@@ -1,105 +1,271 @@
-/* problem: "What your router does behind your back" — four glass cards. */
+/* problem: "What your router does behind your back".
+   Layout modes (set by problem.js):
+   - default (no JS, reduced motion, or a desktop without a fine pointer): a flat, fully legible row
+     of cards (4 / 2 / 1 columns by width).
+   - .pb-fan (desktop, fine pointer, motion OK): an overlapping hand. --p (0 = stacked deck,
+     1 = fanned) is scrubbed on .pb-stage; .pb-has-active + .is-active focus one card.
+   - .pb-carousel (touch or < 1024px): coverflow carousel; --d / --ad per slot from scroll. */
 
 .sec--problem {
+  --p: 1;
+  position: relative;
+  z-index: 3; /* above the hero's veil seam, which would otherwise dim the heading */
   overflow: clip;
   isolation: isolate;
+  padding-bottom: clamp(64px, 8vw, 120px);
 }
-/* faint violet bloom behind the grid so the section has depth without competing with the hero */
-.sec--problem::before {
+
+/* layered backdrop: a horizon of violet light and a faint dot field; transparent at the bottom so
+   the next seam's glow shows through */
+.pb-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 50% 64%, rgba(124, 108, 255, .14), transparent 70%),
+    radial-gradient(34% 30% at 82% 26%, rgba(255, 95, 210, .06), transparent 70%),
+    radial-gradient(30% 30% at 14% 72%, rgba(63, 227, 201, .05), transparent 70%),
+    linear-gradient(180deg, var(--ground) 0, transparent 20%);
+}
+.pb-bg::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 38%;
-  width: min(1100px, 120vw);
-  height: 620px;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(50% 50% at 50% 50%, rgba(124, 108, 255, .10), transparent 70%);
-  pointer-events: none;
-  z-index: -1;
+  inset: 0;
+  background-image: radial-gradient(rgba(183, 169, 255, .12) .8px, transparent 1.3px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(70% 50% at 50% 62%, #000, transparent 75%);
+  -webkit-mask-image: radial-gradient(70% 50% at 50% 62%, #000, transparent 75%);
+  opacity: .6;
 }
 
 .pb-head .lead { max-width: 56ch; }
 
-.pb-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(14px, 1.6vw, 20px);
+
+/* ---------- halftone planet (canvas = planet + ring bounds, falloff baked in) ---------- */
+.pb-planet {
+  --pw: 1060px;
+  --ph: 640px;
+  position: absolute;
+  left: calc(50% + min(330px, 24vw) - var(--pw) / 2);
+  top: calc(var(--sec-pad) + 170px - var(--ph) / 2);
+  width: var(--pw);
+  height: var(--ph);
+  z-index: -1;
+  pointer-events: none;
+}
+.pb-planet__cv { width: 100%; height: 100%; opacity: .42; }
+/* light catching the lit limb; moves with the planet (the wrapper carries the parallax) */
+.pb-planet__flare {
+  position: absolute;
+  left: 50%;
+  top: var(--limb, 20%);
+  width: 46%;
+  height: 2px;
+  transform: translate(-64%, -1px);
+  background: linear-gradient(90deg, transparent, rgba(143, 211, 255, .4) 30%, #fff 50%, rgba(255, 95, 210, .4) 70%, transparent);
+  opacity: .55;
+}
+.pb-planet__flare::after {
+  content: '';
+  position: absolute;
+  left: 36%;
+  right: 36%;
+  top: -12px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 169, 255, .45), transparent);
 }
 
-.pb-cell { display: flex; min-width: 0; }
+/* ---------- stage ---------- */
+.pb-stage {
+  --W: clamp(280px, 25vw, 340px);
+  position: relative;
+}
+
+/* ---------- deck: default flat row ---------- */
+.pb-deck {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  padding-top: calc(var(--brk-px, 42px) + 10px);
+}
+.pb-slot {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+/* ---------- card ---------- */
 .pb-card {
-  --flare-color: var(--tone);
+  --brk: 42px;   /* illustration break-out above the card (matches BREAK in problem.js) */
+  --art-h: 236px;
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  border-radius: 26px;
+  transform-style: preserve-3d;
+  outline: none;
+}
+.pb-card:focus-visible .pb-card__face {
+  box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px color-mix(in srgb, var(--tone) 80%, #fff);
+}
+.pb-tilt {
+  --gx: 50%;
+  --gy: 0%;
+  --ga: 200deg;
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-width: 0;
-  padding: clamp(22px, 2.6vw, 32px);
-  transition: border-color .35s var(--ease), transform .45s var(--ease), box-shadow .45s var(--ease);
-}
-/* tone-tinted bloom in the top-left corner, replacing the default violet one */
-.pb-card.glass::before {
-  background: radial-gradient(55% 100% at 18% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 72%);
-}
-.pb-card > * { position: relative; z-index: 1; }
-.pb-card:hover {
-  border-color: color-mix(in srgb, var(--tone) 34%, transparent);
-  transform: translateY(-3px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 40px 70px -40px rgba(0, 0, 0, .95), 0 0 0 1px color-mix(in srgb, var(--tone) 8%, transparent);
+  border-radius: inherit;
+  transform-style: preserve-3d;
 }
 
-.pb-card__top {
+/* the card body: dark glass with the tone pooling at the top, under the illustration. No outline;
+   the edge comes from a top highlight and the shadow. --fl leans the light toward the flare. */
+.pb-card__face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 64% at var(--fl, 50%) 0%, color-mix(in srgb, var(--tone) 20%, transparent), transparent 64%),
+    linear-gradient(172deg, rgb(33, 28, 66), rgb(17, 14, 36) 44%, rgb(10, 9, 22));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .09),
+    inset 0 -40px 60px -50px color-mix(in srgb, var(--tone) 34%, transparent),
+    0 60px 80px -50px rgba(0, 0, 0, .95),
+    0 30px 70px -46px color-mix(in srgb, var(--tone) 50%, transparent);
+  transition: filter .7s var(--ease), box-shadow .5s var(--ease);
+}
+
+/* iridescent rim: only on the focused or hovered card */
+.pb-card__rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 30%, rgba(9, 8, 20, .9) 88%),
+    conic-gradient(from var(--ga), #FF5FD2, #7C6CFF, #3FE3C9, #FFC772, #FF5FD2);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  transition: opacity .6s var(--ease);
+}
+
+/* specular glare: hotspot plus a brushed band; blended only while the pointer is on the card */
+.pb-card__glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 255, .26), rgba(255, 255, 255, .06) 24%, transparent 50%),
+    linear-gradient(calc(var(--ga) - 70deg), transparent 34%, rgba(143, 211, 255, .07) 44%, rgba(255, 255, 255, .12) 50%, rgba(255, 95, 210, .07) 56%, transparent 66%);
+  background-size: 100% 100%, 260% 260%;
+  background-position: 0 0, var(--gx) var(--gy);
+  opacity: 0;
+  transition: opacity .5s var(--ease);
+}
+.pb-card.is-lit .pb-card__glare { opacity: 1; mix-blend-mode: screen; }
+.pb-card.is-lit .pb-card__rim { opacity: .95; }
+
+/* live pixel illustration: full card width, rising above the card top, dissolving into the body
+   (the dissolve and the glow are drawn into the pixels) */
+.pb-art {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1 * var(--brk));
+  height: var(--art-h);
+  display: grid;
+  place-items: start center;
+  pointer-events: none;
+  transform: translateZ(34px);
+  transition: opacity .7s var(--ease);
+}
+.pb-art__cv {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pb-card__in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: calc(var(--art-h) - var(--brk) - 30px) clamp(20px, 1.9vw, 26px) clamp(24px, 2.2vw, 30px);
+  transition: opacity .7s var(--ease);
+}
+.pb-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-.pb-ic {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 15px;
-  color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 11%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tone) 24%, transparent);
-  box-shadow: 0 0 28px -8px color-mix(in srgb, var(--tone) 55%, transparent);
-}
-.pb-tag {
+  gap: 10px;
   min-width: 0;
+}
+.pb-no {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: color-mix(in srgb, var(--tone) 55%, var(--dim));
+}
+.pb-chip {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 11px 6px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: .05em;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--tone) 82%, #fff);
+  background: color-mix(in srgb, var(--tone) 12%, rgba(8, 7, 18, .7));
+  box-shadow: 0 0 24px -10px var(--tone);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11.5px;
-  letter-spacing: .04em;
-  color: var(--muted);
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .03);
 }
+.pb-chip__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 10px var(--tone);
+  animation: pb-blink 2.4s ease-in-out infinite;
+}
+@keyframes pb-blink { 50% { opacity: .35; } }
 
 .pb-card__title {
-  font: 650 clamp(21px, 1.9vw, 25px)/1.18 var(--f-display);
+  font: 650 clamp(20px, 1.75vw, 24px)/1.16 var(--f-display);
   letter-spacing: -.024em;
   text-wrap: balance;
 }
 .pb-card__body {
   color: var(--muted);
-  font-size: 15.5px;
-  line-height: 1.65;
+  font-size: 14.5px;
+  line-height: 1.62;
   text-wrap: pretty;
-  max-width: 52ch;
 }
 
+.pb-ctrl { display: none; }
+.pb-flare { display: none; }
+
+/* ---------- footnote ---------- */
 .pb-foot {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   max-width: 64ch;
-  margin: clamp(28px, 4vw, 44px) auto 0;
+  margin: clamp(16px, 2.4vw, 28px) auto 0;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.6;
@@ -115,9 +281,257 @@
   box-shadow: 0 0 12px var(--mint);
 }
 
-@media (max-width: 760px) {
-  .pb-grid { grid-template-columns: minmax(0, 1fr); }
+/* default row on narrower screens without the carousel (no JS) */
+@media (max-width: 1023.98px) {
+  .pb-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: calc(var(--brk-px, 42px) + 22px); }
 }
+@media (max-width: 639.98px) {
+  .pb-deck { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* =====================================================================
+   FAN MODE: an overlapping hand (desktop, fine pointer, motion OK)
+   ===================================================================== */
+.pb-fan .pb-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 84px 0 92px; /* DECK_TOP in problem.js */
+  perspective: 1800px;
+  perspective-origin: 50% 24%;
+  transform-style: preserve-3d;
+}
+.pb-fan .pb-slot {
+  /* per-card progress, staggered, ease-out quad */
+  --pi: clamp(0, (var(--p) - var(--i) * .08) / .76, 1);
+  --e: calc(var(--pi) * (2 - var(--pi)));
+  --k: calc(1 - var(--e));
+  grid-area: 1 / 1;
+  justify-self: center;
+  width: var(--W);
+  z-index: calc(10 + var(--i));
+  transform-style: preserve-3d;
+  transform-origin: 50% 100%;
+  transform:
+    translate3d(
+      calc(var(--o) * var(--W) * .68 * var(--e)),
+      calc(var(--o2) * 14px * var(--e) + (var(--sy) + 140px) * var(--k)),
+      calc(var(--oa) * -26px * var(--e) - var(--i) * 30px * var(--k)))
+    rotateZ(calc(var(--o) * 4deg * var(--e) + var(--srz) * var(--k)))
+    scale(calc(1 - .06 * var(--k)));
+}
+.pb-is-fanning .pb-slot { will-change: transform; }
+
+.pb-fan .pb-card {
+  transform: translate3d(0, 0, 0);
+  transition: transform .85s var(--ease-out);
+}
+.pb-fan .pb-card__rim { opacity: .28; }
+
+/* a card is focused: it straightens, rises and comes forward; the rest step back and dim */
+.pb-has-active .pb-slot.is-active .pb-card {
+  transform: translate3d(0, -30px, 64px) rotateZ(calc(var(--o) * -4deg));
+}
+.pb-has-active .pb-slot:not(.is-active) .pb-card {
+  transform: translate3d(calc(var(--side, 0) * 48px), 14px, -70px) scale(.95);
+}
+.pb-has-active .pb-slot.is-active .pb-card__rim { opacity: .9; }
+.pb-has-active .pb-slot.is-active .pb-card__face {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    inset 0 -40px 60px -50px color-mix(in srgb, var(--tone) 44%, transparent),
+    0 80px 100px -50px rgba(0, 0, 0, 1),
+    0 40px 90px -40px color-mix(in srgb, var(--tone) 70%, transparent);
+}
+.pb-has-active .pb-slot:not(.is-active) .pb-card__face { filter: brightness(.62) saturate(.8); }
+.pb-has-active .pb-slot:not(.is-active) .pb-card__rim { opacity: 0; }
+.pb-has-active .pb-slot:not(.is-active) .pb-card__in { opacity: .4; }
+.pb-has-active .pb-slot:not(.is-active) .pb-art { opacity: .42; }
+
+/* ---------- anamorphic flare: one lens event that tracks the focused card ---------- */
+.pb-fan .pb-flare {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  transform: translate3d(var(--fx, 50%), var(--fy, 54px), 0);
+  transition: transform .85s var(--ease-out), opacity .6s var(--ease);
+  opacity: 0;
+}
+.pb-fan .pb-has-active .pb-flare { opacity: .85; }
+.pb-flare > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.pb-flare__bloom {
+  width: 1000px;
+  height: 84px;
+  background: radial-gradient(closest-side, rgba(183, 169, 255, .42), rgba(124, 108, 255, .14) 50%, transparent);
+}
+.pb-flare__streak {
+  width: 1240px;
+  height: 2px;
+  border-radius: 2px !important;
+  background: linear-gradient(90deg, transparent, rgba(143, 211, 255, .5) 24%, #fff 47%, #fff 53%, rgba(255, 95, 210, .5) 76%, transparent);
+  box-shadow: 0 0 12px rgba(183, 169, 255, .9), 0 0 3px #fff;
+}
+.pb-flare__fringe { height: 1px; border-radius: 1px !important; }
+.pb-flare__fringe--a {
+  width: 820px;
+  margin-top: -4px;
+  background: linear-gradient(90deg, transparent, rgba(63, 227, 201, .6) 40%, rgba(63, 227, 201, .6) 60%, transparent);
+}
+.pb-flare__fringe--b {
+  width: 760px;
+  margin-top: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255, 95, 210, .55) 40%, rgba(255, 95, 210, .55) 60%, transparent);
+}
+.pb-flare__core {
+  width: 110px;
+  height: 30px;
+  background: radial-gradient(closest-side, #fff, rgba(255, 255, 255, .7) 30%, rgba(183, 169, 255, .3) 62%, transparent);
+}
+/* ignition when the hand first opens, and a softer one each time the focus moves */
+.pb-flare.is-flash .pb-flare__streak,
+.pb-flare.is-flash .pb-flare__fringe { animation: pb-flash-line 1.5s var(--ease-out) both; }
+.pb-flare.is-flash .pb-flare__bloom,
+.pb-flare.is-flash .pb-flare__core { animation: pb-flash-glow 1.5s var(--ease-out) both; }
+.pb-flare.is-blip .pb-flare__streak,
+.pb-flare.is-blip .pb-flare__fringe { animation: pb-blip-line 1.1s var(--ease-out) both; }
+.pb-flare.is-blip .pb-flare__core { animation: pb-flash-glow 1.1s var(--ease-out) both; }
+@keyframes pb-flash-line {
+  0% { transform: translate(-50%, -50%) scaleX(.08); opacity: 0; }
+  18% { opacity: 1; }
+  45% { transform: translate(-50%, -50%) scaleX(1.25) scaleY(1.6); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 1; }
+}
+@keyframes pb-flash-glow {
+  0% { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1.8); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes pb-blip-line {
+  0% { transform: translate(-50%, -50%) scaleX(.55); opacity: .5; }
+  40% { transform: translate(-50%, -50%) scaleX(1.12) scaleY(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 1; }
+}
+
+/* =====================================================================
+   CAROUSEL MODE: touch or narrow screens
+   ===================================================================== */
+.pb-carousel .pb-stage { margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr)); }
+.pb-carousel .pb-planet {
+  --pw: min(132vw, 900px);
+  --ph: min(80vw, 545px);
+  left: calc(50% - var(--pw) / 2);
+  top: calc(var(--pt, 420px) - var(--ph) * .5);
+}
+.pb-carousel .pb-planet__cv { opacity: .5; }
+.pb-carousel .pb-planet__flare { width: 40%; transform: translate(-58%, -1px); }
+.pb-carousel .pb-deck {
+  display: flex;
+  gap: 12px;
+  padding: calc(var(--brk-px, 42px) + 14px) var(--gr) 26px var(--gl);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gl) var(--gr);
+  scrollbar-width: none;
+}
+.pb-carousel .pb-deck::-webkit-scrollbar { display: none; }
+.pb-carousel .pb-deck:focus-visible { outline: 2px solid var(--lavender); outline-offset: -6px; border-radius: 24px; }
+.pb-carousel .pb-slot {
+  flex: 0 0 min(80%, 420px);
+  scroll-snap-align: center;
+  perspective: 900px; /* each card gets its own projection inside the scroller */
+}
+.pb-carousel .pb-slot:first-child { margin-left: calc((100% - min(80%, 420px)) / 2 - var(--gl)); }
+.pb-carousel .pb-slot:last-child { margin-right: calc((100% - min(80%, 420px)) / 2 - var(--gr)); }
+.pb-carousel .pb-card {
+  transform-origin: calc(50% - var(--d, 0) * 50%) 50%;
+  transform:
+    rotateY(calc(var(--d, 0) * -28deg))
+    translateZ(calc(var(--ad, 0) * -60px))
+    scale(calc(1 - var(--ad, 0) * .05));
+}
+.pb-carousel .pb-card__rim { opacity: calc(.75 - var(--ad, 0) * .75); }
+.pb-carousel .pb-card__face { filter: brightness(calc(1 - var(--ad, 0) * .4)); transition: none; }
+.pb-carousel .pb-card__in { opacity: calc(1 - var(--ad, 0) * .5); transition: none; }
+.pb-carousel .pb-art {
+  opacity: calc(1 - var(--ad, 0) * .45);
+  transform: translate3d(calc(var(--d, 0) * -26px), 0, 34px);
+  transition: none;
+}
+
+.pb-carousel .pb-ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.pb-dots { display: flex; gap: 2px; }
+.pb-dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+.pb-dot span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(183, 169, 255, .3);
+  transition: width .35s var(--ease-out), background .35s;
+}
+.pb-dot[aria-current='true'] span {
+  width: 22px;
+  background: linear-gradient(90deg, #FF5FD2, #B7A9FF, #3FE3C9);
+}
+.pb-nav {
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text);
+  background: rgba(183, 169, 255, .1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+  transition: background .3s var(--ease), opacity .3s;
+}
+.pb-nav:hover { background: rgba(183, 169, 255, .2); }
+.pb-nav:disabled { opacity: .35; cursor: default; }
+.pb-dot:focus-visible, .pb-nav:focus-visible { outline: 2px solid var(--lavender); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .pb-carousel .pb-nav { display: grid; }
+}
+
 @media (max-width: 400px) {
-  .pb-card__top { flex-wrap: wrap; }
+  .pb-card { --art-h: 214px; }
+  .pb-card__title { font-size: 20px; }
+}
+
+/* ---------- reduced motion: still layouts, nothing moves ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pb-carousel .pb-card, .pb-tilt { transform: none !important; }
+  .pb-carousel .pb-art { transform: none; }
+  .pb-chip__dot { animation: none; }
+}
+
+@media print {
+  .pb-planet, .pb-bg, .pb-flare { display: none; }
+  .pb-slot, .pb-card { transform: none !important; }
 }

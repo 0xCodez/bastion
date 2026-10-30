@@ -1,4 +1,5 @@
-/* cta: final statement over a planet horizon, drawn in CSS (no canvas, no 3D). */
+/* cta: the finale. A planet horizon drawn in CSS, a star-warp canvas behind it, an anamorphic flare
+   along the rim, and a word-by-word headline. Start states are set by cta.js only (never in CSS). */
 
 .sec.sec--cta {
   --hz: clamp(150px, 19vw, 260px);       /* how much of the planet cap shows */
@@ -15,6 +16,11 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  /* the planet body dissolves into the page over the last stretch, so the section never ends on a
+     straight cut-off edge above the footer */
+  --fade: min(150px, calc(var(--hz) * .6));
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - var(--fade)), transparent);
 }
 .ct-stars {
   position: absolute;
@@ -35,6 +41,15 @@
     radial-gradient(1px 1px at 4% 82%, #E9E5FF, transparent);
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
   mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+}
+.ct-has-warp .ct-stars { opacity: .25; }
+.ct-warp {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%);
+  mask-image: linear-gradient(180deg, transparent, #000 18%);
 }
 .ct-glow {
   position: absolute;
@@ -97,6 +112,91 @@
   filter: drop-shadow(0 -2px 6px rgba(208, 200, 255, .8));
 }
 
+/* ---------- anamorphic flare along the horizon ---------- */
+.ct-flare {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - var(--hz) - 1px);
+  height: 0;
+  mix-blend-mode: screen;
+}
+.ct-flare > i { position: absolute; display: block; border-radius: 50%; }
+.ct-flare__core {
+  left: -5%; right: -5%;
+  top: -1.5px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(143, 211, 255, .5) 18%, rgba(220, 214, 255, .95) 40%, #fff 50%, rgba(220, 214, 255, .95) 60%, rgba(143, 211, 255, .5) 82%, transparent);
+  box-shadow: 0 0 14px 2px rgba(183, 169, 255, .8), 0 0 40px 6px rgba(124, 108, 255, .45);
+}
+.ct-flare__haze {
+  left: 5%; right: 5%;
+  top: -46px;
+  height: 92px;
+  background: radial-gradient(closest-side, rgba(170, 160, 255, .5), rgba(124, 108, 255, .16) 55%, transparent);
+  filter: blur(6px);
+}
+.ct-flare__hot {
+  left: 30%;
+  width: 40%;
+  top: -16px;
+  height: 32px;
+  background: radial-gradient(closest-side, #fff, rgba(200, 236, 255, .7) 30%, rgba(143, 211, 255, .2) 60%, transparent);
+  filter: blur(2px);
+}
+/* lens ghosts: soft chromatic discs mirrored through the centre, opposite the hot spot.
+   Each .ct-gc is a full-width carrier moved by xPercent in cta.js; the disc sits at its centre. */
+.ct-ghosts {
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(100% - var(--hz));
+  height: 0;
+  mix-blend-mode: screen;
+}
+.ct-gc { position: absolute; left: 0; right: 0; top: 0; height: 0; opacity: .4; }
+.ct-gc--2 { opacity: .25; }
+.ct-gc--3 { opacity: .5; }
+.ct-ghost {
+  position: absolute;
+  left: 50%;
+  top: -96px;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(143, 211, 255, .2), rgba(143, 211, 255, .12) 55%, rgba(255, 95, 210, .1) 82%, transparent);
+  filter: blur(1.5px);
+}
+.ct-ghost--2 {
+  top: -150px;
+  width: 120px;
+  height: 120px;
+  margin-left: -60px;
+  background: radial-gradient(closest-side, rgba(124, 108, 255, .1), rgba(63, 227, 201, .08) 70%, rgba(255, 95, 210, .07) 88%, transparent);
+  filter: blur(3px);
+}
+.ct-ghost--3 {
+  top: -44px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  background: radial-gradient(closest-side, rgba(63, 227, 201, .45), rgba(143, 211, 255, .12) 70%, transparent);
+}
+/* the flash where the rim breaks open: a wide bloom over the horizon centre */
+.ct-bloom {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - var(--hz));
+  width: min(900px, 80vw);
+  height: 220px;
+  margin: -110px 0 0 calc(min(900px, 80vw) / -2);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .42), rgba(183, 169, 255, .2) 35%, rgba(124, 108, 255, .06) 65%, transparent);
+  mix-blend-mode: screen;
+  opacity: .35;
+  pointer-events: none;
+}
+
 /* ---------- content ---------- */
 .ct {
   position: relative;
@@ -124,10 +224,27 @@
 .sec--cta.ct-live .ct-glow { animation: ct-glow 6.8s ease-in-out infinite; }
 @keyframes ct-glow { 50% { opacity: .8; transform: scaleY(1.04); } }
 
+.ct-eyebrow { text-wrap: balance; }
 .ct-title {
   max-width: 13ch;
   margin-top: 18px;
-  padding-bottom: .06em; /* keeps descenders inside the gradient clip */
+}
+/* each word rises out of its own mask */
+.ct-w {
+  display: inline-block;
+  overflow: hidden;
+  padding: .04em .02em .1em;
+  margin: -.04em -.02em -.1em;
+  vertical-align: top;
+}
+.ct-wi {
+  display: inline-block;
+  background: linear-gradient(180deg, #fff 30%, #C9C0FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transform-origin: 0 100%;
+  will-change: transform;
 }
 .ct-lead.lead {
   margin-top: 24px;
@@ -140,6 +257,32 @@
   gap: 12px;
   margin-top: 40px;
 }
+/* buttons light up once the finale lands */
+.ct-glowing .ct-actions .btn--primary {
+  animation: ct-btn 3.6s ease-in-out infinite;
+}
+@keyframes ct-btn {
+  50% { box-shadow: 0 0 0 6px rgba(124, 108, 255, .12), 0 18px 54px -10px rgba(150, 130, 255, 1), inset 0 1px 0 rgba(255, 255, 255, .6); }
+}
+.ct-actions .btn--primary { position: relative; }
+.ct-actions .btn--primary::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--ct-a, 0deg), transparent 0 70%, rgba(255, 255, 255, .95) 80%, transparent 90%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .6s;
+}
+@property --ct-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.ct-glowing.ct-live .ct-actions .btn--primary::after { opacity: 1; animation: ct-orbit 3.2s linear infinite; }
+@keyframes ct-orbit { to { --ct-a: 360deg; } }
+
 .ct-meta {
   margin-top: 22px;
   font-size: 12px;
@@ -147,8 +290,21 @@
   color: var(--dim);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .ct-flare__core, .ct-flare__haze { opacity: .62; }
+  .ct-flare__hot { opacity: 0; }
+}
+
+/* faq -> cta: the finale's planet is the only horizon in the closing part, so the seam into it is a
+   plain veil: only its feathered blend band stays (no arc, no anamorphic flare, no rising glow). */
+.seam[data-seam="faq-cta"] .seam__arc,
+.seam[data-seam="faq-cta"] .seam__flare,
+.seam[data-seam="faq-cta"] .seam__atmo { display: none; }
 @media (max-width: 560px) {
   .sec.sec--cta { --pw: max(1100px, 300vw); }
+  .ct-ghost--2 { width: 84px; height: 84px; margin-left: -42px; top: -110px; }
+  .ct-eyebrow { justify-content: center; }
+  .ct-eyebrow::before { display: none; }
   .ct-mark { width: 68px; height: 68px; margin-bottom: 24px; }
   .ct-actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 360px; }
   .ct-actions .btn { white-space: normal; text-align: center; }

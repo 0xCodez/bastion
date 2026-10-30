@@ -1,6 +1,8 @@
 /*
-  Anamorphic flare: a thin horizontal light streak that follows the pointer
-  across an element on hover, and sits at the top edge on keyboard focus.
+  Anamorphic flare: a thin horizontal light streak (white core, faint blue
+  chromatic fringes, ends fading out) that follows the pointer across an
+  element on hover, and sits at the top edge on keyboard focus. Same optics
+  as the section seams in transitions.js.
 
     import { flare } from '../fx/flare.js';
     const off = flare(el, { color: '#B7A9FF' });   // returns a cleanup function
@@ -22,8 +24,10 @@ const CSS = `
 .fx-flare__s{position:absolute;left:0;top:0;width:180%;height:44px;margin:-22px 0 0 -90%;opacity:0;
   transform:translate3d(var(--fx-x,50%),var(--fx-y,0px),0) scaleX(.6);
   transition:opacity .45s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1);will-change:transform,opacity}
+.fx-flare__s{-webkit-mask-image:linear-gradient(90deg,transparent 8%,#000 38%,#000 62%,transparent 92%);mask-image:linear-gradient(90deg,transparent 8%,#000 38%,#000 62%,transparent 92%)}
 .fx-flare__s::before{content:"";position:absolute;left:0;right:0;top:50%;height:1.5px;margin-top:-.75px;
-  background:linear-gradient(90deg,transparent,var(--fx-c) 30%,#fff 50%,var(--fx-c) 70%,transparent);opacity:.95}
+  background:linear-gradient(90deg,transparent,var(--fx-c) 30%,#fff 47%,#fff 53%,var(--fx-c) 70%,transparent);opacity:.95;
+  box-shadow:0 -5px 0 -.4px rgba(110,160,255,.22),0 6px 0 -.5px rgba(150,120,255,.16),0 0 8px color-mix(in srgb,var(--fx-c) 70%,transparent)}
 .fx-flare__s::after{content:"";position:absolute;left:12%;right:12%;top:50%;height:22px;margin-top:-11px;border-radius:50%;
   background:radial-gradient(closest-side,color-mix(in srgb,var(--fx-c) 55%,transparent),transparent);filter:blur(6px);opacity:.75}
 .fx-flare.is-on .fx-flare__s{opacity:1;transform:translate3d(var(--fx-x,50%),var(--fx-y,0px),0) scaleX(1)}

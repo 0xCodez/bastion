@@ -1,158 +1,364 @@
-/* privacy: what leaves the machine (table), what never does, and how keys are stored. */
+/* privacy: a frosted vault (CSS glass around a canvas of data particles) with three beams of light
+   to the three things that leave the computer. Stacking inside .pv-stage:
+   halo + glass body (0) < canvas (1) < specular + rim + caption (2) < text (3). */
+
+.sec.sec--privacy { isolation: isolate; }
+.pv-bgfx {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 36% at 22% 46%, rgba(124, 108, 255, .16), transparent 70%),
+    radial-gradient(30% 30% at 82% 40%, rgba(255, 199, 114, .05), transparent 70%);
+}
+.pv-bgfx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(183, 169, 255, .22) 1px, transparent 1.4px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(42% 46% at 26% 50%, #000, transparent 75%);
+  mask-image: radial-gradient(42% 46% at 26% 50%, #000, transparent 75%);
+  opacity: .5;
+}
 
 .pv-head .lead { max-width: 58ch; }
 
-.pv-grid {
+/* ---------- stage ---------- */
+.pv-stage {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  gap: clamp(14px, 1.6vw, 20px);
-}
-.pv-side {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: clamp(14px, 1.6vw, 20px);
-  align-items: stretch;
-}
-
-.pv-out,
-.pv-never,
-.pv-keys {
-  padding: clamp(22px, 2.8vw, 34px);
-}
-.pv-out > *,
-.pv-never > *,
-.pv-keys > * { position: relative; }
-
-.pv-card-h {
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(40px, 7vw, 120px);
   align-items: center;
-  gap: 14px;
-  margin-bottom: clamp(18px, 2.4vw, 26px);
+  padding-block: clamp(12px, 3vw, 40px);
 }
-.pv-ic {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+.pv-canvas {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
 }
-.pv-ic--out {
-  color: var(--amber);
-  background: rgba(255, 199, 114, .1);
-  border: 1px solid rgba(255, 199, 114, .24);
-}
-.pv-ic--stay {
-  color: var(--mint);
-  background: rgba(158, 240, 196, .1);
-  border: 1px solid rgba(158, 240, 196, .24);
-}
-.pv-h {
-  font: 650 clamp(19px, 1.7vw, 22px)/1.25 var(--f-display);
-  letter-spacing: -.02em;
-}
-.pv-sub { margin-top: 2px; font-size: 13.5px; color: var(--dim); }
 
-/* ---------- table ---------- */
-.pv-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14.5px;
-  line-height: 1.55;
-  text-align: left;
+/* ---------- vault ---------- */
+.pv-vault {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
 }
-.pv-table thead th {
-  padding: 0 16px 12px 0;
-  font: 500 10.5px/1.4 var(--f-mono);
-  letter-spacing: .14em;
+.pv-orb {
+  --mx: 0;
+  --my: 0;
+  position: relative;
+  width: min(420px, 34vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+.pv-orb > span {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform .6s var(--ease-out);
+}
+.pv-orb__halo {
+  inset: -32%;
+  z-index: 0;
+  background: radial-gradient(closest-side, rgba(124, 108, 255, .3), rgba(124, 108, 255, .08) 55%, transparent);
+  transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -10px), 0);
+}
+.pv-orb__glass {
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 110%, rgba(63, 227, 201, .16), transparent 55%),
+    radial-gradient(circle at 50% 38%, rgba(52, 42, 120, .55), rgba(12, 10, 30, .9) 72%);
+  box-shadow:
+    inset 0 0 70px rgba(124, 108, 255, .38),
+    inset 0 -24px 60px rgba(63, 227, 201, .1),
+    0 40px 90px -40px rgba(0, 0, 0, .9);
+}
+.pv-orb__spec {
+  inset: 0;
+  z-index: 2;
+  background:
+    radial-gradient(38% 24% at calc(34% + var(--mx) * 16%) calc(20% + var(--my) * 12%), rgba(255, 255, 255, .34), rgba(255, 255, 255, .06) 60%, transparent 72%),
+    radial-gradient(60% 22% at 50% 96%, rgba(183, 169, 255, .16), transparent 70%),
+    linear-gradient(160deg, rgba(255, 255, 255, .06), transparent 40%, transparent 70%, rgba(255, 255, 255, .04));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .28), inset 0 0 0 1px rgba(220, 214, 255, .14);
+  mix-blend-mode: screen;
+}
+.pv-orb__rim {
+  inset: -1px;
+  z-index: 2;
+  background: conic-gradient(from 210deg, #FF5FD2, #7C6CFF, #3FE3C9, #FFC772, #FF5FD2);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  opacity: .55;
+  animation: pv-spin 22s linear infinite;
+}
+@keyframes pv-spin { to { transform: rotate(360deg); } }
+
+.pv-vault__cap {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  letter-spacing: .18em;
   text-transform: uppercase;
-  color: var(--dim);
-  border-bottom: 1px solid var(--line-2);
-  white-space: nowrap;
+  color: var(--lavender);
 }
-.pv-table tbody th,
-.pv-table tbody td {
-  padding: 18px 20px 18px 0;
-  vertical-align: top;
-  border-bottom: 1px solid var(--line);
+.pv-legend {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  font-size: 13px;
   color: var(--muted);
 }
-.pv-table tbody tr:last-child th,
-.pv-table tbody tr:last-child td { border-bottom: 0; padding-bottom: 4px; }
-.pv-table tbody th {
-  width: 20%;
-  font-weight: 650;
-  color: var(--text);
-  white-space: nowrap;
-}
-.pv-table td:nth-child(2) { width: 22%; }
-.pv-table td:nth-child(3) { width: 22%; }
-.pv-table td:last-child { padding-right: 0; }
-.pv-table strong { display: block; color: var(--text); font-weight: 600; }
-.pv-host { display: block; margin-top: 2px; font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
-.pv-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 10px;
+.pv-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.pv-legend li::before {
+  content: '';
+  width: 7px; height: 7px;
   border-radius: 50%;
-  vertical-align: 1px;
   background: var(--tone);
   box-shadow: 0 0 10px var(--tone);
 }
 
-/* ---------- never ---------- */
-.pv-list { display: grid; gap: 12px; }
-.pv-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 15px;
-  line-height: 1.5;
-  color: #DCD7F5;
+/* ---------- what leaves ---------- */
+.pv-out { position: relative; z-index: 3; }
+.pv-out__h { margin-bottom: clamp(22px, 3vw, 34px); }
+.pv-h {
+  font: 650 clamp(19px, 1.7vw, 23px)/1.25 var(--f-display);
+  letter-spacing: -.02em;
 }
-.pv-list svg {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin-top: 0;
-  padding: 4px;
-  border-radius: 50%;
-  color: var(--mint);
-  background: rgba(158, 240, 196, .1);
-  border: 1px solid rgba(158, 240, 196, .22);
-}
+.pv-sub { margin-top: 4px; font-size: 13.5px; color: var(--dim); }
 
-/* ---------- keys ---------- */
-.pv-keys {
+.pv-beams { display: grid; gap: clamp(22px, 3vw, 34px); }
+.pv-beam {
+  position: relative;
+  padding-left: 34px;
+}
+.pv-port {
+  position: absolute;
+  left: 0;
+  top: .42em;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tone);
+  background: var(--tone);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 14%, transparent), 0 0 18px var(--tone);
+  transition: background .5s, box-shadow .6s var(--ease-out), transform .6s var(--ease-out);
+}
+.pv-armed .pv-beam:not(.is-lit) .pv-port {
+  background: var(--ground);
+  box-shadow: none;
+  transform: scale(.8);
+}
+.pv-beam__h {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font: 650 clamp(18px, 1.55vw, 21px)/1.3 var(--f-display);
+  letter-spacing: -.016em;
 }
-.pv-keys.glass::before {
-  background: radial-gradient(70% 100% at 20% 0%, rgba(255, 199, 114, .12), transparent 70%);
+.pv-to { color: color-mix(in srgb, var(--tone) 55%, #fff); font-weight: 600; }
+.pv-arrow { color: var(--tone); }
+.pv-mask {
+  align-self: center;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: rgba(255, 199, 114, .1);
+  box-shadow: inset 0 0 0 1px rgba(255, 199, 114, .3);
 }
-.pv-keys p {
-  margin-top: 8px;
-  font-size: 15px;
-  line-height: 1.6;
+.pv-host { margin-top: 2px; font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+.pv-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 14px 22px;
+  margin-top: 12px;
+  padding-top: 12px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 40%, transparent), transparent 80%) top left / 100% 1px no-repeat;
+}
+.pv-meta dt {
+  font: 500 10px/1.5 var(--f-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.pv-meta dd {
+  margin: 3px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
   color: var(--muted);
   text-wrap: pretty;
 }
+
+/* ---------- never / keys ----------
+   No hairline and no list bullets: the lower block sits on a soft glow that continues the vault's
+   light, each "never" line is a packet stopped at a pane of glass, and the keys sit in a small
+   glass vault of their own. */
+.pv-lower {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(36px, 6vw, 96px);
+  margin-top: clamp(40px, 5vw, 72px);
+  padding-top: clamp(16px, 2vw, 24px);
+}
+.pv-lower::before {
+  content: '';
+  position: absolute;
+  left: -8%; right: -8%; top: -40%; bottom: -30%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 26% 30%, rgba(158, 240, 196, .07), transparent 70%),
+    radial-gradient(30% 46% at 80% 40%, rgba(255, 199, 114, .06), transparent 70%);
+}
+.pv-never__h .pv-sub { margin-top: 6px; }
+.pv-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 26px;
+}
+.pv-stop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 7px 0;
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: #DCD7F5;
+  cursor: default;
+}
+.pv-stop:last-child { color: var(--text); font-weight: 600; }
+.pv-stop__t { transition: color .3s, transform .5s var(--ease-out); }
+.pv-stop:hover .pv-stop__t { color: #fff; transform: translateX(3px); }
+
+/* the glass: a packet (dot) stopped just short of a frosted pane, ripple arcs on impact */
+.pv-glass {
+  position: relative;
+  flex: none;
+  width: 68px;
+  height: 28px;
+}
+.pv-glass::before {
+  /* the packet's track: a dotted trail toward the pane */
+  content: '';
+  position: absolute;
+  left: 0; right: 12px; top: 50%;
+  height: 1px;
+  margin-top: -.5px;
+  background: repeating-linear-gradient(90deg, rgba(158, 240, 196, .5) 0 2px, transparent 2px 6px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000);
+  mask-image: linear-gradient(90deg, transparent, #000);
+}
+.pv-glass::after {
+  /* frosted glow on the near side of the pane */
+  content: '';
+  position: absolute;
+  right: 4px; top: -4px; bottom: -4px;
+  width: 22px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 169, 255, .25), transparent);
+}
+.pv-wall {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(220, 214, 255, .1), rgba(220, 214, 255, .45) 50%, rgba(220, 214, 255, .1));
+  box-shadow: 0 0 10px rgba(183, 169, 255, .35), inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+.pv-pk {
+  position: absolute;
+  top: 50%;
+  left: 42px;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 10px var(--mint), 0 0 2px #fff inset;
+}
+.pv-rip {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin-top: -13px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-left-color: rgba(158, 240, 196, .9);
+  opacity: 0;
+}
+.pv-stop.is-armed .pv-pk { transform: translateX(-30px); opacity: 0; }
+.pv-stop.is-armed .pv-stop__t { opacity: .3; }
+.pv-stop.is-hit .pv-pk { animation: pv-pk 1s var(--ease-out) both; }
+.pv-stop.is-hit .pv-rip { animation: pv-rip .9s .36s ease-out both; }
+.pv-stop.is-hit .pv-wall { animation: pv-wall 1s .34s ease-out both; }
+.pv-stop.is-hit .pv-stop__t { animation: pv-txt .8s .3s var(--ease-out) both; }
+@keyframes pv-pk {
+  0% { transform: translateX(-30px); opacity: 0; }
+  30% { opacity: 1; }
+  38% { transform: translateX(10px); }
+  62% { transform: translateX(-2px); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes pv-rip {
+  from { transform: scale(.4); opacity: 1; }
+  to { transform: scale(1.9) translateX(-6px); opacity: 0; }
+}
+@keyframes pv-wall {
+  0% { box-shadow: 0 0 10px rgba(183, 169, 255, .35), inset 0 0 0 1px rgba(255, 255, 255, .18); }
+  12% { box-shadow: 0 0 22px 4px rgba(158, 240, 196, .8), inset 0 0 0 1px #fff; background: rgba(240, 255, 248, .85); }
+}
+@keyframes pv-txt { from { opacity: .3; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+.pv-keys { display: grid; gap: 12px; align-content: start; }
+.pv-keys p { font-size: 15px; line-height: 1.6; color: var(--muted); text-wrap: pretty; }
+/* a small glass vault holding the lock */
 .pv-lock {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 18px;
+  width: 76px; height: 76px;
+  margin-bottom: 6px;
+  border-radius: 50%;
   color: var(--amber);
-  background: radial-gradient(circle at 50% 30%, rgba(255, 199, 114, .22), rgba(255, 199, 114, .05));
-  border: 1px solid rgba(255, 199, 114, .3);
-  box-shadow: 0 0 36px -10px rgba(255, 199, 114, .6);
+  background:
+    radial-gradient(40% 26% at 36% 24%, rgba(255, 255, 255, .26), transparent 70%),
+    radial-gradient(circle at 50% 40%, rgba(80, 60, 30, .5), rgba(14, 11, 26, .9) 72%);
+  box-shadow: inset 0 0 24px rgba(255, 199, 114, .28), 0 0 50px -6px rgba(255, 199, 114, .45);
+}
+.pv-lock svg { width: 28px; height: 28px; filter: drop-shadow(0 0 8px rgba(255, 199, 114, .7)); }
+.pv-lock__rim {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: conic-gradient(from 30deg, #FFC772, #FF5FD2, #7C6CFF, #3FE3C9, #FFC772);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  opacity: .6;
+  animation: pv-spin 16s linear infinite;
 }
 
 .pv-foot {
   max-width: 70ch;
-  margin-top: clamp(24px, 3.5vw, 36px);
+  margin-top: clamp(32px, 4vw, 48px);
   font-size: 14.5px;
   line-height: 1.6;
   color: var(--dim);
@@ -160,46 +366,22 @@
 .pv-foot a { color: var(--lavender); font-weight: 600; white-space: nowrap; }
 
 /* ---------- responsive ---------- */
-@media (max-width: 900px) {
-  .pv-side { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 860px) {
+  .pv-stage { grid-template-columns: minmax(0, 1fr); gap: 72px; }
+  .pv-vault { gap: 14px; }
+  .pv-vault__cap, .pv-legend { order: -1; }
+  .pv-orb { width: min(300px, 72vw); margin-top: 10px; }
+  .pv-canvas { left: calc(-1 * var(--gl)); width: calc(100% + var(--gl) + var(--gr)); }
+  .pv-out__h { padding-left: 34px; }
+  .pv-lower { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 760px) {
-  .pv-table thead {
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
-  }
-  .pv-table,
-  .pv-table tbody,
-  .pv-table tr,
-  .pv-table th,
-  .pv-table td { display: block; width: auto !important; }
-  .pv-table tbody tr {
-    padding: 16px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .pv-table tbody tr:first-child { padding-top: 0; }
-  .pv-table tbody tr:last-child { border-bottom: 0; padding-bottom: 0; }
-  .pv-table tbody th,
-  .pv-table tbody td {
-    padding: 0;
-    border: 0;
-    white-space: normal;
-  }
-  .pv-table tbody th { margin-bottom: 10px; font-size: 16px; }
-  .pv-table tbody td {
-    display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 12px;
-    padding: 4px 0;
-  }
-  .pv-table tbody td::before {
-    content: attr(data-label);
-    padding-top: 3px;
-    font: 500 10px/1.5 var(--f-mono);
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--dim);
-  }
+@media (max-width: 560px) {
+  .pv-glass { width: 48px; }
+  .pv-pk { left: 22px; }
+  .pv-stop { gap: 12px; font-size: 15px; }
+  .pv-meta { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pv-beam, .pv-out__h { padding-left: 30px; }
 }
-@media (max-width: 380px) {
-  .pv-table tbody td { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-orb__rim, .pv-lock__rim { animation: none; }
 }

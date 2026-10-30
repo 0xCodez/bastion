@@ -4,14 +4,16 @@
 //   reveal(sectionEl);               // every [data-reveal] inside sectionEl (and sectionEl itself)
 //
 // Markup:
-//   <h2 data-reveal>…</h2>                 soft rise + de-blur (default)
-//   <div data-reveal="fade">…</div>        no movement, opacity/blur only
-//   <div data-reveal="scale">…</div>       slight scale-up
+//   <h2 data-reveal>…</h2>                 quick rise + fade (default, no blur)
+//   <div data-reveal="fade">…</div>        no movement, opacity only
+//   <div data-reveal="scale">…</div>       slight rise and scale-up
+//   <div data-reveal="left|right">…</div>  slides in from that side
 //   <ul data-reveal-stagger="0.08">        children with [data-reveal] get increasing delays
 //   <p data-reveal style="--reveal-delay:.2s">  explicit delay
 //
 // Resting state is fully visible. Only elements that are below the fold when reveal() runs get the
-// "armed" class (a half-visible offset); the observer adds .is-in as they enter. Elements already on
+// "armed" class (hidden + offset); the observer adds .is-in as they enter, and safety nets (scroll
+// settle, hash jumps, load, resize) settle anything that has reached the viewport regardless. Elements already on
 // screen, reduced-motion users and browsers without IntersectionObserver are left untouched.
 // Returns a cleanup function.
 
@@ -22,7 +24,7 @@ const reduceMotion = () =>
 
 export function reveal(root = document, opts = {}) {
   if (!root || typeof window === 'undefined') return () => {};
-  const { threshold = 0.14, rootMargin = '0px 0px -8% 0px' } = opts;
+  const { threshold = 0.01, rootMargin = '0px 0px -10% 0px' } = opts;
 
   const els = [];
   if (root.matches && root.matches('[data-reveal]')) els.push(root);
@@ -93,6 +95,8 @@ export function reveal(root = document, opts = {}) {
     scrollT = setTimeout(unarmPassed, 400);
   };
   window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  window.addEventListener('load', unarmPassed, { once: true });
 
   return () => {
     io.disconnect();
@@ -100,6 +104,8 @@ export function reveal(root = document, opts = {}) {
     clearTimeout(scrollT);
     window.removeEventListener('hashchange', onHash);
     window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('resize', onScroll);
+    window.removeEventListener('load', unarmPassed);
   };
 }
 

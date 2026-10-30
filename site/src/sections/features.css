@@ -1,45 +1,56 @@
-/* features: four large rows, alternating sides, each with a small live visual. */
+/* features: pinned scroll story on desktop (.ft--story), stacked still frames everywhere else.
+   The default rules below are the stacked layout, so the copy is complete without JS. */
 
+.sec--features { isolation: isolate; }
 .ft-head .lead { max-width: 54ch; }
 
-.ft-rows {
-  display: grid;
-  gap: clamp(80px, 11vw, 152px);
-}
+[data-accent='coral'] { --acc: #FF8E7A; --acc-rgb: 255, 142, 122; }
+[data-accent='sky']   { --acc: #8FD3FF; --acc-rgb: 143, 211, 255; }
+[data-accent='mint']  { --acc: #9EF0C4; --acc-rgb: 158, 240, 196; }
+[data-accent='clay']  { --acc: #E8A07F; --acc-rgb: 232, 160, 127; }
 
-.ft-row {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  align-items: center;
-  gap: clamp(36px, 6.5vw, 96px);
-}
-.ft-row--flip { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
-.ft-row--flip .ft-copy { order: 2; }
-.ft-row--flip .ft-media { order: 1; }
-
-.ft-copy { display: grid; gap: 18px; min-width: 0; }
+/* ---------- copy (shared) ---------- */
+.ft-copy { display: grid; gap: 18px; min-width: 0; align-content: start; }
 .ft-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font-size: 12px;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--lavender);
 }
+.ft-kicker__n {
+  color: var(--acc, var(--lavender));
+  text-shadow: 0 0 14px rgba(var(--acc-rgb, 183, 169, 255), .7);
+}
+.ft-kicker__n::after {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  width: 28px;
+  height: 1px;
+  margin-left: 12px;
+  background: linear-gradient(90deg, var(--acc, var(--lavender)), transparent);
+}
 .ft-title { max-width: 16ch; }
+.ft-w { display: inline-block; }
+.ft-w > span { display: inline-block; }
 .ft-body {
   color: var(--muted);
-  font-size: clamp(16px, 1.25vw, 17.5px);
-  line-height: 1.68;
+  font-size: clamp(16px, 1.2vw, 17px);
+  line-height: 1.66;
   max-width: 52ch;
   text-wrap: pretty;
 }
 .ft-points {
   display: grid;
-  gap: 12px;
-  margin-top: 6px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
+  gap: 11px;
+  margin-top: 4px;
+  padding-top: 0;
 }
 .ft-points li {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -49,144 +60,583 @@
 }
 .ft-points svg {
   flex: none;
-  margin-top: 2px;
+  margin-top: 1px;
   padding: 3px;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  color: var(--mint);
-  background: rgba(158, 240, 196, .1);
-  border: 1px solid rgba(158, 240, 196, .22);
+  color: var(--ink);
+  background: radial-gradient(circle at 35% 30%, #fff, var(--acc, var(--mint)) 70%);
+  box-shadow: 0 0 16px -2px rgba(var(--acc-rgb, 158, 240, 196), .65);
 }
 
-/* ---------- visual frame ---------- */
-.ft-media { min-width: 0; }
-.ft-vis.glass {
-  aspect-ratio: 6 / 5;
-  width: 100%;
-  background:
-    radial-gradient(80% 70% at 50% 45%, rgba(124, 108, 255, .10), transparent 70%),
-    linear-gradient(180deg, rgba(26, 22, 54, .78), rgba(12, 10, 26, .86));
+/* ---------- particle figure (shared by the story visual and the still frames) ---------- */
+.ft-visual,
+.ft-still {
+  position: relative;
+  margin: 0;
+  isolation: isolate;
 }
-/* faint dot grid inside the frame */
-.ft-vis::after {
+.ft-halo {
+  position: absolute;
+  inset: 4% 6%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 42% at 50% 52%, rgba(var(--acc-rgb, 183, 169, 255), .11), transparent 72%),
+    radial-gradient(60% 55% at 50% 50%, rgba(124, 108, 255, .14), transparent 75%);
+  transition: background .8s var(--ease);
+}
+/* a faint pixel grid that the particles sit on, fading out towards the edges */
+.ft-halo::after {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: radial-gradient(rgba(183, 169, 255, .10) 1px, transparent 1.2px);
-  background-size: 18px 18px;
-  -webkit-mask-image: radial-gradient(75% 70% at 50% 50%, #000, transparent);
-  mask-image: radial-gradient(75% 70% at 50% 50%, #000, transparent);
-  pointer-events: none;
-}
-.ft-stage {
-  position: absolute;
-  inset: 0;
+  inset: -6%;
+  background-image: radial-gradient(rgba(183, 169, 255, .16) .8px, transparent 1.1px);
+  background-size: 12px 12px;
+  -webkit-mask-image: radial-gradient(50% 50% at 50% 50%, #000 10%, transparent 75%);
+  mask-image: radial-gradient(50% 50% at 50% 50%, #000 10%, transparent 75%);
+  opacity: .55;
 }
 .ft-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  /* feathered edges: the dust never meets a hard canvas border */
+  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 70%, transparent 100%);
+  mask-image: radial-gradient(closest-side at 50% 50%, #000 70%, transparent 100%);
+  -webkit-mask-size: 116% 116%;
+  mask-size: 116% 116%;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.ft-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
 }
 .ft-cap {
   position: absolute;
-  left: 20px;
-  bottom: 16px;
+  left: 4px;
+  bottom: 6px;
   z-index: 2;
   font-size: 10.5px;
-  letter-spacing: .1em;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--dim);
 }
-.ft-vis--spectrum .ft-stage { inset: 18px 14px 34px; }
-.ft-vis--exposure .ft-stage { inset: 10px 10px 30px; }
+.ft-cap::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 9px;
+  vertical-align: 1px;
+  background: var(--acc, var(--lavender));
+  box-shadow: 0 0 10px var(--acc, var(--lavender));
+}
 
-/* ---------- 02: process -> destination SVG ---------- */
-.ft-vis--flow .ft-stage {
-  inset: 24px 22px 40px;
-  display: grid;
-  place-items: center;
+/* overlay labels positioned by JS from the particle layout */
+.ft-lb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  transition: opacity .25s linear;
+  font: 500 11.5px/1.2 var(--f-mono);
+  color: var(--muted);
+  text-shadow: 0 0 10px rgba(7, 6, 14, .95), 0 0 3px rgba(7, 6, 14, .9);
 }
-.ft-flow { width: 100%; height: 100%; overflow: visible; }
-.ft-flow--sm { display: none; }
-@media (max-width: 520px) {
-  .ft-flow--lg { display: none; }
-  .ft-flow--sm { display: block; max-width: 380px; }
+/* a soft dark smudge behind each label keeps it legible over the art, without drawing a box */
+.ft-lb > span {
+  display: inline-block;
+  padding: 5px 10px;
+  background: radial-gradient(closest-side, rgba(7, 6, 14, .8), rgba(7, 6, 14, .5) 60%, rgba(7, 6, 14, 0));
 }
-.ft-flow__base {
-  stroke: rgba(183, 169, 255, .2);
-  stroke-width: 1.2;
-}
-.ft-flow__base.is-hot { stroke: rgba(255, 199, 114, .32); }
-.ft-flow__pkt {
-  stroke-width: 3.2;
-  stroke-dasharray: 8 192;
-  stroke-dashoffset: 200;
-  animation: ft-pkt 2.4s linear infinite;
-  animation-play-state: paused;
-}
-.ft-vis.is-live .ft-flow__pkt { animation-play-state: running; }
-@keyframes ft-pkt { to { stroke-dashoffset: 0; } }
+.ft-lb--l > span { margin-left: -10px; }
+.ft-lb--r > span { margin-left: 10px; }
+.ft-lb--c > span { transform: translate(-50%, -50%); }
+.ft-lb--l > span { transform: translate(0, -50%); }
+.ft-lb--r > span { transform: translate(-100%, -50%); }
+.ft-lb b { font-weight: 600; color: var(--text); }
+.ft-lb.is-risk b { color: #FFC0B4; }
+.ft-lb.is-warn b { color: var(--amber); }
+.ft-lb.is-risk span span,
+.ft-lb.is-warn span span { color: var(--muted); }
+.ft-lb.is-dim { font-size: 10.5px; color: var(--dim); letter-spacing: .04em; }
+.ft-lb.is-name { font: 650 13px/1.2 var(--f-ui); color: var(--text); }
+.ft-lb.is-addr { font-size: 11px; color: var(--muted); }
+.ft-lb.is-addr.is-warn { color: var(--amber); }
+.ft-lb.is-tag { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.ft-lb.is-you { font: 700 13px/1.2 var(--f-ui); color: var(--mint); text-shadow: 0 0 14px rgba(158, 240, 196, .55), 0 0 4px rgba(7, 6, 14, .9); }
+.ft-lb.is-hud { font-size: 11.5px; }
+.ft-lb.is-hud.is-ok { color: var(--mint); }
+.ft-lb.is-hud.is-warn { color: var(--amber); }
+.ft-lb.is-ch { font-size: 10.5px; color: var(--dim); }
+.ft-lb.is-ch.is-on { color: var(--mint); font-weight: 600; }
+.ft-lb.is-agent { font: 650 13.5px/1.2 var(--f-ui); color: var(--text); }
 
-.ft-flow__proc rect {
-  fill: rgba(30, 26, 62, .9);
-  stroke: rgba(183, 169, 255, .26);
-}
-.ft-flow__pn { fill: var(--text); font: 600 14px var(--f-ui); }
-.ft-flow__dest rect {
-  fill: rgba(16, 13, 34, .9);
-  stroke: rgba(183, 169, 255, .16);
-}
-.ft-flow__dn { fill: var(--muted); font: 500 11.5px var(--f-mono); }
-.ft-flow__dest.is-hot rect {
-  fill: rgba(255, 199, 114, .07);
-  stroke: rgba(255, 199, 114, .45);
-}
-.ft-flow__dest.is-hot .ft-flow__dn { fill: var(--amber); }
-
-/* ---------- 04: key pill over the orbit canvas ---------- */
+/* "Bring your own key" pill on the watchers frame */
 .ft-key {
   position: absolute;
-  z-index: 2;
-  right: 18px;
-  bottom: 14px;
+  z-index: 3;
+  right: 6px;
+  bottom: 0;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   height: 32px;
-  padding: 0 13px 0 11px;
+  padding: 0 14px 0 12px;
   border-radius: 999px;
   font: 600 12.5px var(--f-ui);
-  color: #DDD7FF;
-  background: rgba(18, 15, 36, .7);
-  border: 1px solid var(--line-2);
+  color: #EDE9FF;
+  background:
+    linear-gradient(rgba(18, 15, 36, .72), rgba(18, 15, 36, .72)) padding-box,
+    linear-gradient(90deg, rgba(255, 95, 210, .7), rgba(124, 108, 255, .7), rgba(63, 227, 201, .7), rgba(255, 199, 114, .7)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 30px -12px rgba(124, 108, 255, .8);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 .ft-key svg { color: var(--amber); }
 
-/* ---------- responsive ---------- */
+/* ---------- stacked layout (default: narrow, touch, reduced motion, no JS) ---------- */
+.ft-bg,
+.ft-rail,
+.ft-right,
+.ft-num { display: none; }
+
+.ft-steps {
+  position: relative;
+  display: grid;
+  gap: clamp(88px, 11vw, 150px);
+}
+.ft-step {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  scroll-margin-top: calc(var(--nav-h) + 16px);
+}
+.ft-steps > .ft-step:nth-of-type(even) .ft-copy { order: 2; }
+.ft-steps > .ft-step:nth-of-type(even) { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+.ft-still {
+  width: 100%;
+  aspect-ratio: 6 / 5;
+}
+.ft-still .ft-key { right: 4px; bottom: 2px; }
+
 @media (max-width: 900px) {
-  .ft-row,
-  .ft-row--flip { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .ft-row--flip .ft-copy { order: 1; }
-  .ft-row--flip .ft-media { order: 2; }
+  .ft-step { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+  .ft-steps > .ft-step:nth-of-type(even) { grid-template-columns: minmax(0, 1fr); }
+  .ft-steps > .ft-step:nth-of-type(even) .ft-copy { order: 0; }
   .ft-title { max-width: 20ch; }
+  .ft-still { aspect-ratio: 1 / 1; max-width: 560px; margin-inline: auto; }
+  .ft-still[data-accent='mint'] { aspect-ratio: 5 / 4; }
+  /* a thin rail ties the stacked steps together */
+  .ft-steps::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, rgba(183, 169, 255, .4), rgba(183, 169, 255, .08) 70%, transparent);
+  }
+  .ft-copy { padding-left: 22px; }
+  .ft-kicker__n { position: relative; }
+  .ft-kicker__n::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin-top: -4.5px;
+    border-radius: 2px;
+    background: var(--acc);
+    box-shadow: 0 0 12px var(--acc);
+  }
 }
 @media (max-width: 560px) {
-  .ft-vis.glass { aspect-ratio: 1 / 1; }
-  .ft-vis--flow.glass,
-  .ft-vis--spectrum.glass { aspect-ratio: 5 / 4; }
-  .ft-vis--flow .ft-stage { inset: 16px 12px 36px; }
-  .ft-cap { left: 16px; bottom: 13px; font-size: 10px; }
-  .ft-key { right: 12px; bottom: 10px; height: 30px; font-size: 12px; }
-  .ft-vis--watchers .ft-cap { display: none; }
+  .ft-copy { gap: 15px; }
+  .ft-cap { font-size: 10px; }
+  .ft-still .ft-cap { left: 2px; bottom: -4px; }
+  .ft-still .ft-key { height: 30px; font-size: 12px; bottom: -8px; }
+  .ft-still[data-accent='clay'] .ft-cap { display: none; }
+  .ft-lb { font-size: 11px; }
+  .ft-lb.is-name, .ft-lb.is-agent, .ft-lb.is-you { font-size: 12.5px; }
+  .ft-lb.is-addr { font-size: 10.5px; }
+  .ft-lb.is-ch, .ft-lb.is-dim, .ft-lb.is-tag { font-size: 10.5px; }
+  .ft-lb.is-hud { font-size: 11px; }
+}
+
+/* ======================================================================================
+   story mode (desktop): sticky pin, rail, crossfading steps, one morphing visual
+   ====================================================================================== */
+.ft--story { padding-bottom: 0; }
+.ft--story .ft-head { margin-bottom: 0; }
+.ft--story .ft-story {
+  position: relative;
+  height: calc(100vh + 420vh);
+}
+.ft--story .ft-pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.ft--story .ft-bg,
+.ft--story .ft-rail,
+.ft--story .ft-right,
+.ft--story .ft-num { display: block; }
+.ft--story .ft-still { display: none; }
+
+/* per-step light behind the visual, cross-faded by JS (--w) */
+.ft--story .ft-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.ft-bg i {
+  position: absolute;
+  inset: 0;
+  opacity: var(--w, 0);
+  will-change: opacity;
+}
+.ft-bg i[data-b='0'] {
+  opacity: var(--w, 1);
+  background:
+    radial-gradient(34% 44% at 72% 60%, rgba(255, 142, 122, .10), transparent 70%),
+    radial-gradient(46% 60% at 78% 42%, rgba(124, 108, 255, .16), transparent 72%);
+}
+.ft-bg i[data-b='1'] {
+  background:
+    radial-gradient(40% 50% at 70% 48%, rgba(143, 211, 255, .12), transparent 70%),
+    radial-gradient(30% 40% at 86% 70%, rgba(255, 199, 114, .06), transparent 70%),
+    radial-gradient(50% 60% at 62% 40%, rgba(124, 108, 255, .12), transparent 72%);
+}
+.ft-bg i[data-b='2'] {
+  background:
+    radial-gradient(50% 36% at 72% 70%, rgba(158, 240, 196, .12), transparent 70%),
+    radial-gradient(44% 56% at 80% 40%, rgba(63, 227, 201, .07), transparent 72%),
+    radial-gradient(50% 60% at 64% 50%, rgba(124, 108, 255, .10), transparent 72%);
+}
+.ft-bg i[data-b='3'] {
+  background:
+    radial-gradient(36% 46% at 72% 54%, rgba(232, 160, 127, .10), transparent 70%),
+    radial-gradient(50% 64% at 76% 48%, rgba(183, 169, 255, .15), transparent 72%);
+}
+
+.ft--story .ft-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6.2fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 64px);
+  padding-top: calc(var(--nav-h) - 8px);
+}
+.ft--story .ft-left {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(20px, 2.4vw, 36px);
+  min-width: 0;
+}
+
+/* progress rail */
+.ft-rail {
+  position: relative;
+  height: min(54vh, 420px);
+}
+.ft-rail ol {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.ft-rail__track {
+  position: absolute;
+  left: 21px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgba(183, 169, 255, .12);
+  overflow: hidden;
+}
+.ft-rail__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  transform: scaleY(var(--p, 0));
+  background: linear-gradient(180deg, var(--coral), var(--sky) 35%, var(--mint) 66%, var(--clay));
+  box-shadow: 0 0 12px rgba(183, 169, 255, .6);
+}
+.ft-rail__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dim);
+}
+.ft-rail__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 3px;
+  background: var(--ground);
+  border: 1.5px solid rgba(183, 169, 255, .4);
+  transform: rotate(45deg);
+  transition: background .4s var(--ease), border-color .4s var(--ease), box-shadow .4s var(--ease), transform .5s var(--ease-out);
+}
+.ft-rail__n {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  opacity: 0;
+  transition: opacity .3s, color .3s;
+}
+/* the kicker carries the step number; the rail shows it only on hover / keyboard focus */
+.ft-rail__btn[aria-current='step'] .ft-rail__n { color: var(--acc); }
+.ft-rail__btn:hover .ft-rail__n,
+.ft-rail__btn:focus-visible .ft-rail__n { opacity: 1; }
+.ft-rail__btn:hover .ft-rail__dot { border-color: var(--acc); }
+.ft-rail__btn[aria-current='step'] .ft-rail__dot {
+  background: var(--acc);
+  border-color: #fff;
+  box-shadow: 0 0 0 5px rgba(var(--acc-rgb), .14), 0 0 22px 2px rgba(var(--acc-rgb), .85);
+  transform: rotate(45deg) scale(1.25);
+}
+.ft-rail__btn:focus-visible { outline-offset: 0; border-radius: 50%; }
+
+/* steps share one grid cell and cross-fade */
+.ft--story .ft-steps {
+  display: grid;
+  gap: 0;
+  align-items: center;
+  min-height: min(62vh, 520px);
+}
+.ft--story .ft-step {
+  grid-area: 1 / 1;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .45s var(--ease) .05s;
+}
+.ft--story .ft-step.is-active { opacity: 1; pointer-events: auto; transition-delay: 0s; transition-duration: .2s; }
+.ft--story .ft-copy { order: 0; padding: 0; }
+.ft--story .ft-w {
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: .1em;
+  margin-bottom: -.1em;
+}
+.ft--story .ft-step .ft-w > span {
+  transform: translateY(108%) rotate(4deg);
+  transform-origin: 0 100%;
+  transition: transform .75s var(--ease-out);
+  transition-delay: calc(var(--wi) * 45ms + 60ms);
+}
+.ft--story .ft-step .ft-kicker,
+.ft--story .ft-step .ft-body {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  filter: blur(6px);
+  transition: opacity .6s var(--ease-out), transform .8s var(--ease-out), filter .6s var(--ease-out);
+}
+.ft--story .ft-step .ft-body { transition-delay: .2s; }
+.ft--story .ft-step .ft-points li {
+  opacity: 0;
+  transform: translate3d(-16px, 0, 0);
+  transition: opacity .5s var(--ease-out), transform .7s var(--ease-out);
+  transition-delay: calc(.32s + var(--pi) * 80ms);
+}
+.ft--story .ft-step .ft-points svg {
+  transform: scale(.3);
+  transition: transform .6s cubic-bezier(.3, 1.6, .5, 1);
+  transition-delay: calc(.4s + var(--pi) * 80ms);
+}
+.ft--story .ft-step.is-active .ft-w > span,
+.ft--story .ft-step.is-active .ft-kicker,
+.ft--story .ft-step.is-active .ft-body,
+.ft--story .ft-step.is-active .ft-points li,
+.ft--story .ft-step.is-active .ft-points svg {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+/* leaving: the old copy lifts away in the scroll direction, quickly */
+.ft--story .ft-step.is-out .ft-w > span { transform: translateY(-108%) rotate(-3deg); transition-duration: .4s; transition-delay: calc(var(--wi) * 20ms); }
+.ft--story .ft-step.is-out[data-dir='up'] .ft-w > span { transform: translateY(108%) rotate(4deg); }
+.ft--story .ft-step.is-out .ft-kicker,
+.ft--story .ft-step.is-out .ft-body,
+.ft--story .ft-step.is-out .ft-points li { transform: translate3d(0, -14px, 0); transition-duration: .35s; transition-delay: 0s; }
+.ft--story .ft-step.is-out[data-dir='up'] .ft-kicker,
+.ft--story .ft-step.is-out[data-dir='up'] .ft-body,
+.ft--story .ft-step.is-out[data-dir='up'] .ft-points li { transform: translate3d(0, 14px, 0); }
+
+/* the stage: the particle field bleeds full-height and off the right edge, reaching softly in
+   behind the copy column; it is not a column with a frame, it is the room the copy stands in */
+.ft--story .ft-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: max(64vw, 600px);
+  z-index: 0;
+  pointer-events: none;
+}
+.ft--story .ft-grid { position: relative; z-index: 1; }
+.ft--story .ft-visual {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ft--story .ft-visual .ft-canvas {
+  /* fade in from behind the copy on the left, feather the top/bottom, let it run off the right */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%, #000 100%), linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 24%, #000 100%), linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.ft--story .ft-visual .ft-halo {
+  inset: 0;
+  background:
+    radial-gradient(28% 34% at 56% 54%, rgba(var(--acc-rgb, 183, 169, 255), .12), transparent 72%),
+    radial-gradient(42% 50% at 58% 52%, rgba(124, 108, 255, .14), transparent 76%);
+}
+.ft--story .ft-visual .ft-halo::after {
+  -webkit-mask-image: radial-gradient(34% 44% at 56% 54%, #000 10%, transparent 80%);
+  mask-image: radial-gradient(34% 44% at 56% 54%, #000 10%, transparent 80%);
+}
+.ft--story .ft-labels { pointer-events: none; }
+.ft--story .ft-visual .ft-cap { left: auto; right: max(4vw, 32px); bottom: 30px; }
+.ft-key--story {
+  opacity: var(--w, 0);
+  transform: translate3d(0, calc((1 - var(--w, 0)) * 10px), 0);
+  right: max(4vw, 32px);
+  bottom: 62px;
+}
+
+/* big odometer numeral: a gradient-lit figure standing behind the particles (left of the formation),
+   scrubbed with the scroll (--s) and nudged against the particles' motion at each morph (--k) */
+.ft-num {
+  --k: 0;
+  position: absolute;
+  left: 9%;
+  top: calc(var(--nav-h) + 3vh);
+  z-index: 0;
+  height: 1em;
+  overflow: hidden;
+  font: 800 clamp(200px, 23vw, 360px)/1 var(--f-display);
+  letter-spacing: -.07em;
+  pointer-events: none;
+  transform: translate3d(calc(var(--k) * -26px), 0, 0);
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 96%);
+  mask-image: linear-gradient(180deg, #000 30%, transparent 96%);
+}
+.ft-num__col {
+  display: flex;
+  flex-direction: column;
+  transform: translate3d(0, calc(var(--s, 0) * -1em), 0);
+  will-change: transform;
+}
+.ft-num__col span {
+  display: block;
+  height: 1em;
+  padding-right: .06em;
+  color: transparent;
+  background: linear-gradient(170deg, rgba(var(--acc-rgb), .34) 0%, rgba(124, 108, 255, .14) 42%, rgba(124, 108, 255, 0) 78%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* anamorphic flare, pulsed by JS (--f) at each morph; it spans the stage only and fades out
+   before it reaches the copy column */
+.ft-flare {
+  --f: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + 28px);
+  z-index: 4;
+  height: 200px;
+  margin-top: -100px;
+  pointer-events: none;
+  opacity: var(--f);
+  mix-blend-mode: screen;
+  --acc: #B7A9FF;
+  --acc-rgb: 183, 169, 255;
+  -webkit-mask-image: linear-gradient(90deg, transparent 18%, #000 36%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent 18%, #000 36%, #000 92%, transparent);
+}
+.ft-flare > i { position: absolute; left: 56%; top: 50%; display: block; }
+.ft-flare__streak {
+  width: 110%;
+  height: 2px;
+  margin: -1px 0 0 -55%;
+  background: linear-gradient(90deg, transparent 18%, rgba(var(--acc-rgb), .55) 38%, #fff 50%, rgba(var(--acc-rgb), .55) 62%, transparent 82%);
+  transform: scaleX(calc(.3 + var(--f) * .7));
+}
+.ft-flare__halo {
+  width: 60%;
+  height: 70px;
+  margin: -35px 0 0 -30%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--acc-rgb), .45), transparent);
+  filter: blur(8px);
+  transform: scaleX(calc(.4 + var(--f) * .6));
+}
+.ft-flare__core {
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .9), rgba(var(--acc-rgb), .35) 40%, transparent);
+  transform: scale(calc(.4 + var(--f) * .8));
+}
+.ft-flare__ghost {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--acc-rgb), .5);
+  background: radial-gradient(closest-side, rgba(var(--acc-rgb), .18), transparent);
+  transform: translate3d(calc(120px + var(--f) * 90px), 0, 0) scale(.7);
+  box-shadow: 90px 0 0 -10px rgba(143, 211, 255, .2), -110px 0 0 -6px rgba(var(--acc-rgb), .16);
+}
+
+/* short desktop windows: tighter copy so a full step fits in the pinned frame */
+@media (max-height: 760px) {
+  .ft--story .ft-copy { gap: 13px; }
+  .ft--story .ft-title { font-size: clamp(26px, 2.8vw, 36px); }
+  .ft--story .ft-body { font-size: 15.5px; line-height: 1.6; }
+  .ft--story .ft-points li { font-size: 14px; }
+  .ft-rail { height: min(48vh, 360px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ft-flow__pkt { display: none; }
-  .ft-flow__base { stroke: rgba(183, 169, 255, .4); }
-  .ft-flow__base.is-hot { stroke: rgba(255, 199, 114, .7); }
+  .ft-step *, .ft-lb { transition: none !important; }
 }

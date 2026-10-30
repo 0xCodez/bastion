@@ -36,7 +36,7 @@
   --gr: max(20px, env(safe-area-inset-right, 0px));
   --maxw: 1200px;
   --nav-h: 76px;                         /* fixed header height incl. its top offset */
-  --sec-pad: clamp(96px, 12vw, 176px);   /* vertical rhythm between sections */
+  --sec-pad: clamp(80px, 9vw, 136px);    /* vertical rhythm between sections (seams sit in the gap) */
   --radius-l: 30px;
   --radius-m: 20px;
   --radius-s: 14px;
@@ -155,6 +155,10 @@ kbd, code {
 /* Decorative glows and planets may bleed sideways; clip them horizontally only (no scroll container,
    so position: sticky inside sections keeps working and vertical bleed between sections stays). */
 main, .site-footer { overflow-x: clip; }
+/* <main> is its own stacking context above the fixed page backdrop (src/fx/backdrop.js), so section
+   glows with negative z-index stay inside it and never fall behind the backdrop. */
+main { position: relative; z-index: 1; }
+.site-footer { z-index: 1; }
 
 .sec {
   position: relative;
@@ -172,26 +176,42 @@ main, .site-footer { overflow-x: clip; }
   background: linear-gradient(90deg, transparent, var(--line-2) 20%, rgba(183, 169, 255, .4) 50%, var(--line-2) 80%, transparent);
 }
 
-/* ---------- glass surface ---------- */
+/* ---------- glass surface ----------
+   Light, not boxed: no outline. Depth comes from an inner light gradient, a 1px top highlight that
+   fades at the corners, a soft drop shadow and a pointer-following sheen (--lx/--ly are set on the
+   hovered surface by src/fx/transitions.js). */
 .glass {
   position: relative;
   border-radius: var(--radius-l);
-  background: linear-gradient(180deg, rgba(30, 26, 60, .72), rgba(14, 12, 28, .78));
-  border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 30px 60px -40px rgba(0, 0, 0, .9);
+  background:
+    linear-gradient(180deg, rgba(196, 186, 255, .075), rgba(150, 136, 255, .025) 38%, rgba(10, 8, 24, .28) 100%),
+    rgba(20, 17, 42, .42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .07),
+    inset 0 0 0 1px rgba(183, 169, 255, .045),
+    0 40px 80px -48px rgba(0, 0, 0, .85),
+    0 2px 30px -18px rgba(124, 108, 255, .35);
   overflow: hidden;
   isolation: isolate;
 }
 .glass::before {
-  content: ''; position: absolute; inset: -1px -1px auto; height: 160px; z-index: -1;
-  background: radial-gradient(60% 100% at 30% 0%, rgba(124, 108, 255, .18), transparent 70%);
+  content: ''; position: absolute; inset: 0 0 auto; height: 180px; z-index: -1;
+  background:
+    linear-gradient(90deg, transparent 6%, rgba(255, 255, 255, .22) 35%, rgba(214, 206, 255, .28) 55%, transparent 94%) 50% 0 / 100% 1px no-repeat,
+    radial-gradient(60% 100% at 30% 0%, rgba(124, 108, 255, .16), transparent 70%);
   pointer-events: none;
 }
+.glass::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: radial-gradient(420px circle at var(--lx, 50%) var(--ly, -30%), rgba(183, 169, 255, .11), rgba(143, 211, 255, .04) 40%, transparent 70%);
+  opacity: 0;
+  transition: opacity .5s var(--ease);
+  pointer-events: none;
+}
+.glass.is-lit::after { opacity: 1; }
 .glass--blur {
-  background: rgba(18, 15, 36, .58);
-  border-color: var(--line-2);
+  background: linear-gradient(180deg, rgba(196, 186, 255, .08), rgba(18, 15, 36, .42));
   backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
 /* ---------- buttons ---------- */
@@ -239,29 +259,42 @@ main, .site-footer { overflow-x: clip; }
 .pill--mono { font-family: var(--f-mono); font-weight: 500; font-size: 11.5px; letter-spacing: .04em; }
 
 /* ---------- reveal (see src/fx/reveal.js) ----------
-   Content is always visible by default. JS "arms" only elements that start below the fold,
-   giving them a soft offset that settles when they scroll in. If JS or the observer never runs,
-   nothing is hidden. */
+   Content is always visible by default. JS "arms" only elements that start below the fold, giving
+   them a quick-rise offset that settles as they scroll in (no blur). Safety nets in reveal.js
+   settle anything that reaches the viewport even if the observer misses it; without JS nothing is
+   ever armed. The armed state keeps a small opacity floor, so text never depends entirely on a
+   transition starting (stalled frames, throttled tabs); the rise carries the motion. */
 [data-reveal].reveal-armed {
-  opacity: .72;
-  transform: translate3d(0, 18px, 0);
+  opacity: .14;
+  transform: translate3d(0, 28px, 0);
 }
 [data-reveal].reveal-armed.is-in {
   opacity: 1;
   transform: none;
-  filter: none;
   transition:
-    opacity var(--dur) var(--ease-out),
-    transform var(--dur) var(--ease-out);
+    opacity .7s cubic-bezier(.2, .7, .2, 1),
+    transform .9s var(--ease-out);
   transition-delay: var(--reveal-delay, 0s);
 }
 [data-reveal='fade'].reveal-armed { transform: none; }
-[data-reveal='scale'].reveal-armed { transform: scale(.97); }
+[data-reveal='scale'].reveal-armed { transform: translate3d(0, 16px, 0) scale(.965); }
+[data-reveal='left'].reveal-armed { transform: translate3d(-32px, 0, 0); }
+[data-reveal='right'].reveal-armed { transform: translate3d(32px, 0, 0); }
+[data-reveal].reveal-armed.is-in { transform: none; }
 
 /* ---------- motion preferences ---------- */
+/* Smooth anchor scrolling is done in JS (src/fx/scroll.js: Lenis or native smooth, with the nav
+   offset). CSS smooth scrolling stays only for the no-JS page; it fights Lenis and ScrollTrigger. */
 @media (prefers-reduced-motion: no-preference) {
-  html { scroll-behavior: smooth; }
+  html:not(.js) { scroll-behavior: smooth; }
 }
+
+/* Lenis (src/fx/scroll.js) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;

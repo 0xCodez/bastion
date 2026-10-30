@@ -1,0 +1,76 @@
+/* Fixed page backdrop (see backdrop.js). Sits under <main>, which is its own stacking context
+   (z-index 1, base.css), so section glows with negative z-index still paint above it.
+   The static gradient is the reduced-motion / no-WebGL look; .backdrop[data-temp] (set by
+   transitions.js) retints it per section, with registered colours so the change cross-fades.
+   The colours are non-inheriting and live on .backdrop only: a transitioned custom property on
+   :root would restyle the whole document on every frame of the cross-fade. Once the WebGL layer is
+   up (.is-gl) the gradient is covered, so the cross-fade is switched off. */
+
+@property --temp-a { syntax: '<color>'; inherits: false; initial-value: rgba(92, 64, 216, .5); }
+@property --temp-b { syntax: '<color>'; inherits: false; initial-value: rgba(44, 52, 160, .42); }
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+  --temp-a: rgba(92, 64, 216, .5);
+  --temp-b: rgba(44, 52, 160, .42);
+  transition: --temp-a 1.4s cubic-bezier(.2, .8, .2, 1), --temp-b 1.4s cubic-bezier(.2, .8, .2, 1);
+  background:
+    radial-gradient(70% 55% at 6% 100%, color-mix(in srgb, var(--temp-a) 42%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 96% 0%, color-mix(in srgb, var(--temp-b) 46%, transparent), transparent 72%),
+    radial-gradient(40% 30% at 70% 70%, color-mix(in srgb, var(--temp-a) 14%, transparent), transparent 70%),
+    var(--ground);
+}
+.backdrop__gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(.16, 1, .3, 1);
+}
+.backdrop.is-gl .backdrop__gl { opacity: 1; }
+.backdrop.is-gl { transition: none; }
+
+/* film grain: a generated noise tile, jittered in steps (compositor-only transform) */
+.backdrop__grain {
+  position: absolute;
+  inset: -64px;
+  z-index: 1;
+  background-size: 140px 140px;
+  opacity: .055;
+  mix-blend-mode: overlay;
+  animation: backdrop-grain .9s steps(6) infinite;
+}
+@keyframes backdrop-grain {
+  0%   { transform: translate3d(0, 0, 0); }
+  17%  { transform: translate3d(-23px, 11px, 0); }
+  33%  { transform: translate3d(17px, -29px, 0); }
+  50%  { transform: translate3d(-9px, 31px, 0); }
+  67%  { transform: translate3d(29px, 7px, 0); }
+  83%  { transform: translate3d(-31px, -17px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* per-section colour temperature (deep violet -> indigo -> teal-violet ...) */
+.backdrop[data-temp='problem']  { --temp-a: rgba(104, 52, 200, .55); --temp-b: rgba(160, 60, 140, .32); }
+.backdrop[data-temp='features'] { --temp-a: rgba(64, 70, 210, .55);  --temp-b: rgba(96, 64, 220, .4); }
+.backdrop[data-temp='demo']     { --temp-a: rgba(24, 150, 168, .5);  --temp-b: rgba(70, 90, 210, .42); }
+.backdrop[data-temp='agents']   { --temp-a: rgba(130, 50, 170, .5);  --temp-b: rgba(54, 70, 200, .42); }
+.backdrop[data-temp='steps']    { --temp-a: rgba(52, 92, 200, .5);   --temp-b: rgba(80, 60, 190, .4); }
+.backdrop[data-temp='privacy']  { --temp-a: rgba(18, 160, 138, .5);  --temp-b: rgba(40, 100, 190, .42); }
+.backdrop[data-temp='faq']      { --temp-a: rgba(84, 60, 180, .45);  --temp-b: rgba(44, 46, 130, .4); }
+.backdrop[data-temp='cta']      { --temp-a: rgba(110, 84, 255, .6);  --temp-b: rgba(60, 130, 210, .45); }
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop__grain { animation: none; }
+  .backdrop__gl { display: none; }
+}
+@media print {
+  .backdrop { display: none; }
+}
