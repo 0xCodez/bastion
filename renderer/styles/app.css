@@ -347,6 +347,8 @@ input, textarea, [contenteditable], .selectable { user-select: text; }
   border: 1px solid var(--line);
   background: var(--glass);
   box-shadow: var(--glass-hi), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 .panel::before {
   content: "";

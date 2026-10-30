@@ -6,11 +6,25 @@ import { readPrefs, writePrefs, PREFS_EVENT } from './settings.js';
 const LOG_KEY = 'bastion.agentLog';
 const PROVIDER_KEY = 'bastion.agentProvider';
 const LOG_MAX = 300;
+// kind 'cli': the user's own Claude / ChatGPT subscription through Claude Code / Codex
+// (shown only when installed, first when ready). `icon` picks the provider app icon.
 const PROVIDERS = [
+  { id: 'claude-cli', name: 'Claude (my subscription)', tab: 'Claude', tag: 'plan', dot: 'var(--clay)', icon: 'claude', kind: 'cli', via: 'Claude Code', login: 'claude auth login' },
+  { id: 'codex-cli', name: 'ChatGPT (my subscription)', tab: 'ChatGPT', tag: 'plan', dot: 'var(--mint)', icon: 'openai', kind: 'cli', via: 'Codex', login: 'codex login' },
   { id: 'claude', name: 'Claude', dot: 'var(--clay)' },
   { id: 'openai', name: 'ChatGPT', dot: 'var(--mint)' },
   { id: 'grok', name: 'Grok', dot: 'var(--sky)' },
 ];
+const isCliId = (id) => PROVIDERS.some((p) => p.id === id && p.kind === 'cli');
+
+// Why a provider cannot answer yet, in plain words.
+function notReadyText(id, info) {
+  const p = meta(id);
+  if (p.kind !== 'cli') return 'No ' + p.name + ' key saved. Add one in Settings.';
+  const c = (info && info.cli) || {};
+  if (!c.installed) return p.via + ' is not installed on this computer. Settings shows how to install it.';
+  return p.via + ' is not signed in. Run `' + p.login + '` in a terminal, then try again.';
+}
 const QUICK = ['What should I fix first?', 'Is anything on my network suspicious?', 'Why is my Wi-Fi slow?'];
 
 function esc(s) {
@@ -36,6 +50,19 @@ function clock(ts) {
 
 function meta(id) {
   return PROVIDERS.find((p) => p.id === id) || { id, name: id, dot: 'var(--muted)' };
+}
+
+// Provider app icon from the user's installed apps (store key 'providerIcons', loaded by app.js),
+// or a monogram tile in the provider colour when there is none.
+const LOGO_RE = /^data:image\/(png|jpeg|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/=]+$/;
+function logoMark(store, id, size) {
+  const m = store.get('providerIcons');
+  const v = m && typeof m === 'object' ? m[meta(id).icon || id] : null;
+  if (typeof v === 'string' && LOGO_RE.test(v)) {
+    return `<span class="ag-logo ag-logo--${size}" aria-hidden="true"><img src="${esc(v)}" alt="" draggable="false"></span>`;
+  }
+  const p = meta(id);
+  return `<span class="ag-logo ag-logo--${size} ag-logo--mono" style="--prov:${p.dot}" aria-hidden="true">${esc(String(p.name).charAt(0))}</span>`;
 }
 
 function uid() {
@@ -246,7 +273,7 @@ async function watchTick() {
       return;
     }
     if (info && !info.hasKey) {
-      pushLog(ctx.store, { provider: providerId, role: 'error', watch: true, text: 'No ' + meta(providerId).name + ' key saved, so the agent was not asked. Add one in Settings.' });
+      pushLog(ctx.store, { provider: providerId, role: 'error', watch: true, text: 'The agent was not asked. ' + notReadyText(providerId, info) });
       return;
     }
     const q = 'Watch mode check. Bastion refreshed my network and found these changes since ' + since + ':\n' +
@@ -317,9 +344,9 @@ export function mount(el, ctx) {
       <div class="ag-console">
         <div class="ag-card ag-chat nv-glass">
           <div class="ag-card-h">
-            <div><h2>Ask your agents</h2><p class="ag-sub">Your own key, straight to the provider</p></div>
+            <div><h2>Ask your agents</h2><p class="ag-sub">Your own key or subscription, straight to the provider</p></div>
             <div class="gk-segment" role="tablist" aria-label="Agent">
-              ${PROVIDERS.map((p) => `<button type="button" role="tab" data-provider="${p.id}" aria-selected="${p.id === selected}"><i class="ag-tdot" style="background:${p.dot}"></i>${p.name}</button>`).join('')}
+              ${PROVIDERS.map((p) => `<button type="button" role="tab" data-provider="${p.id}" aria-selected="${p.id === selected}"${p.kind === 'cli' ? ` title="${esc(p.name)} via ${esc(p.via)}"${p.id === selected ? '' : ' hidden disabled'}` : ''}><span class="ag-mark" data-mark="${p.id}">${logoMark(store, p.id, 'tab')}</span>${esc(p.tab || p.name)}${p.tag ? `<small class="ag-tab-tag">${esc(p.tag)}</small>` : ''}</button>`).join('')}
             </div>
           </div>
           <div class="ag-status" data-status></div>
@@ -357,7 +384,7 @@ export function mount(el, ctx) {
             <ul>
               <li>Agents can read the snapshot below and answer. They cannot run commands, change settings or touch your router.</li>
               <li>Every fix stays a guided step you do yourself.</li>
-              <li>Requests go straight from this computer to the provider with your own key.</li>
+              <li>Requests go straight from this computer to the provider with your own key, or through your own Claude Code or Codex login.</li>
             </ul>
           </div>
           <details class="ag-snap" data-snap-details>
@@ -402,20 +429,32 @@ export function mount(el, ctx) {
     const box = $('[data-status]');
     const provs = store.get('providers');
     if (!Array.isArray(provs) && (provLoading || (provs === undefined && !provErr))) {
-      box.innerHTML = `<span class="ag-k"><i class="ag-tdot" style="background:${m.dot}"></i>${esc(m.name)}</span><span class="ag-dim">Checking your keys</span>`;
+      box.innerHTML = `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span><span class="ag-dim">Checking your keys</span>`;
     } else if (!Array.isArray(provs)) {
-      box.innerHTML = `<span class="ag-k"><i class="ag-tdot" style="background:${m.dot}"></i>${esc(m.name)}</span><span class="pill pill--warn">Unknown</span><span class="ag-dim">Could not check your saved keys${provErr ? ': ' + esc(provErr) : '.'}</span><button class="ag-link" type="button" data-retry-providers>Retry</button>`;
+      box.innerHTML = `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span><span class="pill pill--warn">Unknown</span><span class="ag-dim">Could not check your saved keys${provErr ? ': ' + esc(provErr) : '.'}</span><button class="ag-link" type="button" data-retry-providers>Retry</button>`;
     } else if (!info || !info.hasKey) {
-      box.innerHTML = `<span class="ag-k"><i class="ag-tdot" style="background:${m.dot}"></i>${esc(m.name)}</span><span class="pill">No key</span><button class="ag-link" type="button" data-go-settings>Add a key in Settings</button>`;
+      const cliInfo = (info && info.cli) || {};
+      box.innerHTML = m.kind === 'cli'
+        ? `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span><span class="pill pill--warn">${cliInfo.installed ? 'Not signed in' : 'Not installed'}</span><button class="ag-link" type="button" data-go-settings>Set up in Settings</button>`
+        : `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span><span class="pill">No key</span><button class="ag-link" type="button" data-go-settings>Add a key in Settings</button>`;
+    } else if (m.kind === 'cli') {
+      const c = info.cli || {};
+      const pill = c.ready ? '<span class="pill pill--ok">Subscription</span>'
+        : /^api_key/.test(c.authMethod || '') ? '<span class="pill pill--warn" title="Answers are billed to that API key, not to your subscription">API key login</span>'
+          : '<span class="pill" title="Bastion could not check the sign-in; the first answer will tell">Sign-in unchecked</span>';
+      box.innerHTML = `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span>${pill}<span class="ag-model">${esc(m.via)}${info.model && info.model !== 'default' ? ' · ' + esc(info.model) : ''}</span>`;
     } else {
-      box.innerHTML = `<span class="ag-k"><i class="ag-tdot" style="background:${m.dot}"></i>${esc(m.name)}</span><span class="pill pill--ok">Key saved</span><span class="ag-model">${esc(info.model || 'default model')}</span>`;
+      box.innerHTML = `<span class="ag-k">${logoMark(store, selected, 'status')}${esc(m.name)}</span><span class="pill pill--ok">Key saved</span><span class="ag-model">${esc(info.model || 'default model')}</span>`;
     }
     const hasKey = !!(info && info.hasKey);
     const busy = pending.has(selected);
     input.disabled = !hasKey;
-    sendBtn.disabled = !hasKey || busy;
-    sendBtn.textContent = busy ? 'Thinking' : 'Send';
-    input.placeholder = hasKey ? 'Ask ' + m.name + ' about your router, Wi-Fi or devices' : 'Add a ' + m.name + ' key in Settings to ask';
+    // While this agent answers, the button stops it (agents.cancel).
+    sendBtn.disabled = !hasKey;
+    sendBtn.textContent = busy ? 'Stop' : 'Send';
+    sendBtn.setAttribute('aria-label', busy ? 'Stop ' + m.name + ' (thinking)' : 'Send');
+    input.placeholder = hasKey ? 'Ask ' + (m.tab || m.name) + ' about your router, Wi-Fi or devices'
+      : m.kind === 'cli' ? 'Set up ' + m.via + ' in Settings to ask' : 'Add a ' + m.name + ' key in Settings to ask';
     el.querySelectorAll('[data-q]').forEach((b) => { b.disabled = !hasKey || busy; });
   }
 
@@ -432,7 +471,9 @@ export function mount(el, ctx) {
     if (!msgs.length && !busy) {
       const html = info && info.hasKey
         ? `<div class="ag-empty"><p>Ask ${esc(m.name)} anything about your network. It sees the latest scan, Wi-Fi, DNS, speed and device data, and nothing else.</p></div>`
-        : `<div class="ag-empty"><p>${esc(m.name)} needs your own API key. Bastion stores it on this computer and sends requests straight to the provider.</p><button class="nv-mini nv-mini--go" type="button" data-go-settings>Open Settings</button></div>`;
+        : m.kind === 'cli'
+          ? `<div class="ag-empty"><p>${esc(notReadyText(selected, info))} Answers then count against your subscription's usage limits.</p><button class="nv-mini nv-mini--go" type="button" data-go-settings>Open Settings</button></div>`
+          : `<div class="ag-empty"><p>${esc(m.name)} needs your own API key. Bastion stores it on this computer and sends requests straight to the provider.</p><button class="nv-mini nv-mini--go" type="button" data-go-settings>Open Settings</button></div>`;
       if (shown.provider !== selected || shown.emptyHtml !== html) logEl.innerHTML = html;
       shown = { provider: selected, ids: [], emptyHtml: html };
       return;
@@ -506,6 +547,40 @@ export function mount(el, ctx) {
   el.querySelectorAll('[data-provider]').forEach((b) => {
     b.addEventListener('click', () => selectProvider(b.dataset.provider));
   });
+
+  // Subscription tabs show only when their CLI is installed; ready ones go first, then the
+  // API-key providers, then installed-but-signed-out subscriptions. Buttons are moved, not
+  // re-created, so the glow kit's segment keeps working.
+  let tabOrderKey = '';
+  function arrangeTabs() {
+    const list = store.get('providers');
+    if (!Array.isArray(list)) return;
+    const seg = $('[role="tablist"]');
+    // Ready (signed in for sure, not with an API key) subscriptions first; usable but
+    // unchecked / API-key-login ones after the API-key providers.
+    const rank = (p) => {
+      if (p.kind !== 'cli') return 1;
+      const info = list.find((x) => x && x.id === p.id);
+      if (info && info.cli && info.cli.ready) return 0;
+      if (info && info.hasKey) return 1.5;
+      return info && info.cli && info.cli.installed ? 2 : 3;
+    };
+    const ordered = PROVIDERS.map((p, i) => ({ p, i, r: rank(p) })).sort((a, b) => a.r - b.r || a.i - b.i);
+    const key = ordered.map((o) => o.p.id + ':' + o.r).join(',');
+    if (key === tabOrderKey) return;
+    tabOrderKey = key;
+    for (const o of ordered) {
+      const b = seg.querySelector(`[data-provider="${o.p.id}"]`);
+      if (!b) continue;
+      const hide = o.r === 3;
+      b.hidden = hide;
+      b.disabled = hide;
+      seg.append(b);
+    }
+    // A subscription that disappeared (uninstalled) cannot stay selected.
+    if (isCliId(selected) && rank(meta(selected)) === 3) selectProvider(ordered[0].p.id);
+    else seg.querySelectorAll('[data-provider]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.provider === selected)));
+  }
   $('[role="tablist"]').addEventListener('change', (e) => {
     const tab = e.detail && e.detail.tab;
     if (tab && tab.dataset) selectProvider(tab.dataset.provider);
@@ -513,6 +588,12 @@ export function mount(el, ctx) {
 
   $('[data-form]').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (pending.has(selected)) {
+      // Stop button: the pending ask() resolves with "Cancelled." and is logged as an error
+      // line. Enter in the field while busy does nothing and keeps the typed question.
+      if (e.submitter === sendBtn) Promise.resolve(api.agents.cancel(selected)).catch(() => {});
+      return;
+    }
     const q = input.value.trim();
     if (!q) return;
     input.value = '';
@@ -537,7 +618,7 @@ export function mount(el, ctx) {
     if (next) {
       const info = providerInfo(store, selected);
       if (!info || !info.hasKey) {
-        ctx.toast('Add a ' + meta(selected).name + ' key in Settings before turning on watch mode.', 'warn');
+        ctx.toast(isCliId(selected) ? notReadyText(selected, info) : 'Add a ' + meta(selected).name + ' key in Settings before turning on watch mode.', 'warn');
         next = false;
       } else {
         setWatch(ctx, true);
@@ -573,9 +654,15 @@ export function mount(el, ctx) {
   const onChange = () => { if (alive) renderAll(); };
   listeners.add(onChange);
   subs.push(store.on('agentLog', () => { if (alive) renderLog(); }));
-  subs.push(store.on('providers', () => { if (alive) { renderStatus(); renderLog(); } }));
+  subs.push(store.on('providers', () => { if (alive) { arrangeTabs(); renderStatus(); renderLog(); } }));
+  subs.push(store.on('providerIcons', () => {
+    if (!alive) return;
+    el.querySelectorAll('[data-mark]').forEach((x) => { x.innerHTML = logoMark(store, x.dataset.mark, 'tab'); });
+    renderStatus();
+  }));
   const tick = setInterval(() => { if (alive && watch.on) renderWatch(); }, 1000);
 
+  arrangeTabs();
   renderAll();
   upgradeGlow(el, (c) => { if (alive) glowCleanup = c; else c(); });
   ensureProviders();

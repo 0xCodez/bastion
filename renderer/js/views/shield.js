@@ -1,24 +1,20 @@
-// Shield view: exposure map (polar plot around the router), deep scan checks with guided fixes,
-// score dial, UPnP mappings and open ports. Everything shown comes from the store; nothing is invented.
+// Shield view: exposure radar (WebGL glass disc around the router, 2D fallback), deep scan checks
+// with guided fixes, score dial, UPnP mappings and open ports. Everything shown comes from the
+// store; nothing is invented.
 import { readPrefs, PREFS_EVENT } from './settings.js';
+import { createExposureRadar } from '../viz/exposure-radar.js';
 
-const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
-const FONT_D = '"Bricolage Grotesque Variable", "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif';
-const FONT_U = '"Plus Jakarta Sans", system-ui, "Segoe UI", sans-serif';
-const FONT_M = '"JetBrains Mono", Consolas, monospace';
 
-const CHECK_ORDER = ['tr069', 'upnp', 'dns-plaintext', 'admin-default', 'wps', 'telnet', 'ssh',
-  'web-admin-http', 'location-map', 'mac-privacy', 'wifi-security', 'unknown-devices'];
 const SHORT = {
   tr069: 'TR-069', upnp: 'UPnP', 'dns-plaintext': 'DNS', 'admin-default': 'Admin login', wps: 'WPS',
   telnet: 'Telnet', ssh: 'SSH', 'web-admin-http': 'HTTP admin', 'location-map': 'Location maps',
   'mac-privacy': 'MAC privacy', 'wifi-security': 'Wi-Fi security', 'unknown-devices': 'Devices',
 };
-const STATUS_WORD = { risk: 'open', warn: 'check', ok: 'sealed', unknown: 'unknown' };
+// One word per status everywhere: radar label, legend, summary and row tag. Severity is secondary.
+const STATUS_WORD = { risk: 'Open', warn: 'Review', ok: 'Sealed', unknown: 'Unknown' };
 // Score arc: 270 degrees, same geometry as the reference speed gauge (centre 130,130, r 100).
 const ARC_D = 'M59.29 200.71 A100 100 0 1 1 200.71 200.71';
-const STATUS_RADIUS = { risk: 1, warn: 0.8, unknown: 0.62, ok: 0.44 };
 const STATUS_RANK = { risk: 0, warn: 1, unknown: 2, ok: 3 };
 const FIX_TARGET = {
   'router-admin': 'Opens your router admin page',
@@ -36,30 +32,6 @@ function errText(err) {
   return String((err && err.message) || err || 'Unknown error');
 }
 
-function palette() {
-  const cs = getComputedStyle(document.documentElement);
-  const t = (n, f) => cs.getPropertyValue(n).trim() || f;
-  return {
-    ground: t('--ground', '#07060E'), text: t('--text', '#F3F0FF'), muted: t('--muted', '#ABA6CB'), dim: t('--dim', '#857FA9'),
-    violet: t('--violet', '#7C6CFF'), lavender: t('--lavender', '#B7A9FF'), sky: t('--sky', '#8FD3FF'),
-    mint: t('--mint', '#9EF0C4'), coral: t('--coral', '#FF8E7A'), amber: t('--amber', '#FFC772'),
-  };
-}
-
-function rgba(c, a) {
-  let h = String(c).trim();
-  if (/^#[0-9a-f]{3}$/i.test(h)) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
-  if (!/^#[0-9a-f]{6}$/i.test(h)) return c;
-  const n = parseInt(h.slice(1), 16);
-  return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
-}
-
-function hash(str) {
-  let h = 2166136261;
-  for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967296;
-}
-
 function fmtTime(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
@@ -70,11 +42,10 @@ function isReport(r) {
   return !!(r && Array.isArray(r.checks));
 }
 
-function sevLabel(c) {
-  if (c.liveOnly) return STATUS_WORD[c.status] || 'unknown';
-  if (c.status === 'ok') return 'sealed';
-  if (c.status === 'unknown') return 'unknown';
-  return String(c.severity || (c.status === 'risk' ? 'high' : 'medium')).toLowerCase();
+function statusTag(c) {
+  const word = STATUS_WORD[c.status] || 'Unknown';
+  const sev = !c.liveOnly && (c.status === 'risk' || c.status === 'warn') && c.severity ? String(c.severity).toLowerCase() : '';
+  return `<span class="${pillClass(c.status)}">${esc(word)}${sev ? `<span class="pill-sev">${esc(sev)}</span>` : ''}</span>`;
 }
 
 function pillClass(status) {
@@ -83,14 +54,26 @@ function pillClass(status) {
   if (status === 'ok') return 'pill pill--ok';
   return 'pill pill--unknown';
 }
+// Status glyphs for the check list: shield-check (sealed), exclamation in an octagon (open),
+// eye (needs a look), question in a circle (unknown), plus checking and pending states.
+const GLYPH = {
+  ok: '<path d="M12 3.2l6.8 2.7v5.3c0 4.3-2.9 7.9-6.8 9.4-3.9-1.5-6.8-5.1-6.8-9.4V5.9z"/><path d="M9.1 12.2l2 2 3.9-4.2"/>',
+  risk: '<path d="M8.5 3.6h7l5 5v7l-5 5h-7l-5-5v-7z"/><path d="M12 8.2v4.4"/><path d="M12 15.9v.05"/>',
+  warn: '<path d="M2.9 12s3.3-6 9.1-6 9.1 6 9.1 6-3.3 6-9.1 6-9.1-6-9.1-6z"/><circle cx="12" cy="12" r="2.5"/>',
+  unknown: '<circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.7a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.9-2.2 3.3"/><path d="M12 16.5v.05"/>',
+  checking: '<circle class="g-track" cx="12" cy="12" r="7.5"/><path class="g-arc" d="M12 4.5a7.5 7.5 0 0 1 7.5 7.5"/>',
+  pending: '<circle cx="12" cy="12" r="6.5" stroke-dasharray="1.6 3.1"/>',
+};
 
+function glyph(state) {
+  return `<span class="sh-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${GLYPH[state] || GLYPH.unknown}</svg></span>`;
+}
 
 export function mount(el, ctx) {
   const { api, store } = ctx;
   const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const subs = [];
   let alive = true;
-  let raf = 0;
   let prefs = readPrefs();
 
   const st = {
@@ -130,20 +113,24 @@ export function mount(el, ctx) {
 
         <div class="sh-cells sh-cells--main">
           <div class="sh-card sh-map nv-glass">
-            <div class="sh-card-h"><h2>Exposure map</h2><span class="nv-tag" data-open-count></span></div>
-            <canvas class="sh-canvas" data-map role="img" aria-label="Polar map of checks and devices around your router"></canvas>
+            <div class="sh-card-h"><h2>Exposure radar</h2><span class="nv-tag" data-open-count></span></div>
+            <div class="sh-radar" data-radar role="img" aria-label="Exposure radar around your router"></div>
             <div class="sh-legend">
-              <span><i class="lg-dev"></i>Device</span>
-              <span><i class="lg-risk"></i>Open backdoor</span>
-              <span><i class="lg-warn"></i>Needs a look</span>
+              <span><i class="lg-risk"></i>Open</span>
+              <span><i class="lg-warn"></i>Review</span>
               <span><i class="lg-ok"></i>Sealed</span>
               <span><i class="lg-unk"></i>Unknown</span>
+              <span><i class="lg-dev"></i>Device</span>
+              <span class="sh-legend-note">Closer to the rim means easier to reach from outside. Drag to tilt.</span>
             </div>
           </div>
           <div class="sh-card sh-checks nv-glass">
             <div class="sh-card-h"><h2>Deep scan</h2><span class="nv-tag" data-scan-meta></span></div>
             <p class="sh-step" data-step role="status" aria-live="polite"></p>
-            <ul class="sh-list" data-list></ul>
+            <div class="sh-scroll" data-scroll>
+              <div class="sh-sum" data-sum></div>
+              <ul class="sh-list" data-list aria-label="Scan checks"></ul>
+            </div>
             <div data-errors></div>
           </div>
         </div>
@@ -178,11 +165,6 @@ export function mount(el, ctx) {
 
   const $ = (sel) => el.querySelector(sel);
   const runBtn = $('[data-run]');
-  const canvas = $('[data-map]');
-  const c2d = canvas.getContext('2d');
-  const scene = { w: 0, h: 0 };
-  let pal = palette();
-
   // ---------- derived state ----------
   function progFrac() {
     const p = st.prog;
@@ -218,249 +200,63 @@ export function mount(el, ctx) {
     return out;
   }
 
-  // ---------- exposure map ----------
-  function sizeCanvas() {
-    const r = canvas.getBoundingClientRect();
-    const d = Math.min(2, window.devicePixelRatio || 1);
-    scene.w = r.width;
-    scene.h = r.height;
-    canvas.width = Math.max(1, Math.round(r.width * d));
-    canvas.height = Math.max(1, Math.round(r.height * d));
-    c2d.setTransform(d, 0, 0, d, 0, 0);
-    draw(performance.now() / 1000);
+  // ---------- exposure radar ----------
+  let hotId = null;
+  function markRow(id) {
+    hotId = id;
+    el.querySelectorAll('.sh-row.is-hot').forEach((r) => { if (r.dataset.id !== id) r.classList.remove('is-hot'); });
+    if (id) {
+      const row = el.querySelector(`.sh-row[data-id="${CSS.escape(id)}"]`);
+      if (row) row.classList.add('is-hot');
+    }
   }
 
-  function checkAngle(id) {
-    const i = CHECK_ORDER.indexOf(id);
-    if (i >= 0) return (-90 + i * (360 / CHECK_ORDER.length) + 8) * DEG;
-    return (-90 + hash(id) * 360) * DEG;
+  // A beacon click opens its row's fix steps and brings the whole row (steps included) into view.
+  let revealTimer = 0;
+  function openRow(id) {
+    const row = el.querySelector(`.sh-row[data-id="${CSS.escape(id)}"]`);
+    if (!row) return;
+    const det = row.querySelector('details');
+    const opening = det && !det.open;
+    if (det) { expanded.add(id); det.open = true; }
+    const behavior = RM ? 'auto' : 'smooth';
+    row.scrollIntoView({ behavior, block: 'nearest' });
+    clearTimeout(revealTimer);
+    // the steps grow open over .4s; check again once they have their full height
+    if (opening && !RM) revealTimer = setTimeout(() => { if (alive && row.isConnected) row.scrollIntoView({ behavior, block: 'nearest' }); }, 460);
+    row.classList.remove('is-flash');
+    void row.offsetWidth;
+    row.classList.add('is-flash');
+    // Focus the disclosure (or the row itself), never an action button: Enter must not launch a fix.
+    let target = row.querySelector('details > summary');
+    if (!target) { row.tabIndex = -1; target = row; }
+    target.focus({ preventScroll: true });
   }
 
-  // Soft radial glow, used for every dot so the map reads like the reference's luminous planet.
-  function halo(ctx, x, y, r, col, a) {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, rgba(col, a));
-    g.addColorStop(1, rgba(col, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-  }
+  const radarHost = $('[data-radar]');
+  const radar = createExposureRadar(radarHost, {
+    onHover: (id) => markRow(id),
+    onSelect: (id) => openRow(id),
+  });
 
-  function draw(t) {
-    const ctx = c2d;
-    const { w, h } = scene;
-    if (!w || !h) return;
-    const cx = w / 2;
-    const cy = h / 2;
-    const R = Math.min(w, h) * 0.36;
-    const scanning = isScanning();
-    ctx.clearRect(0, 0, w, h);
-    ctx.lineWidth = 1;
-
-    // nebula core
-    halo(ctx, cx, cy, R * 1.12, pal.violet, 0.2);
-
-    // rings
-    [0.25, 0.5, 0.75, 1].forEach((k) => {
-      ctx.strokeStyle = rgba(pal.lavender, k === 1 ? 0.4 : k === 0.75 ? 0.2 : 0.12);
-      ctx.setLineDash(k === 1 || k === 0.75 ? [] : [2, 6]);
-      ctx.beginPath(); ctx.arc(cx, cy, R * k, 0, TAU); ctx.stroke();
-    });
-    ctx.setLineDash([]);
-    ctx.save();
-    ctx.shadowColor = rgba(pal.violet, 0.9); ctx.shadowBlur = 16;
-    ctx.strokeStyle = rgba(pal.lavender, 0.3); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
-    ctx.restore();
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 72; i++) {
-      const a = i * 5 * DEG;
-      const long = i % 6 === 0;
-      const r0 = R + 6;
-      const r1 = R + (long ? 14 : 9);
-      ctx.strokeStyle = rgba(pal.lavender, long ? 0.55 : 0.18);
-      ctx.beginPath(); ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a)); ctx.lineTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a)); ctx.stroke();
-    }
-    ctx.strokeStyle = rgba(pal.lavender, 0.07);
-    ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
-
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.font = '500 10px ' + FONT_M;
-    ctx.fillStyle = pal.dim; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    // Axis captions register their boxes so check labels step around them.
-    const placed = [];
-    if (w > 300) {
-      const cap = (txt, x) => { ctx.fillText(txt, x, cy + 9); placed.push({ x, y: cy + 9, w: ctx.measureText(txt).width }); };
-      cap('LAN', cx + R * 0.44 + 4);
-      cap('WAN edge', Math.min(w - 64, cx + R + 18));
-    }
-
-    // violet sweep, only while a scan runs
-    let sweepA = null;
-    if (scanning) {
-      sweepA = RM ? -90 * DEG + progFrac() * TAU : (t * 1.1) % TAU;
-      for (let k = 0; k < 32; k++) {
-        const a0 = sweepA - (k + 1) * 0.035;
-        ctx.fillStyle = rgba(pal.violet, 0.3 * Math.pow(1 - k / 32, 1.4));
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + 0.037); ctx.closePath(); ctx.fill();
-      }
-      const ex = cx + R * Math.cos(sweepA);
-      const ey = cy + R * Math.sin(sweepA);
-      ctx.save();
-      ctx.shadowColor = pal.violet; ctx.shadowBlur = 12;
-      const lg = ctx.createLinearGradient(cx, cy, ex, ey);
-      lg.addColorStop(0, rgba(pal.lavender, 0.15)); lg.addColorStop(1, rgba(pal.sky, 0.95));
-      ctx.strokeStyle = lg; ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
-      ctx.restore();
-      halo(ctx, ex, ey, 14, pal.sky, 0.55);
-      ctx.lineWidth = 1;
-    }
-    const glow = (ang) => {
-      if (sweepA == null) return 0;
-      let d = (sweepA - ang) % TAU;
-      if (d < 0) d += TAU;
-      return Math.exp(-d * 1.4);
-    };
-
-    // devices seen on the LAN (real neighbour table entries)
-    const devices = Array.isArray(store.get('devices')) ? store.get('devices') : [];
-    for (const d of devices) {
-      if (d.isGateway) continue;
-      const key = d.mac || d.ip;
-      const ang = hash(key) * TAU;
-      const rr = 0.16 + hash(key + '|r') * 0.5;
-      const gl = glow(ang);
-      const x = cx + rr * R * Math.cos(ang);
-      const y = cy + rr * R * Math.sin(ang);
-      const col = d.isThisComputer ? pal.mint : pal.lavender;
-      halo(ctx, x, y, 9 + gl * 6, col, (d.isThisComputer ? 0.4 : 0.22) + 0.3 * gl);
-      ctx.fillStyle = rgba(col, (d.isThisComputer ? 0.95 : 0.55) + 0.4 * gl);
-      ctx.beginPath(); ctx.arc(x, y, (d.isThisComputer ? 2.6 : 1.9) + gl * 1.2, 0, TAU); ctx.fill();
-      if (d.randomizedMac) {
-        ctx.strokeStyle = rgba(pal.lavender, 0.5); ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(x, y, 4.6, 0, TAU); ctx.stroke();
-      }
-    }
-
-    // checks
-    const showLabels = w > 340;
-    ctx.font = '600 11px ' + FONT_U;
-    ctx.textBaseline = 'middle';
-    const label = (x, y, txt, col) => {
-      const tw = ctx.measureText(txt).width;
-      const th = 14;
-      const right = x >= cx;
-      let lx = right ? x + 11 : x - 11 - tw;
-      lx = Math.max(4, Math.min(w - 4 - tw, lx));
-      let ly = y - 10;
-      const dir = y < cy ? -1 : 1;
-      for (let k = 0; k < 10; k++) {
-        const hit = placed.some((r) => lx < r.x + r.w + 4 && lx + tw + 4 > r.x && Math.abs(ly - r.y) < th);
-        if (!hit) break;
-        ly += dir * th;
-      }
-      ly = Math.max(th / 2 + 2, Math.min(h - th / 2 - 2, ly));
-      placed.push({ x: lx, y: ly, w: tw });
-      ctx.textAlign = 'left';
-      ctx.fillStyle = col;
-      ctx.fillText(txt, lx, ly);
-    };
-
-    const checks = currentChecks().filter((c) => c.state !== 'pending')
-      .sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9));
-    for (const c of checks) {
-      const ang = checkAngle(c.id);
-      const rr = STATUS_RADIUS[c.status] || STATUS_RADIUS.unknown;
-      const x = cx + rr * R * Math.cos(ang);
-      const y = cy + rr * R * Math.sin(ang);
-      const gl = glow(ang);
-      const name = SHORT[c.id] || String(c.id);
-      if (c.state === 'checking') {
-        halo(ctx, x, y, 16, pal.lavender, 0.35);
-        ctx.strokeStyle = pal.lavender; ctx.lineWidth = 1.4; ctx.setLineDash([2, 3]);
-        ctx.beginPath(); ctx.arc(x, y, 6.5, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-        if (showLabels) label(x, y, name + ' · checking', pal.lavender);
-        continue;
-      }
-      if (c.status === 'risk') {
-        for (let k = 0; k < 2; k++) {
-          const ph = RM ? 0.4 : (t * 0.8 + k / 2) % 1;
-          ctx.strokeStyle = rgba(pal.coral, (1 - ph) * 0.85); ctx.lineWidth = 1.3;
-          ctx.beginPath(); ctx.arc(x, y, 5 + ph * 24, 0, TAU); ctx.stroke();
-        }
-        halo(ctx, x, y, 30, pal.coral, 0.5);
-        // anamorphic flare
-        const fl = ctx.createLinearGradient(x - 40, y, x + 40, y);
-        fl.addColorStop(0, rgba(pal.coral, 0)); fl.addColorStop(0.5, rgba('#FFFFFF', 0.85)); fl.addColorStop(1, rgba(pal.coral, 0));
-        ctx.fillStyle = fl; ctx.fillRect(x - 40, y - 0.75, 80, 1.5);
-        ctx.fillStyle = pal.coral; ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.fill();
-        ctx.fillStyle = rgba('#FFFFFF', 0.9); ctx.beginPath(); ctx.arc(x, y, 1.8, 0, TAU); ctx.fill();
-        if (showLabels) label(x, y, name + ' · ' + STATUS_WORD.risk, pal.coral);
-      } else if (c.status === 'warn') {
-        halo(ctx, x, y, 18, pal.amber, 0.38 + 0.3 * gl);
-        ctx.fillStyle = rgba(pal.amber, 0.85 + 0.15 * gl);
-        ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill();
-        if (showLabels) label(x, y, name + ' · ' + STATUS_WORD.warn, pal.amber);
-      } else if (c.status === 'ok') {
-        halo(ctx, x, y, 15, pal.mint, 0.28 + 0.3 * gl);
-        ctx.fillStyle = rgba(pal.mint, 0.85 + 0.15 * gl);
-        ctx.beginPath(); ctx.arc(x, y, 3.6, 0, TAU); ctx.fill();
-        if (showLabels) label(x, y, name + ' · ' + STATUS_WORD.ok, pal.mint);
-      } else {
-        ctx.strokeStyle = rgba(pal.dim, 0.95); ctx.lineWidth = 1.2; ctx.setLineDash([2, 2]);
-        ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-        if (showLabels) label(x, y, name + ' · ' + STATUS_WORD.unknown, pal.dim);
-      }
-    }
-
-    // router at the centre: a small luminous orb, like the reference shield button
-    halo(ctx, cx, cy, 34, pal.violet, 0.55);
-    ctx.strokeStyle = rgba(pal.lavender, 0.35); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, 15, 0, TAU); ctx.stroke();
-    const og = ctx.createRadialGradient(cx, cy - 4, 0, cx, cy, 10);
-    og.addColorStop(0, '#C9C0FF'); og.addColorStop(0.45, '#9F90FF'); og.addColorStop(1, '#4B39D0');
-    ctx.fillStyle = og; ctx.beginPath(); ctx.arc(cx, cy, 9, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(220,214,255,0.7)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, 9, 0, TAU); ctx.stroke();
+  function feedRadar() {
+    const devs = Array.isArray(store.get('devices')) ? store.get('devices') : [];
     const ov = store.get('overview');
-    const gw = ov && ov.gateway && ov.gateway.ip;
-    if (w > 260) {
-      ctx.font = '500 10.5px ' + FONT_M;
-      ctx.textAlign = 'center'; ctx.fillStyle = rgba(pal.lavender, 0.8);
-      ctx.fillText(gw || 'Router', cx, cy + 27);
-    }
-
-    if (!st.report && !scanning) {
-      ctx.font = '600 15px ' + FONT_D; ctx.textAlign = 'center'; ctx.fillStyle = pal.muted;
-      ctx.fillText('No scan yet', cx, cy - R * 0.62);
-    }
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const checks = currentChecks();
+    radar.setData({
+      checks,
+      devices: devs.filter((d) => d && !d.isGateway).map((d) => ({ key: d.mac || d.ip, self: !!d.isThisComputer })),
+      gateway: ov && ov.gateway && ov.gateway.ip,
+      scanning: isScanning(),
+      progress: progFrac(),
+      hasReport: !!st.report,
+    });
+    const done = checks.filter((c) => c.state === 'done');
+    const n = (k) => done.filter((c) => c.status === k).length;
+    radarHost.setAttribute('aria-label', !st.report && !isScanning()
+      ? 'Exposure radar around your router. No scan yet.'
+      : 'Exposure radar around your router: ' + n('risk') + ' open, ' + n('warn') + ' to review, ' + n('unknown') + ' unknown, ' + n('ok') + ' sealed. Details are in the Deep scan list.');
   }
-
-  function needsAnimation() {
-    if (RM) return false;
-    if (isScanning()) return true;
-    return currentChecks().some((c) => c.status === 'risk');
-  }
-
-  function frame(now) {
-    raf = 0;
-    if (!alive) return;
-    if (!document.hidden) draw(now / 1000);
-    if (needsAnimation()) raf = requestAnimationFrame(frame);
-  }
-
-  function kick() {
-    if (!alive) return;
-    if (raf) return;
-    if (needsAnimation()) raf = requestAnimationFrame(frame);
-    else draw(performance.now() / 1000);
-  }
-
-  const ro = new ResizeObserver(() => sizeCanvas());
-  ro.observe(canvas);
-  const onVis = () => { if (!document.hidden) kick(); };
-  document.addEventListener('visibilitychange', onVis);
 
   // ---------- head / bar ----------
   function renderHead() {
@@ -497,29 +293,31 @@ export function mount(el, ctx) {
     }
     step.classList.toggle('sh-step--err', !scanning && !!st.scanError);
 
-    const checks = currentChecks();
-    const risk = checks.filter((c) => c.state === 'done' && c.status === 'risk').length;
-    const warn = checks.filter((c) => c.state === 'done' && c.status === 'warn').length;
-    const unk = checks.filter((c) => c.state === 'done' && c.status === 'unknown').length;
-    let txt = 'No scan yet';
-    if (st.report || scanning) {
-      const parts = [];
-      if (risk) parts.push(risk + ' open');
-      if (warn) parts.push(warn + ' to check');
-      if (unk) parts.push(unk + ' unknown');
-      txt = parts.length ? parts.join(' · ') : scanning ? 'Scanning' : 'All sealed';
-    }
-    $('[data-open-count]').textContent = txt;
-    $('[data-scan-meta]').textContent = st.report || scanning ? checks.length + ' checks' : '';
+    // The counts live once, in the Deep scan summary; the radar header only says when it is live.
+    $('[data-open-count]').textContent = scanning ? 'Live' : '';
+    $('[data-scan-meta]').textContent = '';
   }
 
   // ---------- check list ----------
   const expanded = new Set();
 
+  function renderSummary(checks, scanning) {
+    const box = $('[data-sum]');
+    const done = checks.filter((c) => c.state === 'done');
+    if (!done.length && !scanning) { box.hidden = true; box.innerHTML = ''; return; }
+    const n = (k) => done.filter((c) => c.status === k).length;
+    const parts = ['risk', 'warn', 'unknown', 'ok'].map((k) => [k, n(k), STATUS_WORD[k]])
+      .filter((p) => p[1] > 0 || p[0] === 'risk' || p[0] === 'warn');
+    box.hidden = false;
+    box.innerHTML = parts.map(([k, v, w]) => `<span class="sh-sum-i" data-k="${k}"${v ? '' : ' data-zero'}><i></i><b>${v}</b> ${w}</span>`).join('<span class="sh-sum-sep" aria-hidden="true"></span>')
+      + (scanning ? `<span class="sh-sum-i sh-sum-scan">${done.length}/${(st.prog && st.prog.total) || checks.length}</span>` : '');
+  }
+
   function renderList() {
     const list = $('[data-list]');
     const scanning = isScanning();
     const checks = currentChecks();
+    renderSummary(checks, scanning);
     if (!checks.length) {
       list.innerHTML = scanning
         ? '<li class="sh-empty">Preparing checks.</li>'
@@ -531,19 +329,21 @@ export function mount(el, ctx) {
     const sorted = scanning ? checks : checks.slice().sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9));
     list.innerHTML = sorted.map((c) => {
       const state = c.state === 'done' ? c.status : c.state;
+      const port = c.state === 'done' ? (String(c.evidence || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}:(\d{1,5})\b/) || [])[1] : null;
       const hasSteps = c.fix && Array.isArray(c.fix.steps) && c.fix.steps.length && c.status !== 'ok' && c.state === 'done';
       const canOpen = c.fix && c.fix.open && c.status !== 'ok' && c.state === 'done';
       const tag = c.state === 'pending' ? '<span class="pill pill--unknown">Pending</span>'
         : c.state === 'checking' ? '<span class="pill pill--info">Checking</span>'
-        : `<span class="${pillClass(c.status)}">${esc(sevLabel(c))}</span>`;
+        : statusTag(c);
       const extra = c.id === 'unknown-devices' && c.state === 'done'
         ? '<button class="nv-mini" type="button" data-go="devices">See devices</button>' : '';
       const upnpLink = c.id === 'upnp' && c.state === 'done' && st.report && Array.isArray(st.report.upnpMappings) && st.report.upnpMappings.length
         ? '<button class="nv-mini" type="button" data-jump="upnp">See mappings</button>' : '';
       return `
-        <li class="sh-row" data-state="${esc(state)}" data-id="${esc(c.id)}">
-          <span class="sh-dot" aria-hidden="true"></span>
+        <li class="sh-row${c.id === hotId ? ' is-hot' : ''}" data-state="${esc(state)}" data-id="${esc(c.id)}">
+          ${glyph(state)}
           <div class="sh-what">
+            <span class="sh-kicker">${esc(SHORT[c.id] || c.id)}${port ? `<span class="sh-port">:${esc(port)}</span>` : ''}</span>
             <b>${esc(c.title || SHORT[c.id] || c.id)}</b>
             ${c.evidence ? `<span class="sh-ev${prefs.advancedEvidence ? '' : ' sh-ev--clamp'}" title="${esc(c.evidence)}">${esc(c.evidence)}</span>` : ''}
           </div>
@@ -553,7 +353,7 @@ export function mount(el, ctx) {
             ${upnpLink}${extra}
           </div>` : ''}
           ${hasSteps ? `<details class="sh-steps"${expanded.has(c.id) ? ' open' : ''} data-steps="${esc(c.id)}">
-            <summary>How to fix · ${c.fix.steps.length} step${c.fix.steps.length === 1 ? '' : 's'}</summary>
+            <summary><span>How to fix</span><span class="sh-steps-n">${c.fix.steps.length} step${c.fix.steps.length === 1 ? '' : 's'}</span><svg class="sh-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></summary>
             <ol>${c.fix.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
           </details>` : ''}
         </li>`;
@@ -599,6 +399,20 @@ export function mount(el, ctx) {
       if (t) t.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' });
     }
   });
+  const listEl = $('[data-list]');
+  const rowHover = (e) => {
+    const row = e.target.closest && e.target.closest('.sh-row[data-id]');
+    const id = row ? row.dataset.id : null;
+    radar.setHighlight(id);
+    markRow(id);
+  };
+  listEl.addEventListener('pointerover', rowHover);
+  listEl.addEventListener('focusin', rowHover);
+  listEl.addEventListener('pointerleave', () => { radar.setHighlight(null); markRow(null); });
+  listEl.addEventListener('focusout', (e) => {
+    if (!listEl.contains(e.relatedTarget)) { radar.setHighlight(null); markRow(null); }
+  });
+
   el.addEventListener('toggle', (e) => {
     const d = e.target;
     if (!(d instanceof HTMLDetailsElement) || !d.dataset.steps) return;
@@ -706,7 +520,7 @@ export function mount(el, ctx) {
     renderErrors();
     renderScore();
     renderTables();
-    kick();
+    feedRadar();
   }
 
   // ---------- actions ----------
@@ -769,8 +583,8 @@ export function mount(el, ctx) {
     if (isReport(r)) { st.report = r; st.scanError = null; st.prog = null; st.current = null; st.live.clear(); }
     renderAll();
   }));
-  subs.push(store.on('devices', () => kick()));
-  subs.push(store.on('overview', () => { renderHead(); kick(); }));
+  subs.push(store.on('devices', () => feedRadar()));
+  subs.push(store.on('overview', () => { renderHead(); feedRadar(); }));
 
   const onPrefs = () => { prefs = readPrefs(); renderList(); renderErrors(); };
   window.addEventListener(PREFS_EVENT, onPrefs);
@@ -783,16 +597,13 @@ export function mount(el, ctx) {
   }, 5000);
 
   renderAll();
-  requestAnimationFrame(() => { pal = palette(); sizeCanvas(); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (alive) { pal = palette(); kick(); } });
 
   return {
     unmount() {
       alive = false;
-      if (raf) cancelAnimationFrame(raf);
-      ro.disconnect();
+      clearTimeout(revealTimer);
+      radar.dispose();
       clearInterval(staleTimer);
-      document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener(PREFS_EVENT, onPrefs);
       for (const off of subs) if (typeof off === 'function') off();
       el.innerHTML = '';

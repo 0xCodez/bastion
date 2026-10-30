@@ -11,7 +11,7 @@
   --line-2: rgba(183, 169, 255, .26);
   --text: #F3F0FF;
   --muted: #ABA6CB;
-  --dim: #857FA9;
+  --dim: #9A93C4;       /* >= 4.5:1 on glass panels over the brightest ambient light (js/ambient.js) */
   --violet: #7C6CFF;
   --lavender: #B7A9FF;
   --sky: #8FD3FF;
@@ -29,7 +29,9 @@
   --prov-grok: var(--sky);
 
   /* Glass */
-  --glass: linear-gradient(180deg, rgba(30, 26, 60, .72), rgba(14, 12, 28, .78));
+  --glass: linear-gradient(180deg, rgba(30, 26, 60, .7), rgba(14, 12, 28, .77));
+  /* Vibrancy: panels blur and saturate the app-wide ambient layer behind them (styles/ambient.css). */
+  --glass-blur: blur(26px) saturate(160%);
   --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .05);
   --glass-shadow: 0 30px 60px -40px rgba(0, 0, 0, .9);
   --radius: 28px;

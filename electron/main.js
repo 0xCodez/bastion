@@ -5,6 +5,7 @@ const { app, BrowserWindow, ipcMain, shell, nativeTheme } = require('electron');
 
 const engine = require('../engine');
 const agents = require('../agents');
+const icons = require('../engine/icons');
 
 const isDev = process.argv.includes('--dev');
 let win = null;
@@ -28,11 +29,13 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      backgroundThrottling: !process.env.BASTION_SNAPSHOT, // QA snapshots render in a hidden window
       spellcheck: false,
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  // QA snapshot runs (BASTION_SNAPSHOT) stay invisible so they never pop up on the desktop.
+  if (!process.env.BASTION_SNAPSHOT) win.once('ready-to-show', () => win.show());
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   if (isDev) win.webContents.openDevTools({ mode: 'detach' });
 
@@ -66,12 +69,21 @@ async function takeSnapshots(dir) {
     const image = await win.webContents.capturePage();
     fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
   };
+  // BASTION_SNAPSHOT_VIEWS=shield,speed limits the views; every view is also shot scrolled down.
+  const views = (process.env.BASTION_SNAPSHOT_VIEWS || 'home,shield,speed,devices,agents,settings').split(',');
+  const scrollAll = (y) => win.webContents.executeJavaScript(`(() => {
+    const els = [document.scrollingElement, ...document.querySelectorAll('*')].filter((el) => el && el.scrollHeight > el.clientHeight + 40 && (el === document.scrollingElement || /auto|scroll/.test(getComputedStyle(el).overflowY)));
+    els.forEach((el) => { el.scrollTop = ${y}; });
+  })()`);
   await wait(14000); // first scan + intro
-  await shoot('home');
-  for (const id of ['shield', 'speed', 'devices', 'agents', 'settings']) {
+  for (const id of views) {
     await win.webContents.executeJavaScript(`document.querySelector('[data-view="${id}"]')?.click()`);
-    await wait(2500);
+    await wait(3000);
     await shoot(id);
+    await scrollAll(760);
+    await wait(1500);
+    await shoot(`${id}-2`);
+    await scrollAll(0);
   }
   console.log(`[snapshot] saved to ${dir}`);
 }
@@ -111,21 +123,53 @@ function registerIpc() {
     return { ok: true };
   });
 
-  handle('agents:providers', () => agents.providers());
+  // { refresh: true } (Settings "Check again") re-checks the subscription CLIs now.
+  handle('agents:providers', (opts) => agents.providers({ refresh: Boolean(opts && opts.refresh === true) }));
   handle('agents:set-key', (id, key) => agents.setKey(id, key));
   handle('agents:clear-key', (id) => agents.clearKey(id));
   handle('agents:set-model', (id, model) => agents.setModel(id, model));
   handle('agents:test', (id) => agents.test(id));
   handle('agents:ask', (id, question, snapshot) => agents.ask(id, question, snapshot));
+  handle('agents:cancel', (id) => agents.cancel(id));
+
+  // App icons from the user's installed applications (see engine/icons.js).
+  handle('icons:processes', (list, opts) => icons.forProcesses(Array.isArray(list) ? list.slice(0, 400) : [], {
+    known: opts && Array.isArray(opts.known) ? opts.known.slice(0, 2000) : [],
+  }));
+  handle('icons:providers', async () => {
+    let keyIds = [];
+    try {
+      const list = await agents.providers();
+      // A ready subscription CLI counts like a saved key for its provider's icon.
+      const BASE = { 'claude-cli': 'claude', 'codex-cli': 'openai' };
+      if (Array.isArray(list)) keyIds = [...new Set(list.filter((p) => p && p.hasKey).map((p) => BASE[p.id] || p.id))];
+    } catch {
+      keyIds = [];
+    }
+    return icons.providers({ keyIds });
+  });
+
+  // Tips and feedback (electron/support.js).
+  require('./support').register(ipcMain);
+
+  // Push-to-talk: macOS microphone prompt (electron/voice.js).
+  require('./voice').register(ipcMain);
 }
 
 app.whenReady().then(() => {
   agents.init(app.getPath('userData'));
+  require('./voice').setupPermissions(); // microphone (audio only) for Bastion's own page
   registerIpc();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+// No Claude Code / Codex run outlives Bastion (they run in their own process
+// group, and their timeouts live in this process).
+app.on('before-quit', () => {
+  agents.shutdown();
 });
 
 app.on('window-all-closed', () => {

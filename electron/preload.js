@@ -48,5 +48,19 @@ contextBridge.exposeInMainWorld('bastion', {
     setModel: invoke('agents:set-model'),
     test: invoke('agents:test'),
     ask: invoke('agents:ask'),
+    cancel: invoke('agents:cancel'),
+  },
+  icons: {
+    forProcesses: invoke('icons:processes'),
+    providers: invoke('icons:providers'),
+  },
+  support: {
+    tipsProfile: invoke('support:tips-profile'),
+    startTip: invoke('support:start-tip'),
+    sendFeedback: invoke('support:send-feedback'),
+    systemInfo: invoke('support:system-info'),
+  },
+  voice: {
+    ensureMicAccess: invoke('voice:ensure-mic-access'),
   },
 });

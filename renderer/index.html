@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QHspYcLLOKSarKa9WCONpLgp80qJjPebMyusqjGSeoo='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-QHspYcLLOKSarKa9WCONpLgp80qJjPebMyusqjGSeoo='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self' https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://*.xethub.hf.co">
 <title>Bastion</title>
 <script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script>
 <link rel="stylesheet" href="../node_modules/@fontsource-variable/bricolage-grotesque/index.css">
@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="../node_modules/@fontsource/jetbrains-mono/500.css">
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/app.css">
+<link rel="stylesheet" href="styles/ambient.css">
 <link rel="stylesheet" href="styles/motion.css">
 <link rel="stylesheet" href="styles/glow-kit.css">
 <link rel="stylesheet" href="styles/views/home.css">
@@ -23,6 +24,7 @@
 <link rel="stylesheet" href="styles/views/devices.css">
 <link rel="stylesheet" href="styles/views/agents.css">
 <link rel="stylesheet" href="styles/views/settings.css">
+<link rel="stylesheet" href="styles/views/support.css">
 <script type="module" src="js/app.js"></script>
 </head>
 <body>

@@ -1,7 +1,7 @@
 'use strict';
 
 // Smoke test for agents/ without real API calls.
-// - providers() shape with an empty temp userData dir
+// - providers() shape with an empty temp userData dir (API and subscription CLI providers)
 // - setKey/ask/test without a key return clean errors
 // - snapshot minimizer strips private data
 // - claude.js and openai.js talk to a local fake server (BASTION_ANTHROPIC_BASE_URL /
@@ -114,8 +114,8 @@ async function main() {
   const agents = require('../agents');
   const prompt = require('../agents/prompt');
 
-  await step('providers() before init does not throw', () => {
-    const list = agents.providers();
+  await step('providers() before init does not throw', async () => {
+    const list = await agents.providers();
     assert.ok(Array.isArray(list));
   });
 
@@ -123,27 +123,90 @@ async function main() {
     assert.equal(agents.init(tmp).ok, true);
   });
 
-  await step('providers() shape without keys', () => {
-    const list = agents.providers();
-    assert.deepEqual(list.map((p) => p.id), ['claude', 'openai', 'grok']);
+  await step('providers() shape without keys (API and subscription providers)', async () => {
+    const list = await agents.providers();
+    assert.deepEqual(list.map((p) => p.id), ['claude', 'openai', 'grok', 'claude-cli', 'codex-cli']);
     for (const p of list) {
       assert.equal(typeof p.name, 'string');
-      assert.equal(p.hasKey, false);
       assert.equal(typeof p.model, 'string');
       assert.ok(Array.isArray(p.models) && p.models.includes(p.model));
-      assert.deepEqual(Object.keys(p).sort(), ['hasKey', 'id', 'model', 'models', 'name']);
+      if (p.kind === 'api') {
+        assert.equal(p.hasKey, false);
+        assert.deepEqual(Object.keys(p).sort(), ['hasKey', 'id', 'kind', 'model', 'models', 'name']);
+      } else {
+        assert.equal(p.kind, 'cli');
+        assert.equal(typeof p.hasKey, 'boolean');
+        assert.equal(p.model, 'default');
+        for (const k of ['installed', 'ready', 'version', 'loggedIn', 'path', 'authMethod', 'product', 'installCommand', 'loginCommand', 'error', 'note']) {
+          assert.ok(k in p.cli, `cli.${k} present`);
+        }
+        assert.equal(typeof p.cli.installed, 'boolean');
+        assert.equal(typeof p.cli.ready, 'boolean');
+        if (p.cli.ready) assert.equal(p.hasKey, true);
+        console.log(`     ${p.id}: installed=${p.cli.installed} version=${p.cli.version} loggedIn=${p.cli.loggedIn} ready=${p.cli.ready}`);
+      }
     }
     assert.equal(list[0].model, 'claude-opus-5-5');
   });
 
-  await step('setModel() custom model shows up in providers()', () => {
+  await step('setModel() custom model shows up in providers()', async () => {
     assert.equal(agents.setModel('openai', 'gpt-5-custom-test').ok, true);
-    const p = agents.providers().find((x) => x.id === 'openai');
+    const p = (await agents.providers()).find((x) => x.id === 'openai');
     assert.equal(p.model, 'gpt-5-custom-test');
     assert.ok(p.models.includes('gpt-5-custom-test'));
     assert.equal(agents.setModel('openai', 'gpt-5').ok, true);
     assert.equal(agents.setModel('claude', 'gpt-5').ok, false);
     assert.equal(agents.setModel('nope', 'x').ok, false);
+  });
+
+  await step('subscription providers refuse setKey / clearKey', () => {
+    for (const id of ['claude-cli', 'codex-cli']) {
+      const set = agents.setKey(id, 'sk-ant-test-key-1234567890abcdef');
+      assert.equal(set.ok, false);
+      assert.match(set.error, /login, not an API key/);
+      const clear = agents.clearKey(id);
+      assert.equal(clear.ok, false);
+      assert.match(clear.error, /has no API key/);
+    }
+  });
+
+  await step('ask() with a missing CLI gives a clean error', async () => {
+    // Hide every install location, then force a fresh check.
+    const cli = require('../agents/cli');
+    const keep = {};
+    const empty = path.join(tmp, 'no-bin');
+    fs.mkdirSync(empty, { recursive: true });
+    for (const k of ['PATH', 'Path', 'APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'HOME', 'ProgramFiles']) {
+      keep[k] = process.env[k];
+      if (k === 'PATH' || k === 'Path') process.env[k] = empty;
+      else process.env[k] = empty;
+    }
+    try {
+      for (const id of ['claude-cli', 'codex-cli']) {
+        if (cli.findExecutable(cli.SPECS[id].bin)) { console.log(`     ${id}: found in a fixed system dir, skipped`); continue; }
+        const list = await agents.providers({ refresh: true });
+        const p = list.find((x) => x.id === id);
+        assert.equal(p.hasKey, false);
+        assert.equal(p.cli.installed, false);
+        assert.equal(p.cli.ready, false);
+        const r = await agents.ask(id, 'Is my router safe?', SAMPLE_SNAPSHOT);
+        assert.equal(r.ok, false);
+        assert.equal(r.provider, id);
+        assert.equal(r.text, '');
+        assert.match(r.error, /isn't installed\. Install it with: npm install -g/);
+        const t = await agents.test(id);
+        assert.equal(t.ok, false);
+        assert.match(t.error, /isn't installed/);
+      }
+    } finally {
+      for (const [k, v] of Object.entries(keep)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+      await agents.providers({ refresh: true });
+    }
+  });
+
+  await step('cancel() with nothing running', () => {
+    assert.deepEqual(agents.cancel('codex-cli'), { ok: true, cancelled: false });
+    assert.equal(agents.shutdown().ok, true);
   });
 
   await step('setKey() outside Electron refuses to store (no safeStorage)', () => {

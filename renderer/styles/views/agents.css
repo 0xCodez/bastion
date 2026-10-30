@@ -21,12 +21,26 @@
 
 /* provider tabs: the reference's pill tab bar on top of the glow kit segment */
 .v-agents .gk-segment{gap:2px;padding:4px;border-radius:999px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line)}
-.v-agents .gk-segment > [role="tab"]{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;color:var(--muted);font:600 13.5px/1 var(--nf-u);letter-spacing:0;text-transform:none;transition:color .2s,background .2s}
+.v-agents .gk-segment > [role="tab"]{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 10px;border-radius:999px;color:var(--muted);font:600 13.5px/1 var(--nf-u);letter-spacing:0;text-transform:none;transition:color .2s,background .2s}
 .v-agents .gk-segment > [role="tab"]:hover{color:var(--text)}
 .v-agents .gk-segment > [role="tab"][aria-selected="true"]{color:var(--text)}
 .v-agents .gk-segment:not(:has(.gk-segment__thumb)) > [role="tab"][aria-selected="true"]{background:rgba(183,169,255,.16)}
 .v-agents .gk-segment .gk-segment__thumb{border-radius:999px;background:rgba(183,169,255,.16);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 20px rgba(124,108,255,.28)}
 .v-agents .ag-tdot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;box-shadow:0 0 8px rgba(243,240,255,.28)}
+/* provider app icon: rounded tile, hairline, soft contact shadow. In a tab it is 20 px with a 10 px inset
+   on the top, bottom and left, concentric with the pill; unselected tabs only lower its opacity. */
+.v-agents .ag-mark{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.v-agents .ag-tab-tag{margin-left:-2px;padding:2px 6px;border-radius:999px;font:600 10px/1.2 var(--nf-m);letter-spacing:.02em;color:var(--muted);background:rgba(255,255,255,.06)}
+.v-agents .ag-logo{position:relative;flex:none;display:block;overflow:hidden;box-shadow:0 1px 1.5px rgba(0,0,0,.45),0 4px 10px -4px rgba(0,0,0,.6)}
+.v-agents .ag-logo img{display:block;width:100%;height:100%;object-fit:cover}
+.v-agents .ag-logo::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2);pointer-events:none}
+.v-agents .ag-logo--tab{width:20px;height:20px;border-radius:5px}
+.v-agents .ag-logo--status{width:22px;height:22px;border-radius:5.5px}
+.v-agents .ag-logo--mono{display:grid;place-items:center;background:linear-gradient(160deg,color-mix(in srgb,var(--prov) 54%,#1b1633),color-mix(in srgb,var(--prov) 34%,#0d0b1c));color:#fff;font:700 11px/1 var(--nf-d);letter-spacing:-.01em}
+.v-agents .ag-logo--status.ag-logo--mono{font-size:12px}
+.v-agents .gk-segment > [role="tab"] .ag-logo{transition:opacity .25s}
+.v-agents .gk-segment > [role="tab"]:not([aria-selected="true"]) .ag-logo{opacity:.62}
+.v-agents .gk-segment > [role="tab"]:not([aria-selected="true"]):hover .ag-logo{opacity:.9}
 
 .v-agents .ag-status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
 .v-agents .ag-model{font:500 12px/1 var(--nf-m);color:var(--lavender)}

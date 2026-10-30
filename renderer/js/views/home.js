@@ -11,6 +11,13 @@ const PROVIDERS = [
   { id: 'openai', name: 'ChatGPT', company: 'OpenAI', color: '#9EF0C4', hint: 'devices' },
   { id: 'grok', name: 'Grok', company: 'xAI', color: '#8FD3FF', hint: 'speed' },
 ];
+// The user's own Claude / ChatGPT subscription through Claude Code / Codex (agents/cli.js).
+// `base` is the API provider whose app icon and hero light they share.
+const SUB_PROVIDERS = [
+  { id: 'claude-cli', base: 'claude', name: 'Claude (my subscription)', company: 'Anthropic', color: '#E8A07F', hint: 'your Claude plan', kind: 'cli', via: 'Claude Code', login: 'claude auth login' },
+  { id: 'codex-cli', base: 'openai', name: 'ChatGPT (my subscription)', company: 'OpenAI', color: '#9EF0C4', hint: 'your ChatGPT plan', kind: 'cli', via: 'Codex', login: 'codex login' },
+];
+const ALL_PROVIDERS = [...SUB_PROVIDERS, ...PROVIDERS];
 const FIX_TARGET_LABEL = {
   'router-admin': 'router admin page',
   'dns-settings': 'DNS settings',
@@ -397,7 +404,10 @@ export function mount(el, ctx) {
     const list = store.get('providers');
     const agents = PROVIDERS.map((p) => {
       const live = Array.isArray(list) ? list.find((x) => x && x.id === p.id) : null;
-      return { id: p.id, name: (live && live.name) || p.name, color: p.color, active: Boolean(live && live.hasKey) };
+      // A ready subscription lights its provider too.
+      const sub = SUB_PROVIDERS.find((s) => s.base === p.id);
+      const subLive = sub && Array.isArray(list) ? list.find((x) => x && x.id === sub.id) : null;
+      return { id: p.id, name: (live && live.name) || p.name, color: p.color, active: Boolean((live && live.hasKey) || (subLive && subLive.hasKey)) };
     });
     const key = agents.map((a) => `${a.id}:${a.active ? 1 : 0}`).join(',');
     if (key === lastAgentsKey) return;
@@ -991,38 +1001,101 @@ export function mount(el, ctx) {
   /* ---------------------------------------------------------------- voice bar */
 
   let agentPref = readPref();
-  if (agentPref !== 'auto' && !PROVIDERS.some((p) => p.id === agentPref)) agentPref = 'auto';
+  if (agentPref !== 'auto' && !ALL_PROVIDERS.some((p) => p.id === agentPref)) agentPref = 'auto';
   let attachScan = false;
 
   function providerInfo(id) {
-    const base = PROVIDERS.find((p) => p.id === id) || PROVIDERS[0];
+    const base = ALL_PROVIDERS.find((p) => p.id === id) || PROVIDERS[0];
     const list = store.get('providers');
     const live = Array.isArray(list) ? list.find((p) => p && p.id === base.id) : null;
-    return { ...base, name: (live && live.name) || base.name, hasKey: live ? Boolean(live.hasKey) : null, model: live ? live.model : null };
+    return { ...base, name: (live && live.name) || base.name, hasKey: live ? Boolean(live.hasKey) : null, model: live ? live.model : null, cli: (live && live.cli) || null };
   }
 
-  // Auto = first provider with a key (falls back to Claude so the no-key card can explain).
+  // A subscription counts as ready only when its CLI is signed in for sure and not with an
+  // API key (cli.ready). One that is usable but unchecked or on an API key ranks after keys.
+  function cliRank(info) {
+    if (info.cli && info.cli.ready) return 0;
+    if (info.hasKey) return 2;
+    return info.cli && info.cli.installed ? 3 : 4;
+  }
+
+  // Auto = a ready subscription first, then a provider with a saved key, then any usable
+  // subscription (falls back to Claude so the no-key card can explain).
   function resolveProvider() {
     if (agentPref !== 'auto') return providerInfo(agentPref);
     const list = store.get('providers');
-    const withKey = Array.isArray(list) ? PROVIDERS.find((p) => list.some((x) => x && x.id === p.id && x.hasKey)) : null;
-    return providerInfo(withKey ? withKey.id : 'claude');
+    if (!Array.isArray(list)) return providerInfo('claude');
+    const best = ALL_PROVIDERS.map((p, i) => {
+      const info = providerInfo(p.id);
+      return { p, i, r: p.kind === 'cli' ? cliRank(info) : info.hasKey ? 1 : 4 };
+    }).filter((o) => o.r <= 2).sort((a, b) => a.r - b.r || a.i - b.i)[0];
+    return providerInfo(best ? best.p.id : 'claude');
+  }
+
+  // Menu order: ready subscriptions, the API-key providers, unchecked / API-key-login
+  // subscriptions, then installed but signed-out ones. A subscription whose CLI is not
+  // installed is left out (unless picked).
+  function menuProviders() {
+    const rank = (p) => (p.kind !== 'cli' ? 1 : cliRank(providerInfo(p.id)));
+    return ALL_PROVIDERS.map((p, i) => ({ p, i, r: rank(p) }))
+      .filter((o) => o.r < 4 || o.p.id === agentPref)
+      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .map((o) => o.p);
+  }
+
+  function iconId(id) {
+    const p = ALL_PROVIDERS.find((x) => x.id === id);
+    return (p && p.base) || id;
+  }
+
+  // Provider app icon (store key 'providerIcons', loaded by app.js) as an inline-styled 24 px tile
+  // with a hairline; null when there is none, so the coloured dot stays.
+  const LOGO_RE = /^data:image\/(png|jpeg|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/=]+$/;
+  function logoStyle(id, px) {
+    const m = store.get('providerIcons');
+    const v = m && typeof m === 'object' ? m[iconId(id)] : null;
+    if (typeof v !== 'string' || !LOGO_RE.test(v)) return null;
+    return `width:${px}px;height:${px}px;border-radius:${px / 4}px;background:center/cover no-repeat url("${v}");`
+      + 'box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2),0 1px 1.5px rgba(0,0,0,.45),0 4px 10px -4px rgba(0,0,0,.6)';
+  }
+
+  // Fallback when the provider app is not installed: the shared monogram tile (deep provider colour,
+  // white letter), the same recipe as Settings, Agents and the titlebar.
+  function monoStyle(color, px) {
+    return `width:${px}px;height:${px}px;border-radius:${px / 4}px;display:grid;place-items:center;font:700 ${Math.round(px * 0.55)}px/1 var(--nv-display, inherit);font-style:normal;letter-spacing:-.01em;`
+      + `color:#fff;background:linear-gradient(160deg,color-mix(in srgb,${color} 54%,#1b1633),color-mix(in srgb,${color} 34%,#0d0b1c));box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2),0 1px 1.5px rgba(0,0,0,.45)`;
   }
 
   function renderAgent() {
     const p = resolveProvider();
     const auto = agentPref === 'auto';
     ref.agentName.textContent = auto ? 'Agent (auto)' : p.name;
-    ref.agentDot.style.background = auto ? 'var(--lavender)' : p.color;
-    ref.agentBtn.title = `${auto ? `Auto: ${p.name}` : p.name}${p.model ? ` · ${p.model}` : ''}${p.hasKey === false ? ' · no key yet' : ''}`;
+    // Auto shows the logo of the agent it picked, but only once that agent has a key.
+    // A 20 px tile with a 9 px inset on the left, top and bottom, concentric with the 40 px pill.
+    const chipLogo = auto && p.hasKey !== true ? null : logoStyle(p.id, 20) || monoStyle(p.color, 20);
+    ref.agentDot.style.cssText = chipLogo || '';
+    ref.agentDot.textContent = chipLogo && !logoStyle(p.id, 20) ? p.name.charAt(0) : '';
+    ref.agentBtn.style.paddingLeft = chipLogo ? '9px' : '';
+    if (!chipLogo) ref.agentDot.style.background = 'var(--lavender)';
+    ref.agentBtn.title = `${auto ? `Auto: ${p.name}` : p.name}${p.model && p.model !== 'default' ? ` · ${p.model}` : ''}${p.hasKey === false ? (p.kind === 'cli' ? ` · ${p.via} not set up` : ' · no key yet') : ''}`;
     ref.agentBtn.classList.toggle('no-key', p.hasKey === false);
 
     ref.menu.innerHTML = '';
-    const items = [{ id: 'auto', name: 'Auto', color: 'var(--lavender)', small: 'first with a key' },
-      ...PROVIDERS.map((x) => { const info = providerInfo(x.id); return { id: x.id, name: info.name, color: x.color, small: info.hasKey === false ? 'no key' : x.hint }; })];
+    const items = [{ id: 'auto', name: 'Auto', color: 'var(--lavender)', small: 'subscription, then key' },
+      ...menuProviders().map((x) => {
+        const info = providerInfo(x.id);
+        const c = info.cli || {};
+        const small = info.hasKey === false ? (x.kind === 'cli' ? `${x.via}: sign in` : 'no key')
+          : x.kind === 'cli' && info.cli && !c.ready ? (/^api_key/.test(c.authMethod || '') ? `${x.via}: API key login` : `${x.via}: sign-in unchecked`)
+            : x.hint;
+        return { id: x.id, name: info.name, color: x.color, small };
+      })];
     for (const it of items) {
       const b = h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': agentPref === it.id ? 'true' : 'false', 'data-agent': it.id, tabindex: '-1' },
-        h('i', { style: `background:${it.color}` }), it.name, h('small', { text: it.small }));
+        it.id === 'auto'
+          ? h('i', { style: `background:${it.color}` })
+          : h('i', { style: logoStyle(it.id, 22) || monoStyle(it.color, 22), text: logoStyle(it.id, 22) ? '' : it.name.charAt(0) }),
+        it.name, h('small', { text: it.small }));
       ref.menu.append(b);
     }
   }
@@ -1148,13 +1221,18 @@ export function mount(el, ctx) {
       whoLine(p),
       h('p', { class: 'nv-ans', text: needsKeyText(p) }),
       h('div', { class: 'nv-chips' },
-        h('button', { type: 'button', class: 'nv-chip nv-chip--go', text: 'Add a key in Settings', onclick: () => ctx.navigate('settings') }),
+        h('button', { type: 'button', class: 'nv-chip nv-chip--go', text: p.kind === 'cli' ? `Set up ${p.via} in Settings` : 'Add a key in Settings', onclick: () => ctx.navigate('settings') }),
         h('button', { type: 'button', class: 'nv-chip', text: 'Choose another agent', onclick: (e) => { e.stopPropagation(); openMenu(); } })));
     setVox('answer');
     announce(`${p.name}: ${needsKeyText(p)}`);
   }
 
   function needsKeyText(p) {
+    if (p.kind === 'cli') {
+      return p.cli && p.cli.installed
+        ? `${p.name} goes through ${p.via}, which is not signed in. Run \`${p.login}\` in a terminal, then ask again. Answers count against your subscription's usage limits.`
+        : `${p.name} goes through ${p.via}, which is not installed on this computer. Settings shows the one command to install it.`;
+    }
     return `${p.name} needs your own ${p.company} API key first. Add one in Settings: it stays on this computer, and questions go straight from here to ${p.company}.`;
   }
 
@@ -1180,7 +1258,7 @@ export function mount(el, ctx) {
     const q = question.toLowerCase();
     const scan = store.get('scan');
     const hasScan = Boolean(scan && Array.isArray(scan.checks) && scan.checks.length);
-    if (keyProblem) chips.push({ label: 'Add a key in Settings', go: true, run: () => ctx.navigate('settings') });
+    if (keyProblem) chips.push({ label: typeof keyProblem === 'string' ? keyProblem : 'Add a key in Settings', go: true, run: () => ctx.navigate('settings') });
     if (hasScan) {
       const worst = rankChecks(scan.checks).find((c) => c.fix && c.fix.open);
       if (worst) chips.push({ label: FIX_TARGET_CHIP[worst.fix.open] || 'Open settings', go: !keyProblem, run: () => openTarget(worst.fix.open) });
@@ -1199,7 +1277,9 @@ export function mount(el, ctx) {
   let typeTok = 0;
   function renderAnswer(p, question, res) {
     const ok = Boolean(res && res.ok);
-    const keyProblem = !ok && /key/i.test((res && res.error) || '');
+    const errText = (res && res.error) || '';
+    // true -> 'Add a key in Settings'; a subscription CLI that is not set up gets its own label.
+    const keyProblem = !ok && (/not signed in|not installed|isn't installed/i.test(errText) ? 'Set up in Settings' : /key/i.test(errText));
     const text = ok ? (res.text || '(empty answer)') : `${p.name} could not answer: ${(res && res.error) || 'unknown error'}`;
     ref.card.innerHTML = '';
     const ans = h('p', { class: `nv-ans nv-selectable${ok ? '' : ' nv-ans--error'}` });
@@ -1339,6 +1419,7 @@ export function mount(el, ctx) {
   on('overview', renderRouter);
   on('dns', renderRouter);
   on('providers', () => { renderAgent(); applyHero(); });
+  on('providerIcons', () => renderAgent());
   on('watch', () => { renderPower(); renderStatus(); renderTimer(); applyHero(); });
 
   renderPower();

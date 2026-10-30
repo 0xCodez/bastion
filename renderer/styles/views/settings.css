@@ -17,11 +17,20 @@
 .v-settings .st-mono{font-family:var(--nf-m);font-size:12px;color:var(--lavender);word-break:break-all}
 
 /* providers */
+/* subscription CLIs (Claude Code / Codex) */
+.v-settings .st-sub-lede{padding:0 16px 14px;max-width:84ch}
+.v-settings .st-via{font:500 12px/1.2 var(--nf-m);letter-spacing:0;color:var(--muted)}
 .v-settings .st-providers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px}
 .v-settings .st-prov{padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
 .v-settings .st-prov-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.v-settings .st-prov-h h3{display:inline-flex;align-items:center;gap:10px;margin:0;font:700 20px/1.1 var(--nf-d);letter-spacing:-.025em;text-transform:none}
+.v-settings .st-prov-h h3{display:inline-flex;align-items:center;gap:12px;margin:0;font:700 20px/1.1 var(--nf-d);letter-spacing:-.025em;text-transform:none}
 .v-settings .st-dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 10px rgba(243,240,255,.3)}
+/* provider app icon: 28 px rounded tile, hairline on top, soft contact shadow below */
+.v-settings .st-logo{position:relative;flex:none;width:28px;height:28px;border-radius:7px;overflow:hidden;display:grid;place-items:center;
+  box-shadow:0 1px 1.5px rgba(0,0,0,.45),0 6px 14px -6px rgba(0,0,0,.7)}
+.v-settings .st-logo img{display:block;width:100%;height:100%;object-fit:cover}
+.v-settings .st-logo::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2),inset 0 1px 0 rgba(255,255,255,.08);pointer-events:none}
+.v-settings .st-logo--mono{background:linear-gradient(160deg,color-mix(in srgb,var(--prov) 54%,#1b1633),color-mix(in srgb,var(--prov) 34%,#0d0b1c));color:#fff;font:700 14px/1 var(--nf-d);letter-spacing:-.02em}
 .v-settings .st-label{display:block;margin-bottom:6px;font:600 12.5px/1.2 var(--nf-u);letter-spacing:0;text-transform:none;color:var(--muted)}
 /* glass input row */
 .v-settings .st-keyrow{display:flex;align-items:center;gap:6px;min-width:0;padding:4px;border-radius:16px;border:1px solid var(--line-2);background:rgba(7,6,14,.45);box-shadow:inset 0 1px 2px rgba(0,0,0,.5);transition:border-color .2s,box-shadow .2s}

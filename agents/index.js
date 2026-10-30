@@ -6,11 +6,16 @@
 
 const keystore = require('./keystore');
 const prompt = require('./prompt');
+const cli = require('./cli');
 
+// kind 'api': the user's own API key. kind 'cli': the user's Claude / ChatGPT
+// subscription through the official CLI they are signed in to (agents/cli.js).
 const PROVIDERS = {
-  claude: { name: 'Claude', vendor: 'Anthropic', load: () => require('./claude') },
-  openai: { name: 'ChatGPT', vendor: 'OpenAI', load: () => require('./openai') },
-  grok: { name: 'Grok', vendor: 'xAI', load: () => require('./grok') },
+  claude: { name: 'Claude', vendor: 'Anthropic', kind: 'api', load: () => require('./claude') },
+  openai: { name: 'ChatGPT', vendor: 'OpenAI', kind: 'api', load: () => require('./openai') },
+  grok: { name: 'Grok', vendor: 'xAI', kind: 'api', load: () => require('./grok') },
+  'claude-cli': { name: 'Claude (my subscription)', vendor: 'Anthropic', kind: 'cli', base: 'claude' },
+  'codex-cli': { name: 'ChatGPT (my subscription)', vendor: 'OpenAI', kind: 'cli', base: 'openai' },
 };
 
 // Static model info, kept here so providers() works without loading any SDK.
@@ -18,6 +23,9 @@ const MODEL_INFO = {
   claude: { defaultModel: 'claude-opus-5-5', models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'] },
   openai: { defaultModel: 'gpt-5', models: ['gpt-5', 'gpt-5-mini'] },
   grok: { defaultModel: 'grok-4', models: ['grok-4', 'grok-4-fast'] },
+  // 'default' = no model flag: the CLI uses the user's own default.
+  'claude-cli': { defaultModel: 'default', models: ['default', 'opus', 'sonnet', 'haiku'] },
+  'codex-cli': { defaultModel: 'default', models: ['default'] },
 };
 
 const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._:\/-]{0,99}$/;
@@ -39,8 +47,13 @@ function currentModel(id) {
   return keystore.getModel(id) || MODEL_INFO[id].defaultModel;
 }
 
+function isCliProvider(id) {
+  return isProvider(id) && PROVIDERS[id].kind === 'cli';
+}
+
 function init(userDataDir) {
   try {
+    cli.init(userDataDir);
     const r = keystore.init(userDataDir);
     initialized = r.ok;
     return { ok: r.ok };
@@ -53,13 +66,46 @@ function notReady() {
   return initialized ? null : 'AI agents are not initialized yet.';
 }
 
-function providers() {
+// For 'cli' providers hasKey means "installed and usable" (signed in, or not
+// known to be signed out), and `cli` carries the detection result.
+// cli.ready is stricter: signed in for sure, and not with an API key. Only a
+// ready subscription goes first in the UI and is picked by Auto.
+// opts.refresh: check the CLIs again now instead of using the cached status.
+async function providers(opts) {
   try {
-    return Object.keys(PROVIDERS).map((id) => {
+    const force = Boolean(opts && opts.refresh);
+    const ids = Object.keys(PROVIDERS);
+    const statuses = await Promise.all(ids.map((id) => (isCliProvider(id) ? cli.status(id, { force }) : null)));
+    return ids.map((id, i) => {
       const model = currentModel(id);
+      const st = statuses[i];
       const models = [...MODEL_INFO[id].models];
+      if (st && Array.isArray(st.models)) for (const m of st.models) if (!models.includes(m)) models.push(m);
       if (!models.includes(model)) models.push(model);
-      return { id, name: PROVIDERS[id].name, hasKey: keystore.hasKey(id), model, models };
+      if (!st) return { id, name: PROVIDERS[id].name, kind: 'api', hasKey: keystore.hasKey(id), model, models };
+      const spec = cli.SPECS[id];
+      const apiKeyLogin = st.authMethod === 'api_key' || st.authMethod === 'api_key_helper';
+      return {
+        id,
+        name: PROVIDERS[id].name,
+        kind: 'cli',
+        hasKey: Boolean(st.installed && st.loggedIn !== false),
+        model,
+        models,
+        cli: {
+          installed: Boolean(st.installed),
+          ready: Boolean(st.installed && st.loggedIn === true && !apiKeyLogin),
+          version: st.version || null,
+          loggedIn: typeof st.loggedIn === 'boolean' ? st.loggedIn : null,
+          path: st.path || null,
+          authMethod: st.authMethod || null,
+          product: spec.product,
+          installCommand: spec.install,
+          loginCommand: spec.login,
+          error: st.error || null,
+          note: st.note || null,
+        },
+      };
     });
   } catch {
     return [];
@@ -69,6 +115,7 @@ function providers() {
 function setKey(id, key) {
   try {
     if (!isProvider(id)) return { ok: false, error: 'Unknown provider.' };
+    if (isCliProvider(id)) return { ok: false, error: `${PROVIDERS[id].name} uses your ${cli.SPECS[id].product} login, not an API key.` };
     const blocked = notReady();
     if (blocked) return { ok: false, error: blocked };
     const k = typeof key === 'string' ? key.trim() : '';
@@ -89,6 +136,7 @@ function setKey(id, key) {
 function clearKey(id) {
   try {
     if (!isProvider(id)) return { ok: false, error: 'Unknown provider.' };
+    if (isCliProvider(id)) return { ok: false, error: `${PROVIDERS[id].name} has no API key. Sign out with ${cli.SPECS[id].product} itself.` };
     const blocked = notReady();
     if (blocked) return { ok: false, error: blocked };
     const r = keystore.clearKey(id);
@@ -107,6 +155,7 @@ function setModel(id, model) {
     if (blocked) return { ok: false, error: blocked };
     const m = typeof model === 'string' ? model.trim() : '';
     if (!MODEL_RE.test(m)) return { ok: false, error: 'Invalid model name.' };
+    if (isCliProvider(id) && !cli.MODEL_RE.test(m)) return { ok: false, error: 'Invalid model name.' };
     if (id === 'claude' && !m.startsWith('claude-')) return { ok: false, error: 'Claude model names start with "claude-".' };
     const r = keystore.setModel(id, m);
     return r.ok ? { ok: true } : { ok: false, error: r.error || 'Could not save the model.' };
@@ -130,6 +179,19 @@ async function test(id) {
     const blocked = notReady();
     if (blocked) return { ok: false, error: blocked };
     const model = currentModel(id);
+    if (isCliProvider(id)) {
+      // Same lock and cancel path as ask(): one CLI run per provider at a time.
+      if (inFlight.get(id)) return { ok: false, model, error: `${PROVIDERS[id].name} is still answering the previous question.` };
+      const controller = new AbortController();
+      inFlight.set(id, controller);
+      try {
+        const r = await cli.test(id, model, controller.signal);
+        if (!r.ok && controller.signal.aborted) return { ok: false, model, error: 'Cancelled.' };
+        return r.ok ? { ok: true, model: r.model || model } : { ok: false, model: r.model || model, error: r.error };
+      } finally {
+        if (inFlight.get(id) === controller) inFlight.delete(id);
+      }
+    }
     const { apiKey, error } = keyOrError(id);
     if (error) return { ok: false, model, error };
     const r = await PROVIDERS[id].load().test({ apiKey, model });
@@ -148,8 +210,12 @@ async function ask(id, question, snapshot) {
     if (blocked) return { ...base, model, error: blocked };
     const q = typeof question === 'string' ? question.trim() : '';
     if (!q) return { ...base, model, error: 'Type a question first.' };
-    const { apiKey, error } = keyOrError(id);
-    if (error) return { ...base, model, error };
+    let apiKey = null;
+    if (!isCliProvider(id)) {
+      const k = keyOrError(id);
+      if (k.error) return { ...base, model, error: k.error };
+      apiKey = k.apiKey;
+    }
     if (inFlight.get(id)) return { ...base, model, error: `${PROVIDERS[id].name} is still answering the previous question.` };
 
     const controller = new AbortController();
@@ -163,7 +229,10 @@ async function ask(id, question, snapshot) {
           resolve({ ok: false, model, text: '', error: `${PROVIDERS[id].name} did not answer within ${ASK_DEADLINE_MS / 60000} minutes. Try again, or pick a faster model.` });
         }, ASK_DEADLINE_MS);
       });
-      const call = PROVIDERS[id].load().ask({ apiKey, model, system: prompt.SYSTEM_PROMPT, userText, signal: controller.signal });
+      // Same privacy-minimised message and system prompt for every provider kind.
+      const call = isCliProvider(id)
+        ? cli.ask(id, { model, system: prompt.SYSTEM_PROMPT, userText, signal: controller.signal })
+        : PROVIDERS[id].load().ask({ apiKey, model, system: prompt.SYSTEM_PROMPT, userText, signal: controller.signal });
       let r = await Promise.race([call, deadline]);
       if (!r.ok && controller.signal.aborted && controller.signal.reason === 'cancelled') {
         r = { ok: false, model, text: '', error: 'Cancelled.' };
@@ -180,14 +249,29 @@ async function ask(id, question, snapshot) {
   }
 }
 
-// Stops a running ask() for this provider; that ask() resolves with "Cancelled.".
+// Stops a running ask() or CLI test() for this provider; it resolves with
+// "Cancelled.". The lock stays until that call has settled (the CLI is dead or
+// the kill grace period ran out), so a new question cannot overlap the old run.
 function cancel(id) {
   try {
     const controller = isProvider(id) ? inFlight.get(id) : null;
     if (!controller) return { ok: true, cancelled: false };
-    controller.abort('cancelled');
-    inFlight.delete(id);
+    if (!controller.signal.aborted) controller.abort('cancelled');
     return { ok: true, cancelled: true };
+  } catch (err) {
+    return { ok: false, error: errMessage(err) };
+  }
+}
+
+// App quit: cancel every request and kill every CLI still running, so nothing
+// keeps using the user's subscription after Bastion is gone.
+function shutdown() {
+  try {
+    for (const controller of inFlight.values()) {
+      try { if (!controller.signal.aborted) controller.abort('cancelled'); } catch { /* ignore */ }
+    }
+    cli.killAll();
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: errMessage(err) };
   }
@@ -203,4 +287,4 @@ function preview(snapshot) {
   }
 }
 
-module.exports = { init, providers, setKey, clearKey, setModel, test, ask, cancel, preview };
+module.exports = { init, providers, setKey, clearKey, setModel, test, ask, cancel, shutdown, preview };

@@ -338,6 +338,15 @@ const providers = [
   { id: 'claude', name: 'Claude', hasKey: true, model: 'claude-sonnet-4-5', models: ['claude-opus-4-1', 'claude-sonnet-4-5', 'claude-haiku-4-5'] },
   { id: 'openai', name: 'ChatGPT', hasKey: false, model: 'gpt-5', models: ['gpt-5', 'gpt-5-mini'] },
   { id: 'grok', name: 'Grok', hasKey: false, model: 'grok-4', models: ['grok-4', 'grok-4-fast'] },
+  // Subscription CLIs: the browser preview cannot look for them, so they show as not installed.
+  {
+    id: 'claude-cli', name: 'Claude (my subscription)', kind: 'cli', hasKey: false, model: 'default', models: ['default', 'opus', 'sonnet', 'haiku'],
+    cli: { installed: false, ready: false, version: null, loggedIn: null, path: null, authMethod: null, product: 'Claude Code', installCommand: 'npm install -g @anthropic-ai/claude-code', loginCommand: 'claude auth login', error: "Claude Code isn't installed. Install it with: npm install -g @anthropic-ai/claude-code", note: null },
+  },
+  {
+    id: 'codex-cli', name: 'ChatGPT (my subscription)', kind: 'cli', hasKey: false, model: 'default', models: ['default'],
+    cli: { installed: false, ready: false, version: null, loggedIn: null, path: null, authMethod: null, product: 'Codex', installCommand: 'npm install -g @openai/codex', loginCommand: 'codex login', error: "Codex isn't installed. Install it with: npm install -g @openai/codex", note: null },
+  },
 ];
 
 function findProvider(id) {
@@ -525,12 +534,14 @@ const mock = {
       await wait(300);
       const p = findProvider(id);
       if (!p) return { ok: false, error: 'Unknown provider' };
+      if (p.kind === 'cli') return { ok: false, error: `${p.name} uses your ${p.cli.product} login, not an API key.` };
       if (typeof key !== 'string' || key.trim().length < 12) return { ok: false, error: 'That does not look like an API key.' };
       p.hasKey = true;
       return { ok: true };
     },
     async clearKey(id) {
       const p = findProvider(id);
+      if (p && p.kind === 'cli') return { ok: false, error: `${p.name} has no API key.` };
       if (p) p.hasKey = false;
       return { ok: true };
     },
@@ -544,16 +555,67 @@ const mock = {
       await wait(jitter(900));
       const p = findProvider(id);
       if (!p) return { ok: false, error: 'Unknown provider' };
+      if (p.kind === 'cli' && !p.hasKey) return { ok: false, model: p.model, error: p.cli.error };
       if (!p.hasKey) return { ok: false, error: `No ${p.name} key saved.` };
       return { ok: true, model: p.model };
     },
+    async cancel() { return { ok: true, cancelled: false }; },
     async ask(id, question, snapshot) {
       await wait(jitter(1500, 0.15));
       const p = findProvider(id);
       if (!p) return { ok: false, provider: String(id), model: '', text: '', error: 'Unknown provider' };
+      if (p.kind === 'cli' && !p.hasKey) return { ok: false, provider: p.id, model: p.model, text: '', error: p.cli.error };
       if (!p.hasKey) return { ok: false, provider: p.id, model: p.model, text: '', error: `No ${p.name} key saved. Add one in Settings.` };
       return { ok: true, provider: p.id, model: p.model, text: mockAnswer(question, snapshot) };
     },
+  },
+
+  // The browser preview cannot read installed apps, so every icon is unknown and the UI shows monograms.
+  icons: {
+    async forProcesses(list) {
+      const processes = {};
+      for (const item of Array.isArray(list) ? list : []) if (item && item.pid != null) processes[item.pid] = { exe: null, product: null, description: null };
+      return { processes, icons: {} };
+    },
+    async providers() { return { claude: null, openai: null, grok: null }; },
+  },
+
+  // Tips and feedback. Nothing is sent and no checkout opens in the preview.
+  support: {
+    async tipsProfile() {
+      await wait(jitter(450));
+      return {
+        ok: true,
+        profile: { name: 'Beyond Apps', tagline: 'Independent, ad-free apps', currency: 'usd', presets: [3, 5, 10, 25], min: 1, max: 500, supporterCount: 1284 },
+      };
+    },
+    async startTip(req) {
+      await wait(jitter(700));
+      const amount = req && req.amount;
+      if (typeof amount !== 'number' || !Number.isFinite(amount)) return { ok: false, error: 'Please choose an amount.' };
+      if (amount < 1 || amount > 500) return { ok: false, error: 'Please choose an amount between 1 and 500 USD.' };
+      console.info('[mock] support.startTip', req);
+      return { ok: true, url: 'https://checkout.stripe.com/c/pay/sample' };
+    },
+    async sendFeedback(payload) {
+      await wait(jitter(800));
+      const kinds = ['idea', 'bug', 'love'];
+      const message = payload && typeof payload.message === 'string' ? payload.message.trim() : '';
+      if (!payload || !kinds.includes(payload.kind)) return { ok: false, error: 'Please pick what kind of feedback this is.' };
+      if (message.length < 3) return { ok: false, error: 'Please write a little more so we know what you mean.' };
+      if (message.length > 2000) return { ok: false, error: 'That message is a bit long. Please keep it under 2000 characters.' };
+      if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(payload.email).trim())) return { ok: false, error: 'That email address does not look right.' };
+      console.info('[mock] support.sendFeedback', payload);
+      return { ok: true, via: 'email', message: 'Preview only: in the app your mail app opens with the message ready to send.' };
+    },
+    async systemInfo() {
+      return { ok: true, system: { platform: 'darwin', arch: 'arm64', osVersion: 'Darwin 24.1.0 (sample)', appVersion: '0.1.0-preview' } };
+    },
+  },
+
+  // Push-to-talk: the browser asks for the microphone itself.
+  voice: {
+    async ensureMicAccess() { return { granted: true, status: 'unknown' }; },
   },
 };
 

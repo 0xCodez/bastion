@@ -32,11 +32,26 @@ const KEY_PAGES = {
   grok: { url: 'https://console.x.ai', host: 'api.x.ai' },
 };
 const PROVIDER_DOT = { claude: 'var(--clay)', openai: 'var(--mint)', grok: 'var(--sky)' };
+// App icons from the user's installed Claude / ChatGPT / Grok apps (store key 'providerIcons', loaded by app.js).
+const LOGO_RE = /^data:image\/(png|jpeg|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/=]+$/;
+function logoSrc(store, id) {
+  const m = store.get('providerIcons');
+  const v = m && typeof m === 'object' ? m[id] : null;
+  return typeof v === 'string' && LOGO_RE.test(v) ? v : null;
+}
 const PROVIDER_FALLBACK = [
-  { id: 'claude', name: 'Claude', hasKey: false, model: '', models: [] },
-  { id: 'openai', name: 'ChatGPT', hasKey: false, model: '', models: [] },
-  { id: 'grok', name: 'Grok', hasKey: false, model: '', models: [] },
+  { id: 'claude', name: 'Claude', kind: 'api', hasKey: false, model: '', models: [] },
+  { id: 'openai', name: 'ChatGPT', kind: 'api', hasKey: false, model: '', models: [] },
+  { id: 'grok', name: 'Grok', kind: 'api', hasKey: false, model: '', models: [] },
 ];
+// Subscription providers: the official CLI the user is signed in to. Icons reuse the provider's app icon.
+const SUBSCRIPTIONS = [
+  { id: 'claude-cli', icon: 'claude', title: 'Claude', via: 'Claude Code', plan: 'Claude', company: 'Anthropic',
+    install: 'npm install -g @anthropic-ai/claude-code', login: 'claude auth login', docs: 'https://code.claude.com/docs/en/setup' },
+  { id: 'codex-cli', icon: 'openai', title: 'ChatGPT', via: 'Codex', plan: 'ChatGPT', company: 'OpenAI',
+    install: 'npm install -g @openai/codex', login: 'codex login', docs: 'https://developers.openai.com/codex/cli' },
+];
+const isCli = (p) => !!p && (p.kind === 'cli' || SUBSCRIPTIONS.some((s) => s.id === p.id));
 
 export function readPrefs() {
   let saved = null;
@@ -126,6 +141,15 @@ export function mount(el, ctx) {
 
       <div class="st-block nv-glass">
         <div class="st-block-h">
+          <h2 class="st-h">Use your subscription</h2>
+          <span class="st-meta">No API key: your own Claude or ChatGPT plan</span>
+        </div>
+        <p class="st-fine st-sub-lede">If Claude Code or Codex is installed and signed in on this computer, Bastion can ask through it. Answers count against your subscription's usage limits. Bastion starts the CLI with every tool switched off, in an empty folder, so it can only answer: it cannot run commands, read your files or browse.</p>
+        <div class="st-providers" data-subs></div>
+      </div>
+
+      <div class="st-block nv-glass">
+        <div class="st-block-h">
           <h2 class="st-h">AI providers</h2>
           <span class="st-meta">Bring your own API key</span>
         </div>
@@ -188,6 +212,14 @@ export function mount(el, ctx) {
               <span>When you ask an agent, or watch mode runs, your question and a compact snapshot of what Bastion measured go to the provider you picked (<span class="st-mono">api.anthropic.com</span>, <span class="st-mono">api.openai.com</span> or <span class="st-mono">api.x.ai</span>). Nothing is sent until you add a key and ask.</span>
             </li>
             <li>
+              <b>AI requests, with your subscription</b>
+              <span>If you pick Claude or ChatGPT "(my subscription)", the same question and snapshot go to Anthropic or OpenAI through your own Claude Code or Codex login on this computer. Bastion starts the CLI with its tools switched off and never reads your login.</span>
+            </li>
+            <li>
+              <b>Provider icons, once</b>
+              <span>Bastion shows the icons of the Claude, ChatGPT and Grok apps installed on this computer, and only of apps signed by Anthropic, OpenAI or xAI. If one is not installed and you saved a key for it, Bastion downloads that provider's site icon once (<span class="st-mono">claude.ai</span>, <span class="st-mono">chatgpt.com</span> or <span class="st-mono">grok.com</span>) and keeps it on this computer.</span>
+            </li>
+            <li>
               <b>Nothing else</b>
               <span>No telemetry, no account, no analytics. Scans, device lists and connection lists stay on this computer.</span>
             </li>
@@ -215,6 +247,7 @@ export function mount(el, ctx) {
 
   const $ = (sel) => el.querySelector(sel);
   const provEl = $('[data-providers]');
+  const subsEl = $('[data-subs]');
 
   // ---------- providers ----------
   function noteFor(id) {
@@ -223,8 +256,16 @@ export function mount(el, ctx) {
     return `<p class="st-note st-note--${esc(n.kind)}" role="status">${esc(n.text)}</p>`;
   }
 
+  // The provider's own app icon in a rounded tile; a monogram in the provider colour when there is none.
+  function logoTile(id, name) {
+    const src = logoSrc(store, id);
+    if (src) return `<span class="st-logo" aria-hidden="true"><img src="${esc(src)}" alt="" width="28" height="28" draggable="false"></span>`;
+    return `<span class="st-logo st-logo--mono" style="--prov:${PROVIDER_DOT[id] || 'var(--lavender)'}" aria-hidden="true">${esc(String(name || id).charAt(0).toUpperCase())}</span>`;
+  }
+
   function renderProviders() {
-    const list = providers || PROVIDER_FALLBACK;
+    renderSubs();
+    const list = (providers || PROVIDER_FALLBACK).filter((p) => !isCli(p));
     const loading = !providers;
     provEl.innerHTML = list.map((p) => {
       const id = String(p.id);
@@ -237,7 +278,7 @@ export function mount(el, ctx) {
       return `
         <article class="st-prov" data-id="${esc(id)}">
           <div class="st-prov-h">
-            <h3><i class="st-dot" style="background:${PROVIDER_DOT[id] || 'var(--lavender)'}" aria-hidden="true"></i>${esc(p.name || id)}</h3>
+            <h3>${logoTile(id, p.name)}${esc(p.name || id)}</h3>
             ${loading ? '<span class="pill">Loading</span>' : p.hasKey ? '<span class="pill pill--ok">Key saved</span>' : '<span class="pill">No key</span>'}
           </div>
           <form class="st-keyform" data-form="${esc(id)}" autocomplete="off">
@@ -272,9 +313,145 @@ export function mount(el, ctx) {
     }).join('');
   }
 
-  async function reloadProviders() {
+  // ---------- subscriptions (Claude Code / Codex) ----------
+  function cmdRow(label, cmd) {
+    return `
+      <div>
+        <span class="st-label">${esc(label)}</span>
+        <div class="st-keyrow">
+          <input class="st-input st-mono-input" type="text" readonly value="${esc(cmd)}" aria-label="${esc(label)}" data-cmd>
+          <button class="nv-mini" type="button" data-act="copy" data-copy="${esc(cmd)}">Copy</button>
+        </div>
+      </div>`;
+  }
+
+  function subState(s, p, loading) {
+    if (loading) return 'Checking this computer';
+    if (!p) return 'This version of Bastion could not check for ' + s.via + '.';
+    const c = p.cli || {};
+    if (!c.installed) return c.error || s.via + ' is not installed on this computer.';
+    const login = c.loggedIn === true
+      ? 'signed in' + (c.authMethod && c.authMethod !== 'none' ? ' (' + c.authMethod + ')' : '')
+      : c.loggedIn === false ? 'not signed in' : 'sign-in is checked on first use';
+    return s.via + (c.version ? ' ' + c.version : '') + ' · ' + login;
+  }
+
+  function renderSubs() {
+    const loading = !providers;
+    subsEl.innerHTML = SUBSCRIPTIONS.map((s) => {
+      const p = (providers || []).find((x) => x && x.id === s.id) || null;
+      const c = (p && p.cli) || {};
+      const working = busy.has(s.id);
+      const installed = !!c.installed;
+      let pill = '<span class="pill">Loading</span>';
+      if (!loading) {
+        if (!p) pill = '<span class="pill">Unavailable</span>';
+        else if (!installed) pill = '<span class="pill">Not installed</span>';
+        else if (c.loggedIn === false) pill = '<span class="pill pill--warn">Not signed in</span>';
+        else if (c.ready) pill = '<span class="pill pill--ok">Ready</span>';
+        else if (/^api_key/.test(c.authMethod || '')) pill = '<span class="pill pill--warn">API key login</span>';
+        else pill = '<span class="pill">Sign-in unknown</span>';
+      }
+      const models = p && Array.isArray(p.models) ? p.models : [];
+      const current = (p && p.model) || 'default';
+      const options = models.map((m) => `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m === 'default' ? 'default (set in ' + s.via + ')' : m)}</option>`).join('');
+      let help = '';
+      if (!loading && p && !installed) help = cmdRow('Install in a terminal (needs Node.js)', s.install) + cmdRow('Then sign in', s.login);
+      else if (!loading && p && c.loggedIn === false) help = cmdRow('Sign in in a terminal first', s.login);
+      else if (!loading && p && c.loggedIn == null) help = cmdRow('If the test says you are signed out, run', s.login);
+      return `
+        <article class="st-prov" data-sub="${esc(s.id)}">
+          <div class="st-prov-h">
+            <h3>${logoTile(s.icon, s.title)}${esc(s.title)} <span class="st-via">via ${esc(s.via)}</span></h3>
+            ${pill}
+          </div>
+          <p class="st-fine">${esc(subState(s, p, loading))}</p>
+          ${installed && c.path ? `<p class="st-fine">Found at <span class="st-mono">${esc(c.path)}</span></p>` : ''}
+          ${c.note ? `<p class="st-fine">${esc(c.note)}</p>` : ''}
+          ${help}
+          ${installed ? `
+          <div class="st-model">
+            <label class="st-label" for="st-model-${esc(s.id)}">Model</label>
+            <div class="st-keyrow">
+              <select class="st-input st-select" id="st-model-${esc(s.id)}" data-sub-model ${working ? 'disabled' : ''}>${options}</select>
+            </div>
+          </div>` : ''}
+          <div class="st-prov-actions">
+            <button class="nv-mini" type="button" data-act="test" ${!installed || working || loading ? 'disabled' : ''}>${working ? 'Working' : 'Test'}</button>
+            <button class="nv-mini" type="button" data-act="recheck" ${working || loading ? 'disabled' : ''}>Check again</button>
+            <button class="st-link" type="button" data-act="docs">${esc(s.via)} setup guide</button>
+          </div>
+          <p class="st-fine">Uses your ${esc(s.plan)} subscription: answers count against its usage limits. Requests go to ${esc(s.company)} through your own login.</p>
+          ${noteFor(s.id)}
+        </article>`;
+    }).join('');
+  }
+
+  async function copyText(text) {
     try {
-      const list = await api.agents.providers();
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); return true; }
+    } catch { /* fall back below */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.append(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  subsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-act]');
+    const card = e.target.closest('[data-sub]');
+    if (!btn || !card) return;
+    const id = card.dataset.sub;
+    const s = SUBSCRIPTIONS.find((x) => x.id === id);
+    const act = btn.dataset.act;
+    if (act === 'copy') {
+      copyText(btn.dataset.copy || '').then((ok) => ctx.toast(ok ? 'Command copied. Paste it into a terminal.' : 'Could not copy. Select the command and copy it.', ok ? 'ok' : 'warn'));
+      return;
+    }
+    if (act === 'docs') {
+      if (s) Promise.resolve(api.app.openExternal(s.docs)).catch(() => {});
+      return;
+    }
+    if (act === 'recheck') {
+      // refresh: the CLIs are looked at again now, so signing out or uninstalling shows up.
+      withBusy(id, async () => { delete notes[id]; }, { refresh: true });
+      return;
+    }
+    if (act === 'test') {
+      withBusy(id, async () => {
+        try {
+          const r = await api.agents.test(id);
+          notes[id] = r && r.ok
+            ? { kind: 'ok', text: 'Working. ' + (s ? s.via : 'The CLI') + ' answered' + (r.model && r.model !== 'default' ? ' with ' + r.model : '') + '.' }
+            : { kind: 'risk', text: 'Test failed: ' + ((r && r.error) || 'no answer') };
+        } catch (err) {
+          notes[id] = { kind: 'risk', text: 'Test failed: ' + errText(err) };
+        }
+      });
+    }
+  });
+  subsEl.addEventListener('focusin', (e) => {
+    const input = e.target.closest('[data-cmd]');
+    if (input) input.select();
+  });
+  subsEl.addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-sub-model]');
+    if (!sel) return;
+    saveModel(sel.closest('[data-sub]').dataset.sub, sel.value);
+  });
+
+  async function reloadProviders(opts) {
+    try {
+      const list = await (opts && opts.refresh ? api.agents.providers({ refresh: true }) : api.agents.providers());
       if (!alive) return;
       if (Array.isArray(list)) {
         providers = list;
@@ -288,7 +465,7 @@ export function mount(el, ctx) {
     if (alive) renderProviders();
   }
 
-  async function withBusy(id, fn) {
+  async function withBusy(id, fn, reloadOpts) {
     if (busy.has(id)) return;
     busy.add(id);
     renderProviders();
@@ -296,7 +473,7 @@ export function mount(el, ctx) {
       await fn();
     } finally {
       busy.delete(id);
-      if (alive) await reloadProviders();
+      if (alive) await reloadProviders(reloadOpts);
     }
   }
 
@@ -479,6 +656,20 @@ export function mount(el, ctx) {
     ctx.toast('Local history and preferences cleared.', 'ok');
   });
 
+  // Swap only the logo tiles, so a key being typed is not wiped by a late icon.
+  subs.push(store.on('providerIcons', () => {
+    if (!alive) return;
+    subsEl.querySelectorAll('.st-prov[data-sub]').forEach((card) => {
+      const s = SUBSCRIPTIONS.find((x) => x.id === card.dataset.sub);
+      const tile = card.querySelector('.st-logo');
+      if (s && tile) tile.outerHTML = logoTile(s.icon, s.title);
+    });
+    provEl.querySelectorAll('.st-prov[data-id]').forEach((card) => {
+      const tile = card.querySelector('.st-logo');
+      const p = (providers || PROVIDER_FALLBACK).find((x) => String(x.id) === card.dataset.id);
+      if (tile) tile.outerHTML = logoTile(card.dataset.id, p ? p.name : card.dataset.id);
+    });
+  }));
   subs.push(store.on('providers', (v) => {
     const list = providerList(v);
     if (list) { providers = list; renderProviders(); }

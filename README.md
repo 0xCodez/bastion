@@ -47,6 +47,19 @@ One scan checks your router from the inside and explains each finding in plain l
 
 **AI watchers with your own key.** Connect Claude (Anthropic), ChatGPT (OpenAI) or Grok (xAI) with your own API key. Agents read a snapshot of your scan results and answer questions like "is anything here dangerous?" or "why is my Wi-Fi slow in the evening?". They answer and suggest steps; you carry out any change yourself. Agents cannot change anything on your computer or router.
 
+### Use your Claude or ChatGPT subscription
+
+No API key? If you pay for Claude or ChatGPT, Bastion can ask through the official command-line tools you are already signed in to on this computer:
+
+| Provider in Bastion | Needs | Install | Sign in |
+| --- | --- | --- | --- |
+| Claude (my subscription) | [Claude Code](https://code.claude.com/docs/en/setup) | `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
+| ChatGPT (my subscription) | [Codex CLI](https://developers.openai.com/codex/cli) | `npm install -g @openai/codex` | `codex login` |
+
+Open **Settings → Use your subscription**: Bastion finds the CLI (also in the usual install folders when it was started from the Dock or Start menu), shows its version and sign-in state, and has a **Test** button. Once it is ready, it appears first in the Agents tabs and the Home agent menu, and **Auto** prefers it over API keys. Answers count against your plan's usage limits.
+
+Bastion runs the CLI with the same privacy-minimised snapshot it sends to the APIs, passes it on stdin, switches every tool off (Claude Code: `--tools ""` plus `--disallowedTools "*"` and `dontAsk`, with your hooks and plugins not loaded; Codex: `--sandbox read-only`, approvals `never`, shell, code and browser tools disabled, your `config.toml` not loaded, and Bastion checks with `codex features list` that they really are off before the first question) and starts it in a fresh empty folder, so the model can only answer. Signed in to Codex or Claude Code with an API key instead of a plan? Bastion labels it, because those answers are billed to the key. Quitting Bastion stops any CLI still answering. Bastion never reads your login.
+
 ## What it does NOT do
 
 Bastion is honest about what one computer can and cannot see. Where it cannot measure something, it says **unknown** and tells you how to find out yourself. It never shows made-up numbers.
@@ -66,6 +79,7 @@ Bastion has no account, no telemetry, no analytics and no crash reporting. Exact
 | Cloudflare speed test (`speed.cloudflare.com`) | Only when you press Run speed test | Test traffic, nothing about you beyond your IP address |
 | `api.ipify.org` | When the overview loads | A request that returns your public IP address |
 | Anthropic, OpenAI or xAI API | Only when you ask an agent a question | Your question and the network snapshot shown in the app, with your own API key |
+| Anthropic or OpenAI, through your own Claude Code / Codex | Only when you ask a "(my subscription)" agent | The same question and snapshot, sent by the CLI with your own login |
 
 Everything else stays on your local network: the scan talks only to your router's LAN address and uses standard local discovery (UPnP / SSDP). The device list reads this computer's ARP cache (no ping sweep); to show device names it sends reverse-DNS (PTR) lookups for local addresses to the DNS server your system is configured with, which is usually your router but can be your ISP's or a public resolver. Your API keys are encrypted at rest with the operating system's keychain (Electron `safeStorage`) and are sent only to the provider they belong to. AI providers handle what you send under their own terms; review them before you connect a key.
 
@@ -75,10 +89,16 @@ Phones constantly report the Wi-Fi networks they see, which lets location servic
 
 ## Install
 
-Download the latest build from **[Releases](../../releases/latest)**:
+Download the latest build (these links always point to the newest release):
 
-- **Windows 10/11:** `Bastion-<version>-win-x64.exe` or `Bastion-<version>-win-arm64.exe`
-- **macOS 13+:** `Bastion-<version>-mac-universal.dmg` (Apple Silicon and Intel)
+| System | Download |
+| --- | --- |
+| Windows 10/11 (x64, most PCs) | [Bastion-setup-x64.exe](https://github.com/0xCodez/bastion/releases/latest/download/Bastion-setup-x64.exe) |
+| Windows 11 on ARM | [Bastion-setup-arm64.exe](https://github.com/0xCodez/bastion/releases/latest/download/Bastion-setup-arm64.exe) |
+| macOS 13+, Apple Silicon (M1 and later) | [Bastion-mac-arm64.dmg](https://github.com/0xCodez/bastion/releases/latest/download/Bastion-mac-arm64.dmg) |
+| macOS 13+, Intel | [Bastion-mac-x64.dmg](https://github.com/0xCodez/bastion/releases/latest/download/Bastion-mac-x64.dmg) |
+
+Older versions and release notes are on the **[Releases](https://github.com/0xCodez/bastion/releases)** page. Installer file names carry no version number, so the links above never go stale.
 
 Builds are not code-signed yet. On Windows, SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**. On macOS (ad-hoc signed, not notarized), open Bastion once and close the warning, then go to **System Settings > Privacy & Security**, scroll down and click **Open Anyway**. If macOS still refuses, run `xattr -dr com.apple.quarantine /Applications/Bastion.app` in Terminal. Signed and notarized builds are on the roadmap.
 
@@ -102,8 +122,8 @@ npm run dev            # run with DevTools
 Package installers:
 
 ```bash
-npm run dist:win       # Windows NSIS installers (x64 and ARM64) -> dist/
-npm run dist:mac       # macOS universal DMG -> dist/ (run on a Mac)
+npm run dist:win       # dist/Bastion-setup-x64.exe and dist/Bastion-setup-arm64.exe
+npm run dist:mac       # dist/Bastion-mac-arm64.dmg and dist/Bastion-mac-x64.dmg (run on a Mac)
 ```
 
 Other scripts:
@@ -121,7 +141,7 @@ Tagged pushes (`v*`) build both platforms in GitHub Actions and attach the insta
 ```
 electron/      Main process: window, menu, IPC handlers; preload exposes window.bastion
 engine/        Network engine: scans, Wi-Fi, DNS, speed test (Node built-ins only)
-agents/        AI providers (Claude, ChatGPT, Grok) and encrypted key storage
+agents/        AI providers (Claude, ChatGPT, Grok), subscription CLIs (cli.js) and encrypted key storage
 renderer/      The UI: index.html, styles/ (design tokens), js/ (ES modules, three.js hero)
 scripts/       Dev tooling: preview server, syntax check, icon renderer
 build/         App icon (SVG source + rendered PNG) for packaging

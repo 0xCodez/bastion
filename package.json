@@ -25,6 +25,7 @@
     "@fontsource/barlow-semi-condensed": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/plus-jakarta-sans": "^5.3.0",
+    "@huggingface/transformers": "4.3.1",
     "openai": "^7.45.1",
     "three": "^0.187.0"
   },
@@ -50,9 +51,15 @@
         "filter": [
           "**/*"
         ]
-      }
+      },
+      "!node_modules/onnxruntime-node/**",
+      "!node_modules/sharp/**",
+      "!node_modules/@img/**",
+      "!node_modules/onnxruntime-web/dist/!(ort-wasm-simd-threaded.asyncify.*)",
+      "!node_modules/@huggingface/transformers/src/**",
+      "!node_modules/@huggingface/transformers/dist/!(transformers.min.js)"
     ],
-    "artifactName": "Bastion-${version}-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-${os}-${arch}.${ext}",
     "win": {
       "target": [
         {
@@ -69,24 +76,29 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "buildUniversalInstaller": false
+      "buildUniversalInstaller": false,
+      "artifactName": "${productName}-setup-${arch}.${ext}"
     },
     "mac": {
       "target": [
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "arm64",
+            "x64"
           ]
         }
       ],
       "category": "public.app-category.utilities",
       "icon": "build/icon.png",
       "identity": "-",
+      "artifactName": "${productName}-mac-${arch}.${ext}",
       "extendInfo": {
         "NSLocationUsageDescription": "Bastion reads your Wi-Fi network name and channel, which macOS treats as location data.",
-        "NSLocationWhenInUseUsageDescription": "Bastion reads your Wi-Fi network name and channel, which macOS treats as location data."
+        "NSLocationWhenInUseUsageDescription": "Bastion reads your Wi-Fi network name and channel, which macOS treats as location data.",
+        "NSMicrophoneUsageDescription": "Bastion listens only while you hold the mic button, and turns your speech into text on this computer."
       }
-    }
+    },
+    "npmRebuild": false
   }
 }

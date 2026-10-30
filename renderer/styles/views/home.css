@@ -10,7 +10,8 @@
   --nv-ease: cubic-bezier(.2, .8, .2, 1);
   --nv-gl: clamp(16px, 3vw, 40px);
 
-  background: var(--ground);
+  /* No solid ground: the app-wide ambient layer (styles/ambient.css) shows below the hero. */
+  background: transparent;
   color: var(--text);
   font: 400 15px/1.5 var(--nv-ui);
   -webkit-font-smoothing: antialiased;

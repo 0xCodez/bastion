@@ -2,6 +2,7 @@
 
 import api, { isMock } from './api.js';
 import { store } from './store.js';
+import { mountAmbient } from './ambient.js';
 
 const VIEWS = [
   { id: 'home', label: 'Home', icon: '<path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-6h4v6"/>' },
@@ -10,6 +11,7 @@ const VIEWS = [
   { id: 'devices', label: 'Devices', icon: '<rect x="3" y="4" width="13" height="10" rx="1"/><path d="M7 18h5"/><rect x="17.5" y="9" width="4" height="11" rx="1"/>' },
   { id: 'agents', label: 'Agents', icon: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>' },
   { id: 'settings', label: 'Settings', icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>' },
+  { id: 'support', label: 'Support', icon: '<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/>' },
 ];
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -267,6 +269,7 @@ function navigate(id) {
   const def = VIEWS.find((v) => v.id === id);
   if (!def || (current && current.id === id)) return;
   const token = ++navToken;
+  if (ambient) ambient.setView(id);
 
   for (const btn of document.querySelectorAll('.tabbar__item')) {
     if (btn.dataset.view === id) btn.setAttribute('aria-current', 'page');
@@ -453,18 +456,85 @@ function updateTitleStatus() {
   updateRailStatus();
 }
 
-// Three dots, one per AI provider, lit in the provider colour when a key is stored.
+// Provider logos from the user's installed apps (store key 'providerIcons': { claude, openai, grok }
+// -> dataURL | null). Loaded here once, and again when the set of saved keys changes, because a
+// provider with a key may fall back to its site icon. Views read the same store key.
+const LOGO_RE = /^data:image\/(png|jpeg|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/=]+$/;
+let iconKeySig = null;
+let iconSub = false;
+let iconRetried = false;
+// One more try 20 s later when the lookup failed or found nothing (a cold PowerShell start can
+// time out); the engine does not keep a failed lookup either.
+function retryProviderIcons() {
+  if (iconRetried) return;
+  iconRetried = true;
+  setTimeout(() => { iconKeySig = null; loadProviderIcons(store.get('providers')); }, 20000);
+}
+function loadProviderIcons(list) {
+  if (!iconSub) { iconSub = true; store.on('providerIcons', updateKeys); }
+  if (!api.icons || typeof api.icons.providers !== 'function') return;
+  const sig = Array.isArray(list) ? list.filter((p) => p && p.hasKey).map((p) => p.id).sort().join(',') : '?';
+  if (sig === iconKeySig || (sig === '?' && iconKeySig !== null)) return;
+  iconKeySig = sig;
+  Promise.resolve(api.icons.providers())
+    .then((m) => {
+      if (!m || typeof m !== 'object' || m.ok === false) throw new Error('no icons');
+      const out = {};
+      for (const id of ['claude', 'openai', 'grok']) {
+        const v = m[id];
+        out[id] = typeof v === 'string' && LOGO_RE.test(v) ? v : null;
+      }
+      store.set('providerIcons', out);
+      if (!isMock && !Object.values(out).some(Boolean)) retryProviderIcons();
+    })
+    .catch(() => {
+      iconKeySig = null;
+      if (store.get('providerIcons') === undefined) store.set('providerIcons', { claude: null, openai: null, grok: null });
+      retryProviderIcons();
+    });
+}
+
+// The provider's monogram, same recipe as Settings / Agents / Home: a deep tile in the provider
+// colour with a white letter, so it reads as one set with the real app icons.
+function monoTile(color) {
+  return `background:linear-gradient(160deg,color-mix(in srgb,${color} 54%,#1b1633),color-mix(in srgb,${color} 34%,#0d0b1c));`
+    + 'color:#fff;font:700 9.5px/16px var(--nf-d, var(--f-display, inherit));text-align:center;letter-spacing:-.01em;';
+}
+
+// One 16 px mark per AI provider: the provider's app icon in full colour, or its monogram tile.
+// Without a key a mark sits back at 55 % opacity; a saved key brings it forward and adds a small
+// mint status dot. The brand is never desaturated.
 function updateKeys() {
   const btn = $('#keysBtn');
   if (!btn) return;
   const list = store.get('providers');
+  loadProviderIcons(list);
+  const icons = store.get('providerIcons') || {};
   const byId = new Map(Array.isArray(list) ? list.map((p) => [p.id, p]) : []);
+  const dots = $('#keysDots');
+  if (dots) dots.style.gap = '6px';
   let n = 0;
   for (const i of btn.querySelectorAll('[data-prov]')) {
-    const p = byId.get(i.dataset.prov);
+    const id = i.dataset.prov;
+    const p = byId.get(id);
     const on = !!(p && p.hasKey);
     if (on) n += 1;
     i.classList.toggle('is-on', on);
+    const src = icons[id];
+    const base = 'position:relative;display:block;flex:none;width:16px;height:16px;border-radius:4.5px;border:0;font-style:normal;'
+      + 'box-shadow:inset 0 0 0 .5px rgba(255,255,255,.22),0 1px 2px rgba(0,0,0,.45);transition:opacity .3s;'
+      + `opacity:${on ? 1 : 0.55};`;
+    i.style.cssText = base + (src
+      ? `background:center/cover no-repeat url("${src}");`
+      : monoTile(`var(--prov-${id}, var(--lavender))`));
+    const letter = src ? '' : String((p && p.name) || { claude: 'Claude', openai: 'ChatGPT', grok: 'Grok' }[id] || id).charAt(0).toUpperCase();
+    i.textContent = letter;
+    if (on) {
+      const dot = document.createElement('b');
+      dot.style.cssText = 'position:absolute;right:-2px;bottom:-2px;width:6px;height:6px;border-radius:50%;'
+        + 'background:var(--mint);box-shadow:0 0 0 1.5px #15122a,0 0 6px rgba(158,240,196,.55)';
+      i.append(dot);
+    }
   }
   const text = $('#keysText');
   let label;
@@ -472,7 +542,7 @@ function updateKeys() {
   else if (!Array.isArray(list)) label = 'Keys unknown';
   else label = n ? `${n} ${n === 1 ? 'key' : 'keys'}` : 'No keys';
   text.textContent = label;
-  const names = Array.isArray(list) ? list.filter((p) => p.hasKey).map((p) => p.name) : [];
+  const names = Array.isArray(list) ? list.filter((p) => p.hasKey && p.kind !== 'cli').map((p) => p.name) : [];
   const desc = names.length ? `AI keys stored: ${names.join(', ')}` : (Array.isArray(list) ? 'No AI keys stored yet' : 'AI keys');
   btn.title = `${desc}. Open Settings to manage them.`;
   btn.setAttribute('aria-label', `${desc}. Open Settings`);
@@ -481,7 +551,7 @@ function updateKeys() {
 function wireKeyboard() {
   window.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
-    const m = /^Digit([1-6])$/.exec(e.code) || /^([1-6])$/.exec(e.key);
+    const m = /^Digit([1-7])$/.exec(e.code) || /^([1-7])$/.exec(e.key);
     if (!m) return;
     e.preventDefault();
     navigate(VIEWS[Number(m[1]) - 1].id);
@@ -519,8 +589,12 @@ const ctx = {
   snapshot,
 };
 
+// App-wide ambient background (js/ambient.js): mounted once, mood follows the view and the store.
+let ambient = null;
+
 function boot() {
   store.set('agentLog', []);
+  try { ambient = mountAmbient(store); } catch (err) { console.warn('[bastion] ambient background failed', err); }
   buildRail();
   wireKeyboard();
   wireProgressEvents();

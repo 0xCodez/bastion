@@ -20,6 +20,57 @@ const ICONS = {
   phone: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
   device: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
 };
+// Friendly names for well-known programs (process name without .exe, lower case).
+const APP_NAMES = {
+  chrome: 'Google Chrome', msedge: 'Microsoft Edge', msedgewebview2: 'Microsoft Edge WebView2', firefox: 'Firefox',
+  brave: 'Brave', opera: 'Opera', vivaldi: 'Vivaldi', arc: 'Arc', safari: 'Safari', 'com.apple.webkit.networking': 'Safari networking',
+  claude: 'Claude', chatgpt: 'ChatGPT', grok: 'Grok', code: 'Visual Studio Code', 'code helper': 'Visual Studio Code',
+  cursor: 'Cursor', telegram: 'Telegram', discord: 'Discord', spotify: 'Spotify', onedrive: 'OneDrive', 'onedrive.sync.service': 'OneDrive',
+  steam: 'Steam', steamwebhelper: 'Steam', steamservice: 'Steam', slack: 'Slack', zoom: 'Zoom', 'ms-teams': 'Microsoft Teams',
+  teams: 'Microsoft Teams', outlook: 'Outlook', olk: 'Outlook', whatsapp: 'WhatsApp', signal: 'Signal', skype: 'Skype',
+  notion: 'Notion', figma: 'Figma', dropbox: 'Dropbox', obs64: 'OBS Studio', obs: 'OBS Studio', postman: 'Postman',
+  'docker desktop': 'Docker Desktop', 'com.docker.backend': 'Docker', '1password': '1Password', bitwarden: 'Bitwarden',
+  nordvpn: 'NordVPN', openvpn: 'OpenVPN', node: 'Node.js', python: 'Python', pythonw: 'Python', git: 'Git', ssh: 'OpenSSH',
+  explorer: 'File Explorer', searchhost: 'Windows Search', svchost: 'Windows service host', lsass: 'Windows sign-in service',
+  system: 'Windows system', wslhost: 'WSL', nvcontainer: 'NVIDIA Container', epicgameslauncher: 'Epic Games Launcher',
+  battle_net: 'Battle.net', 'battle.net': 'Battle.net', finder: 'Finder', mdnsresponder: 'Bonjour (mDNSResponder)',
+  apsd: 'Apple Push', rapportd: 'Apple Continuity', cloudd: 'iCloud', identityservicesd: 'Apple ID services', electron: 'Electron',
+  bastion: 'Bastion',
+};
+function appName(proc) {
+  const k = String(proc || '').trim().replace(/\.exe$/i, '').toLowerCase();
+  return APP_NAMES[k] || null;
+}
+
+// A product name from the executable's version resource, if it reads like an app name
+// (not "Microsoft(R) Windows(R) Operating System" or an empty / overlong string).
+function saneProduct(s) {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  if (!t || t.length > 32 || /[\u00ae\u2122\u00a9]|operating system/i.test(t)) return null;
+  return t;
+}
+
+// Friendly name for a program: the well-known name, refined by the executable's product name when
+// that names a variant ("claude.exe" of the Claude Code CLI is "Claude Code", not "Claude").
+function appLabel(proc, info) {
+  const base = appName(proc);
+  const prod = info ? saneProduct(info.product) || saneProduct(info.description) : null;
+  if (base) {
+    if (prod && prod.length > base.length && prod.toLowerCase().startsWith(base.toLowerCase() + ' ')) return prod;
+    return base;
+  }
+  return prod;
+}
+
+// Program identity from the user's own installed apps, cached for the whole session:
+//   pidInfo  "pid|process" -> { exe, product, description, at }  (exe null = system would not say)
+//   exeIcons exe path -> dataURL | null   (one entry per program, not per pid)
+const pidInfo = new Map();
+const exeIcons = new Map();
+const UNKNOWN_RETRY_MS = 2 * 60 * 1000;
+const pidKey = (pid, name) => pid + '|' + (name || '');
+const DATA_IMG = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/;
+
 function icon(kind) {
   return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[kind] + '</svg>';
 }
@@ -95,6 +146,9 @@ export function mount(el, ctx) {
   let devErr = '';
   let connErr = '';
   const openGroups = new Set();
+  let iconBusy = false;
+  const imgNodes = new Map(); // exe path -> <img>, reused across repaints of this mount
+  const freshIcons = new Set(); // arrived since the last paint: fade in once, not on every repaint
 
   el.innerHTML = `
     <section class="v-devices view-pad" aria-labelledby="dv-title">
@@ -276,38 +330,97 @@ export function mount(el, ctx) {
     if (target) target.focus();
   }
 
+  function infoOf(c) {
+    return c.pid == null ? null : pidInfo.get(pidKey(c.pid, c.process)) || null;
+  }
+
+  // One card per program, like Activity Monitor: connections of every pid of the same executable
+  // are merged. Until a pid's executable is known it groups by process name.
+  function groupKey(c) {
+    const info = infoOf(c);
+    if (info && info.exe) return 'exe:' + info.exe.toLowerCase();
+    if (c.process) return 'name:' + c.process.toLowerCase();
+    return 'pid:' + (c.pid == null ? '' : c.pid);
+  }
+
+  function pidText(pids) {
+    if (!pids.length) return '';
+    if (pids.length === 1) return 'PID ' + pids[0];
+    if (pids.length <= 3) return 'PIDs ' + pids.join(', ');
+    return pids.length + ' processes';
+  }
+
+  // The <img> of each program survives repaints (moved into the new markup), so a background
+  // refresh never re-decodes the icon or blanks it for a frame.
+  function iconNode(exe, src) {
+    let img = imgNodes.get(exe);
+    if (img && img.getAttribute('src') !== src) img = null;
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'dv-app-ic' + (freshIcons.has(exe) ? ' is-new' : '');
+      img.alt = '';
+      img.width = 30;
+      img.height = 30;
+      img.draggable = false;
+      img.decoding = 'async';
+      img.src = src;
+      imgNodes.set(exe, img);
+    } else {
+      img.classList.remove('is-new');
+    }
+    return img;
+  }
+
   function renderConnsInner(box) {
     const cv = connsValue();
     if (cv.loading) { box.innerHTML = '<p class="empty-state">Reading this computer\'s connections.</p>'; return; }
     if (cv.error) { box.innerHTML = `<p class="empty-state">Could not list connections: ${esc(cv.error)}</p>`; return; }
     let list = cv.list.filter((c) => scope(c.remoteIp) !== 'none');
     if (hideLocal) list = list.filter((c) => { const s = scope(c.remoteIp); return s !== 'loopback' && s !== 'lan' && s !== 'multicast'; });
-    list = list.filter((c) => matches([c.process, c.pid, c.remoteIp, c.remotePort, c.state, c.local, PORT_NAMES[c.remotePort]].join(' ')));
+    list = list.filter((c) => matches([c.process, appLabel(c.process, infoOf(c)), c.pid, c.remoteIp, c.remotePort, c.state, c.local, PORT_NAMES[c.remotePort]].join(' ')));
     if (!list.length) {
       box.innerHTML = `<p class="empty-state">${cv.list.length ? 'No connections match.' + (hideLocal ? ' Local and loopback connections are hidden.' : '') : 'No active connections right now.'}</p>`;
       return;
     }
     const groups = new Map();
     for (const c of list) {
-      const key = (c.process || 'Unknown process') + '|' + (c.pid == null ? '' : c.pid);
-      if (!groups.has(key)) groups.set(key, { name: c.process || null, pid: c.pid, items: [] });
-      groups.get(key).items.push(c);
+      const key = groupKey(c);
+      if (!groups.has(key)) groups.set(key, { name: c.process || null, info: null, exe: null, pids: new Set(), items: [] });
+      const g = groups.get(key);
+      const info = infoOf(c);
+      if (info && info.exe && !g.exe) { g.exe = info.exe; g.info = info; }
+      if (c.pid != null) g.pids.add(c.pid);
+      g.items.push(c);
     }
     const sorted = [...groups.entries()].sort((a, b) => b[1].items.length - a[1].items.length || String(a[1].name).localeCompare(String(b[1].name)));
     const unnamed = list.filter((c) => !c.process).length;
+    const slots = [];
     box.innerHTML = `
       <div class="dv-groups">
         ${sorted.map(([key, g]) => {
           const open = openGroups.has(key);
           const shown = open ? g.items : g.items.slice(0, GROUP_PREVIEW);
           const ext = g.items.filter((c) => scope(c.remoteIp) === 'internet').length;
+          const friendly = appLabel(g.name, g.info);
+          const src = g.exe ? exeIcons.get(g.exe) : null;
+          const pids = [...g.pids].sort((a, b) => a - b);
+          const pending = pids.some((p) => !pidInfo.has(pidKey(p, g.name)));
+          const sub = [friendly ? g.name : '', pidText(pids)].filter(Boolean).join(' · ');
+          const tip = [g.exe, pids.length > 3 ? 'PIDs ' + pids.join(', ') : ''].filter(Boolean).join('\n');
+          let mark;
+          if (src) {
+            slots.push([g.exe, src]);
+            mark = `<span class="dv-ic-slot" data-ic-slot="${slots.length - 1}"></span>`;
+          } else {
+            mark = `<span class="dv-proc-ic${pending ? ' is-loading' : ''}" aria-hidden="true">${esc(String(friendly || g.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`;
+          }
           return `
             <div class="dv-group">
               <div class="dv-group-h">
-                <span class="dv-proc-ic" aria-hidden="true">${esc(String(g.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
-                <span class="dv-group-t">
-                  <b>${esc(g.name || 'Unknown process')}</b>
-                  ${g.pid != null ? `<span class="dv-mono dv-dim">PID ${esc(g.pid)}</span>` : ''}
+                ${mark}
+                <span class="dv-group-t"${tip ? ` title="${esc(tip)}"` : ''}>
+                  <b>${esc(friendly || g.name || 'Unknown process')}</b>
+                  ${sub ? `<span class="dv-mono dv-dim dv-proc-sub">${esc(sub)}</span>` : ''}
                 </span>
                 <span class="nv-tag dv-group-n">${g.items.length} connection${g.items.length === 1 ? '' : 's'}${ext ? ' · ' + ext + ' internet' : ''}</span>
               </div>
@@ -330,6 +443,62 @@ export function mount(el, ctx) {
       </div>
       ${unnamed ? `<p class="dv-fine">${unnamed} connection${unnamed === 1 ? ' has' : 's have'} no process name. The system did not say which program owns them. This is common for system services when Bastion runs without admin rights.</p>` : ''}
       <p class="dv-fine">Remote addresses are shown as numbers. This view does not look them up, so listing connections sends nothing off this computer.</p>`;
+    for (const slot of box.querySelectorAll('[data-ic-slot]')) {
+      const s = slots[Number(slot.dataset.icSlot)];
+      if (s) slot.replaceWith(iconNode(s[0], s[1]));
+      else slot.remove();
+    }
+    freshIcons.clear();
+    loadIcons(list);
+  }
+
+  // Asks main who owns pids not seen yet (one batch at a time) and for the icons of programs not
+  // seen yet, then repaints. Pids the system would not name are asked again after a while, not on
+  // every paint.
+  function loadIcons(conns) {
+    if (iconBusy || !alive || !api.icons || typeof api.icons.forProcesses !== 'function') return;
+    const now = Date.now();
+    const seen = new Set();
+    const need = [];
+    for (const c of conns) {
+      if (c.pid == null) continue;
+      const k = pidKey(c.pid, c.process);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const hit = pidInfo.get(k);
+      if (hit && (hit.exe || now - hit.at < UNKNOWN_RETRY_MS)) continue;
+      need.push({ pid: c.pid, process: c.process || null });
+      if (need.length >= 400) break;
+    }
+    if (!need.length) return;
+    iconBusy = true;
+    if (pidInfo.size > 3000) pidInfo.clear();
+    if (exeIcons.size > 400) { exeIcons.clear(); imgNodes.clear(); }
+    Promise.resolve(api.icons.forProcesses(need, { known: [...exeIcons.keys()] }))
+      .then((res) => {
+        const procs = res && typeof res === 'object' && res.processes && typeof res.processes === 'object' ? res.processes : {};
+        const icons = res && typeof res === 'object' && res.icons && typeof res.icons === 'object' ? res.icons : {};
+        for (const n of need) {
+          const row = procs[n.pid];
+          const exe = row && typeof row.exe === 'string' && row.exe ? row.exe : null;
+          pidInfo.set(pidKey(n.pid, n.process), {
+            exe,
+            product: row && typeof row.product === 'string' ? row.product : null,
+            description: row && typeof row.description === 'string' ? row.description : null,
+            at: now,
+          });
+        }
+        for (const [exe, v] of Object.entries(icons)) {
+          if (typeof v === 'string' && DATA_IMG.test(v)) {
+            if (exeIcons.get(exe) !== v) freshIcons.add(exe);
+            exeIcons.set(exe, v);
+          } else if (!exeIcons.has(exe)) {
+            exeIcons.set(exe, null);
+          }
+        }
+      })
+      .catch(() => { for (const n of need) pidInfo.set(pidKey(n.pid, n.process), { exe: null, product: null, description: null, at: now }); })
+      .finally(() => { iconBusy = false; if (alive) renderConns(); });
   }
 
   // ---------- actions ----------
@@ -441,6 +610,7 @@ export function mount(el, ctx) {
       setLive(false);
       for (const id of timers) clearTimeout(id);
       for (const off of subs) if (typeof off === 'function') off();
+      imgNodes.clear();
       el.innerHTML = '';
     },
   };

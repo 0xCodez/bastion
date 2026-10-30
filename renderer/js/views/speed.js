@@ -1,6 +1,7 @@
 // Speed & Wi-Fi view: live speed gauge, result numerals, test history, Wi-Fi link details
-// and the channel alignment ring built from the real neighbour survey.
+// and the channel spectrum built from the real neighbour survey.
 import { readPrefs, PREFS_EVENT } from './settings.js';
+import { createChannelSpectrum } from '../viz/channel-spectrum.js';
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -52,7 +53,7 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 function fmtMbps(v) {
   const n = num(v);
-  if (n == null) return '--';
+  if (n == null) return '–';
   return n >= 100 ? n.toFixed(0) : n.toFixed(1);
 }
 
@@ -191,17 +192,26 @@ export function mount(el, ctx) {
             <div class="sp-gauge" data-gauge-wrap data-running="false">
               <svg viewBox="0 0 260 232" role="img" aria-labelledby="sp-g-title" data-gauge>
                 <title id="sp-g-title">Speed gauge from 0 to 1 gigabit per second</title>
-                <defs><linearGradient id="spGaugeGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0" style="stop-color:var(--sky)"/><stop offset=".55" style="stop-color:var(--violet)"/><stop offset="1" style="stop-color:var(--lavender)"/>
-                </linearGradient></defs>
+                <defs>
+                  <linearGradient id="spGaugeGrad" x1="0" y1="1" x2="1" y2="0">
+                    <stop offset="0" style="stop-color:var(--sky)"/><stop offset=".55" style="stop-color:var(--violet)"/><stop offset="1" style="stop-color:var(--lavender)"/>
+                  </linearGradient>
+                  <radialGradient id="spGaugeWell" cx="130" cy="130" r="100" gradientUnits="userSpaceOnUse">
+                    <stop offset=".5" style="stop-color:var(--violet);stop-opacity:0"/><stop offset="1" style="stop-color:var(--violet);stop-opacity:.12"/>
+                  </radialGradient>
+                  <filter id="spGaugeGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>
+                </defs>
+                <circle cx="130" cy="130" r="95" fill="url(#spGaugeWell)"/>
+                <path class="g-inner" d="M73.43 186.57 A80 80 0 1 1 186.57 186.57"/>
                 <path class="g-track" d="${ARC_D}" pathLength="100"/>
+                <path class="g-glow" d="${ARC_D}" pathLength="100" stroke="url(#spGaugeGrad)" stroke-dasharray="0 100" filter="url(#spGaugeGlow)" data-gglow/>
                 <path class="g-val" d="${ARC_D}" pathLength="100" stroke="url(#spGaugeGrad)" stroke-dasharray="0 100" data-gval/>
                 <g data-gticks></g>
-                <g class="g-needle" data-needle transform="rotate(135 130 130)"><line x1="130" y1="130" x2="196" y2="130"/><circle cx="130" cy="130" r="7"/></g>
+                <g class="g-head" data-needle transform="rotate(135 130 130)"><circle class="g-head-halo" cx="230" cy="130" r="13"/><circle class="g-head-dot" cx="230" cy="130" r="4.2"/></g>
               </svg>
               <div class="sp-read">
                 <span class="sp-phase" data-phase>Ready</span>
-                <span class="sp-read-num" data-gnum>--</span>
+                <span class="sp-read-num" data-gnum>–</span>
                 <span class="sp-read-unit" data-gunit>Mbps</span>
               </div>
             </div>
@@ -214,10 +224,10 @@ export function mount(el, ctx) {
           </div>
 
           <div class="sp-numerals">
-            <div class="nv-glass nv-stat"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sky)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v14M6 12l6 6 6-6"/></svg>Download</span><span class="nv-stat-v" data-n="down">--</span><span class="nv-stat-u">Mbps</span></div>
-            <div class="nv-glass nv-stat"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lavender)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V6M6 12l6-6 6 6"/></svg>Upload</span><span class="nv-stat-v" data-n="up">--</span><span class="nv-stat-u">Mbps</span></div>
-            <div class="nv-glass nv-stat"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Ping</span><span class="nv-stat-v" data-n="ping">--</span><span class="nv-stat-u">ms</span></div>
-            <div class="nv-glass nv-stat"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h3l3-6 4 12 3-6h5"/></svg>Jitter</span><span class="nv-stat-v" data-n="jitter">--</span><span class="nv-stat-u">ms</span></div>
+            <div class="nv-glass nv-stat sp-tile"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sky)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v14M6 12l6 6 6-6"/></svg>Download</span><span class="sp-tile-v"><span class="nv-stat-v" data-n="down">–</span><span class="nv-stat-u">Mbps</span></span><span class="sp-spark" data-spark="down" aria-hidden="true"></span></div>
+            <div class="nv-glass nv-stat sp-tile"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lavender)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V6M6 12l6-6 6 6"/></svg>Upload</span><span class="sp-tile-v"><span class="nv-stat-v" data-n="up">–</span><span class="nv-stat-u">Mbps</span></span><span class="sp-spark" data-spark="up" aria-hidden="true"></span></div>
+            <div class="nv-glass nv-stat sp-tile"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Ping</span><span class="sp-tile-v"><span class="nv-stat-v" data-n="ping">–</span><span class="nv-stat-u">ms</span></span><span class="sp-spark" data-spark="ping" aria-hidden="true"></span></div>
+            <div class="nv-glass nv-stat sp-tile"><span class="nv-stat-k"><svg class="sp-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h3l3-6 4 12 3-6h5"/></svg>Jitter</span><span class="sp-tile-v"><span class="nv-stat-v" data-n="jitter">–</span><span class="nv-stat-u">ms</span></span><span class="sp-spark" data-spark="jitter" aria-hidden="true"></span></div>
           </div>
         </div>
 
@@ -274,20 +284,31 @@ export function mount(el, ctx) {
   (function buildGaugeTicks() {
     const g = $('[data-gticks]');
     const NS = 'http://www.w3.org/2000/svg';
+    // hairline minor ticks every 5 degrees just outside the track; the stops get longer marks
+    const step = 270 / (GAUGE_STOPS.length - 1);
+    for (let d = 5; d < 270; d += 5) {
+      if (Math.abs(d / step - Math.round(d / step)) < 1e-6) continue;
+      const a = (135 + d) * DEG;
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', (130 + 110 * Math.cos(a)).toFixed(2)); ln.setAttribute('y1', (130 + 110 * Math.sin(a)).toFixed(2));
+      ln.setAttribute('x2', (130 + 113 * Math.cos(a)).toFixed(2)); ln.setAttribute('y2', (130 + 113 * Math.sin(a)).toFixed(2));
+      ln.setAttribute('class', 'g-minor');
+      g.appendChild(ln);
+    }
     GAUGE_STOPS.forEach((v, i) => {
       const a = (135 + 270 * (i / (GAUGE_STOPS.length - 1))) * DEG;
       const c = Math.cos(a);
       const sn = Math.sin(a);
       const t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', (130 + 124 * c).toFixed(1));
-      t.setAttribute('y', (130 + 124 * sn + 4).toFixed(1));
+      t.setAttribute('x', (130 + 125 * c).toFixed(1));
+      t.setAttribute('y', (130 + 125 * sn + 3.5).toFixed(1));
       t.setAttribute('text-anchor', Math.abs(c) < 0.2 ? 'middle' : c < 0 ? 'end' : 'start');
       t.setAttribute('class', 'g-tick');
       t.textContent = GAUGE_LABELS[i];
       g.appendChild(t);
       const ln = document.createElementNS(NS, 'line');
-      ln.setAttribute('x1', (130 + 86 * c).toFixed(1)); ln.setAttribute('y1', (130 + 86 * sn).toFixed(1));
-      ln.setAttribute('x2', (130 + 80 * c).toFixed(1)); ln.setAttribute('y2', (130 + 80 * sn).toFixed(1));
+      ln.setAttribute('x1', (130 + 109 * c).toFixed(2)); ln.setAttribute('y1', (130 + 109 * sn).toFixed(2));
+      ln.setAttribute('x2', (130 + 116 * c).toFixed(2)); ln.setAttribute('y2', (130 + 116 * sn).toFixed(2));
       ln.setAttribute('class', 'g-mark');
       g.appendChild(ln);
     });
@@ -296,6 +317,7 @@ export function mount(el, ctx) {
   const gWrap = $('[data-gauge-wrap]');
   const gVal = $('[data-gval]');
   const gNeedle = $('[data-needle]');
+  const gGlow = $('[data-gglow]');
   const gNum = $('[data-gnum]');
   const gUnit = $('[data-gunit]');
 
@@ -304,14 +326,17 @@ export function mount(el, ctx) {
     const running = isRunning();
     gVal.setAttribute('stroke-dasharray', (f * 100).toFixed(2) + ' 100');
     gVal.style.opacity = f > 0.002 ? '1' : '0';
+    gGlow.setAttribute('stroke-dasharray', (f * 100).toFixed(2) + ' 100');
+    gGlow.style.opacity = f > 0.002 ? '' : '0';
+    gNeedle.style.opacity = f > 0.002 ? '1' : '0';
     gNeedle.setAttribute('transform', 'rotate(' + (135 + 270 * f).toFixed(2) + ' 130 130)');
     gWrap.dataset.running = String(running);
 
     const p = sp.prog;
-    let big = '--';
+    let big = '–';
     let unit = 'Mbps';
     if (running && p && p.phase === 'ping') {
-      big = num(p.pingMs) != null ? String(Math.round(p.pingMs)) : '--';
+      big = num(p.pingMs) != null ? String(Math.round(p.pingMs)) : '–';
       unit = 'ms';
     } else if (running && p && num(p.mbps) != null) {
       big = fmtMbps(p.mbps);
@@ -319,6 +344,7 @@ export function mount(el, ctx) {
       big = fmtMbps(latestResult().downMbps);
     }
     if (gNum.textContent !== big) gNum.textContent = big;
+    gNum.toggleAttribute('data-empty', big === '–');
     if (gUnit.textContent !== unit) gUnit.textContent = unit;
   }
 
@@ -388,24 +414,31 @@ export function mount(el, ctx) {
       : '';
     gauge.redraw();
 
-    const n = (k, v) => { $('[data-n="' + k + '"]').textContent = v; };
+    const n = (k, v) => { const e = $('[data-n="' + k + '"]'); e.textContent = v; e.toggleAttribute('data-empty', v === '–'); };
     if (running) {
       if (p && p.phase === 'ping' && num(p.pingMs) != null) sp.live.ping = p.pingMs;
       if (p && p.phase === 'download' && num(p.mbps) != null) sp.live.down = p.mbps;
       if (p && p.phase === 'upload' && num(p.mbps) != null) sp.live.up = p.mbps;
       if (p && sp.live.down == null && num(p.downMbps) != null) sp.live.down = p.downMbps;
       if (p && sp.live.up == null && num(p.upMbps) != null) sp.live.up = p.upMbps;
-      n('down', sp.live.down != null ? fmtMbps(sp.live.down) : '--');
-      n('up', sp.live.up != null ? fmtMbps(sp.live.up) : '--');
-      n('ping', sp.live.ping != null ? String(Math.round(sp.live.ping)) : '--');
-      n('jitter', '--');
+      n('down', sp.live.down != null ? fmtMbps(sp.live.down) : '–');
+      n('up', sp.live.up != null ? fmtMbps(sp.live.up) : '–');
+      n('ping', sp.live.ping != null ? String(Math.round(sp.live.ping)) : '–');
+      n('jitter', '–');
     } else if (r) {
       n('down', fmtMbps(r.downMbps));
       n('up', fmtMbps(r.upMbps));
-      n('ping', num(r.pingMs) != null ? String(Math.round(r.pingMs)) : '--');
-      n('jitter', num(r.jitterMs) != null ? (r.jitterMs < 10 ? r.jitterMs.toFixed(1) : String(Math.round(r.jitterMs))) : '--');
+      n('ping', num(r.pingMs) != null ? String(Math.round(r.pingMs)) : '–');
+      n('jitter', num(r.jitterMs) != null ? (r.jitterMs < 10 ? r.jitterMs.toFixed(1) : String(Math.round(r.jitterMs))) : '–');
+    } else if (history.length) {
+      // No result this session yet: the tiles show the last saved test (the one their trend ends on).
+      const h = history[history.length - 1];
+      n('down', fmtMbps(h.down));
+      n('up', fmtMbps(h.up));
+      n('ping', num(h.ping) != null ? String(Math.round(h.ping)) : '–');
+      n('jitter', num(h.jitter) != null ? (h.jitter < 10 ? h.jitter.toFixed(1) : String(Math.round(h.jitter))) : '–');
     } else {
-      ['down', 'up', 'ping', 'jitter'].forEach((k) => n(k, '--'));
+      ['down', 'up', 'ping', 'jitter'].forEach((k) => n(k, '–'));
     }
   }
 
@@ -442,10 +475,13 @@ export function mount(el, ctx) {
       sp.busy = false;
       sp.cancelling = false;
       sp.prog = null;
-      const lr = latestResult();
-      setTarget(lr && !sp.outcome ? lr.downMbps || 0 : 0);
-      renderRun();
-      renderHistory();
+      // The view may have been left while the test ran: nothing to render into then.
+      if (alive) {
+        const lr = latestResult();
+        setTarget(lr && !sp.outcome ? lr.downMbps || 0 : 0);
+        renderRun();
+        renderHistory();
+      }
     }
   }
 
@@ -489,11 +525,20 @@ export function mount(el, ctx) {
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
     ctx.font = '500 10.5px ' + FONT_M;
     if (!history.length) {
-      ctx.strokeStyle = rgba(pal.lavender, 0.25); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(L, Tp + ph); ctx.lineTo(L + pw, Tp + ph); ctx.stroke();
-      ctx.fillStyle = pal.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = '600 15px ' + FONT_D;
-      ctx.fillText('No tests yet', L + pw / 2, Tp + ph / 2);
+      // Empty state: the bare instrument (quiet guides, a lit floor) and one line of direction.
+      for (const i of [0, 1, 3, 4]) { // the middle guide would run through the message
+        const y = Math.round(Tp + ph * (i / 4)) + 0.5;
+        ctx.strokeStyle = rgba(pal.lavender, i === 4 ? 0.26 : 0.06); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+      }
+      const fl = ctx.createRadialGradient(L + pw / 2, Tp + ph, 0, L + pw / 2, Tp + ph, pw * 0.45);
+      fl.addColorStop(0, rgba(pal.violet, 0.16)); fl.addColorStop(1, rgba(pal.violet, 0));
+      ctx.fillStyle = fl; ctx.fillRect(L, Tp, pw, ph);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = pal.text; ctx.font = '700 16px ' + FONT_D;
+      ctx.fillText('No tests yet', L + pw / 2, Tp + ph / 2 - 10);
+      ctx.fillStyle = pal.muted; ctx.font = '500 12.5px ' + FONT_U;
+      ctx.fillText('Each finished speed test draws a point here.', L + pw / 2, Tp + ph / 2 + 13);
       return;
     }
     const peak = Math.max(...history.map((x) => Math.max(x.down || 0, x.up || 0)), 1);
@@ -502,8 +547,8 @@ export function mount(el, ctx) {
     for (let i = 0; i <= 4; i++) {
       const v = (max / 4) * i;
       const y = Tp + ph * (1 - v / max);
-      ctx.strokeStyle = rgba(pal.lavender, i === 0 ? 0.24 : 0.07); ctx.lineWidth = 1;
-      ctx.setLineDash(i === 0 ? [] : [2, 5]);
+      ctx.strokeStyle = rgba(pal.lavender, i === 0 ? 0.26 : 0.06); ctx.lineWidth = 1;
+      ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
       ctx.fillStyle = pal.dim; ctx.textAlign = 'right';
       ctx.fillText(v >= 100 ? String(Math.round(v)) : String(+v.toFixed(1)), L - 10, y);
@@ -520,47 +565,85 @@ export function mount(el, ctx) {
       ctx.textAlign = n === 1 ? 'center' : i === 0 ? 'left' : i === n - 1 ? 'right' : 'center';
       ctx.fillText(fmtClock(x.at), X(i), h - 6);
     });
-    // Tests where a direction was not measured leave a gap instead of a fake zero.
+    // Tests where a direction was not measured leave a gap instead of a fake zero. Each measured
+    // run is drawn as a smooth monotone curve (no overshoot above or below the real values).
+    const runs = (key) => {
+      const out = [];
+      let cur = null;
+      history.forEach((x, i) => {
+        if (num(x[key]) == null) { cur = null; return; }
+        if (!cur) { cur = []; out.push(cur); }
+        cur.push([X(i), Y(x[key])]);
+      });
+      return out;
+    };
+    const smooth = (pts, move) => {
+      if (move) ctx.moveTo(pts[0][0], pts[0][1]); else ctx.lineTo(pts[0][0], pts[0][1]);
+      if (pts.length === 1) return;
+      const m = pts.length;
+      const d = [];
+      const t = [];
+      for (let i = 0; i < m - 1; i++) d.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0] || 1));
+      t[0] = d[0];
+      t[m - 1] = d[m - 2];
+      for (let i = 1; i < m - 1; i++) t[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+      for (let i = 0; i < m - 1; i++) {
+        if (d[i] === 0) { t[i] = 0; t[i + 1] = 0; continue; }
+        const a = t[i] / d[i];
+        const b = t[i + 1] / d[i];
+        const q = a * a + b * b;
+        if (q > 9) { const k = 3 / Math.sqrt(q); t[i] = k * a * d[i]; t[i + 1] = k * b * d[i]; }
+      }
+      for (let i = 0; i < m - 1; i++) {
+        const [x0, y0] = pts[i];
+        const [x1, y1] = pts[i + 1];
+        const hx = (x1 - x0) / 3;
+        ctx.bezierCurveTo(x0 + hx, y0 + t[i] * hx, x1 - hx, y1 - t[i + 1] * hx, x1, y1);
+      }
+    };
     const path = (key) => {
       ctx.beginPath();
-      let pen = false;
-      history.forEach((x, i) => {
-        if (num(x[key]) == null) { pen = false; return; }
-        if (pen) ctx.lineTo(X(i), Y(x[key])); else ctx.moveTo(X(i), Y(x[key]));
-        pen = true;
-      });
+      for (const r of runs(key)) smooth(r, true);
     };
-    const downIdx = history.map((x, i) => (num(x.down) != null ? i : -1)).filter((i) => i >= 0);
     if (n > 1) {
-      if (downIdx.length > 1 && downIdx.length === n) {
-        path('down'); ctx.lineTo(X(n - 1), Tp + ph); ctx.lineTo(X(0), Tp + ph); ctx.closePath();
-        const g = ctx.createLinearGradient(0, Tp, 0, Tp + ph);
-        g.addColorStop(0, rgba(pal.violet, 0.38)); g.addColorStop(0.6, rgba(pal.violet, 0.08)); g.addColorStop(1, rgba(pal.violet, 0));
+      // area under each download run: violet light fading into the floor
+      for (const r of runs('down')) {
+        if (r.length < 2) continue;
+        ctx.beginPath();
+        smooth(r, true);
+        ctx.lineTo(r[r.length - 1][0], Tp + ph);
+        ctx.lineTo(r[0][0], Tp + ph);
+        ctx.closePath();
+        const top = Math.min(...r.map((q) => q[1]));
+        const g = ctx.createLinearGradient(0, top, 0, Tp + ph);
+        g.addColorStop(0, rgba(pal.violet, 0.4)); g.addColorStop(0.5, rgba(pal.violet, 0.13)); g.addColorStop(1, rgba(pal.violet, 0));
         ctx.fillStyle = g; ctx.fill();
       }
       if (history.some((x) => num(x.up) != null)) {
-        path('up'); ctx.strokeStyle = rgba(pal.sky, 0.75); ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+        path('up'); ctx.strokeStyle = rgba(pal.sky, 0.8); ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
       }
       ctx.save();
-      ctx.shadowColor = rgba(pal.violet, 0.95); ctx.shadowBlur = 14;
-      path('down'); ctx.strokeStyle = pal.lavender; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+      ctx.shadowColor = rgba(pal.violet, 0.95); ctx.shadowBlur = 16;
+      path('down'); ctx.strokeStyle = rgba(pal.lavender, 0.9); ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
       ctx.restore();
+      path('down'); ctx.strokeStyle = rgba('#FFFFFF', 0.55); ctx.lineWidth = 0.8; ctx.stroke();
     }
     history.forEach((x, i) => {
-      if (num(x.down) != null) { ctx.fillStyle = pal.lavender; ctx.beginPath(); ctx.arc(X(i), Y(x.down), 2.8, 0, TAU); ctx.fill(); }
-      if (num(x.up) != null) { ctx.fillStyle = rgba(pal.sky, 0.85); ctx.beginPath(); ctx.arc(X(i), Y(x.up), 2.2, 0, TAU); ctx.fill(); }
+      if (num(x.down) != null && !(i === n - 1 && n > 1)) { ctx.fillStyle = 'rgba(12,10,26,1)'; ctx.beginPath(); ctx.arc(X(i), Y(x.down), 3.2, 0, TAU); ctx.fill(); ctx.strokeStyle = pal.lavender; ctx.lineWidth = 1.4; ctx.stroke(); }
+      if (num(x.up) != null) { ctx.fillStyle = rgba(pal.sky, 0.85); ctx.beginPath(); ctx.arc(X(i), Y(x.up), 2, 0, TAU); ctx.fill(); }
     });
     const last = history[n - 1];
     const ex = X(n - 1);
     const hasDown = num(last.down) != null;
     const ey = hasDown ? Y(last.down) : Tp;
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-    const lx = Math.min(ex + 12, w - 44);
+    const lx = Math.min(ex + 14, w - 44);
     if (hasDown) {
-      const hg = ctx.createRadialGradient(ex, ey, 0, ex, ey, 16);
-      hg.addColorStop(0, rgba(pal.lavender, 0.55)); hg.addColorStop(1, rgba(pal.lavender, 0));
-      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(ex, ey, 16, 0, TAU); ctx.fill();
-      ctx.fillStyle = pal.text; ctx.beginPath(); ctx.arc(ex, ey, 3.8, 0, TAU); ctx.fill();
+      const hg = ctx.createRadialGradient(ex, ey, 0, ex, ey, 22);
+      hg.addColorStop(0, rgba(pal.lavender, 0.6)); hg.addColorStop(0.4, rgba(pal.violet, 0.22)); hg.addColorStop(1, rgba(pal.violet, 0));
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, TAU); ctx.fill();
+      ctx.strokeStyle = rgba(pal.lavender, 0.45); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(ex, ey, 7.5, 0, TAU); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 3.6, 0, TAU); ctx.fill();
       ctx.font = '700 14px ' + FONT_D;
       ctx.fillStyle = pal.text; ctx.fillText(fmtMbps(last.down), lx, ey);
     }
@@ -575,8 +658,42 @@ export function mount(el, ctx) {
 
   const chart = makeCanvas($('[data-chart]'), drawChart);
 
+  // Each result tile carries its own trend across the saved tests: a hairline with a soft fill and
+  // the newest point lit. Fewer than two tests: just the quiet track.
+  const SPARK = { down: 'var(--sky)', up: 'var(--lavender)', ping: 'var(--mint)', jitter: 'var(--amber)' };
+  function renderSparks() {
+    const SW = 240;
+    const SH = 40;
+    for (const k of Object.keys(SPARK)) {
+      const host = $('[data-spark="' + k + '"]');
+      if (!host) continue;
+      const vals = history.map((x) => num(x[k])).filter((v) => v != null).slice(-12);
+      let html;
+      if (vals.length < 2) {
+        html = `<svg viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none"><line class="sp-spark-track" x1="0" y1="${SH - 0.5}" x2="${SW}" y2="${SH - 0.5}" vector-effect="non-scaling-stroke"/></svg>`;
+      } else {
+        const lo = Math.min(...vals);
+        const span = Math.max(...vals) - lo || 1;
+        const pts = vals.map((v, i) => [(i / (vals.length - 1)) * SW, SH - 4 - ((v - lo) / span) * (SH - 12)]);
+        const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+        const last = pts[pts.length - 1];
+        html = `<svg viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none">
+            <defs><linearGradient id="spk-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+            <line class="sp-spark-track" x1="0" y1="${SH - 0.5}" x2="${SW}" y2="${SH - 0.5}" vector-effect="non-scaling-stroke"/>
+            <path d="${d} L${SW} ${SH} L0 ${SH} Z" fill="url(#spk-${k})"/>
+            <path class="sp-spark-line" d="${d}" vector-effect="non-scaling-stroke"/>
+          </svg><i class="sp-spark-dot" style="left:100%;top:${((last[1] / SH) * 100).toFixed(1)}%"></i>`;
+      }
+      html += `<span class="sp-spark-cap">${vals.length ? (vals.length === 1 ? '1 test' : 'Last ' + vals.length + ' tests') : 'No data yet'}</span>`;
+      host.style.color = SPARK[k];
+      if (host.__html !== html) { host.innerHTML = html; host.__html = html; }
+    }
+  }
+
   function renderHistory() {
+    if (!alive) return;
     chart.redraw();
+    renderSparks();
     const n = history.length;
     $('[data-hist-count]').textContent = n ? 'Last ' + n + ' test' + (n === 1 ? '' : 's') : '';
     $('[data-hist-clear]').hidden = !n;
@@ -595,6 +712,7 @@ export function mount(el, ctx) {
     history = [];
     saveHistory(history);
     renderHistory();
+    renderRun();
   });
 
   // ---------- Wi-Fi link ----------
@@ -753,73 +871,95 @@ export function mount(el, ctx) {
     return { bands: ['2.4', '5', '6'].filter((b) => set.has(b)), current: cur };
   }
 
-  function ringSvg(chs, counts, cur, rec) {
-    const cx = 160;
-    const cy = 160;
-    const r = 104;
-    const N = chs.length;
-    const ang = (i) => (-90 + i * (360 / N)) * DEG;
-    const pt = (rad, a) => (cx + rad * Math.cos(a)).toFixed(1) + '" cy="' + (cy + rad * Math.sin(a)).toFixed(1);
-    const maxCount = Math.max(1, ...counts.values());
-    const barScale = Math.min(4.5, 34 / maxCount);
-    const parts = [];
-    parts.push('<defs><radialGradient id="spRingCore"><stop offset="0" style="stop-color:var(--violet);stop-opacity:.32"/><stop offset="1" style="stop-color:var(--violet);stop-opacity:0"/></radialGradient></defs>');
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r - 6}" fill="url(#spRingCore)"/>`);
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" class="sp-ring-base"/>`);
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r - 18}" fill="none" stroke="var(--lavender)" stroke-opacity=".18" stroke-dasharray="2 6"/>`);
-    const labelEvery = Math.max(1, Math.ceil(N / 8));
-    chs.forEach((ch, i) => {
-      const a = ang(i);
-      const c = Math.cos(a);
-      const s = Math.sin(a);
-      parts.push(`<line x1="${(cx + (r - 6) * c).toFixed(1)}" y1="${(cy + (r - 6) * s).toFixed(1)}" x2="${(cx + (r + 4) * c).toFixed(1)}" y2="${(cy + (r + 4) * s).toFixed(1)}" stroke="var(--lavender)" stroke-opacity=".45" stroke-width="1"/>`);
-      const n = counts.get(ch) || 0;
-      if (n) {
-        const col = n >= 4 ? 'var(--coral)' : n >= 2 ? 'var(--amber)' : 'var(--lavender)';
-        parts.push(`<line x1="${(cx + (r + 9) * c).toFixed(1)}" y1="${(cy + (r + 9) * s).toFixed(1)}" x2="${(cx + (r + 9 + n * barScale) * c).toFixed(1)}" y2="${(cy + (r + 9 + n * barScale) * s).toFixed(1)}" stroke="${col}" stroke-width="4" stroke-linecap="round" class="sp-ring-bar"/>`);
-      }
-      if (i % labelEvery === 0 || ch === cur || ch === rec) {
-        const cls = ch === cur ? ' is-cur' : ch === rec ? ' is-rec' : '';
-        parts.push(`<text x="${(cx + (r + 54) * c).toFixed(1)}" y="${(cy + (r + 54) * s + 4).toFixed(1)}" text-anchor="middle" class="sp-ring-lbl${cls}">${ch}</text>`);
-      }
-    });
-    const ci = chs.indexOf(cur);
-    const ri = chs.indexOf(rec);
-    if (ci >= 0 && ri >= 0 && ci !== ri) {
-      let delta = ri - ci;
-      if (delta > N / 2) delta -= N;
-      if (delta < -N / 2) delta += N;
-      const a0 = ang(ci);
-      const a1 = ang(ri);
-      const sweep = delta > 0 ? 1 : 0;
-      const large = Math.abs(delta) > N / 2 ? 1 : 0;
-      parts.push(`<path d="M${(cx + r * Math.cos(a0)).toFixed(1)} ${(cy + r * Math.sin(a0)).toFixed(1)} A${r} ${r} 0 ${large} ${sweep} ${(cx + r * Math.cos(a1)).toFixed(1)} ${(cy + r * Math.sin(a1)).toFixed(1)}" fill="none" stroke="var(--sky)" stroke-width="3" stroke-linecap="round" class="sp-ring-arc"/>`);
-    }
-    if (ri >= 0) {
-      parts.push(`<circle cx="${pt(r, ang(ri))}" r="10" fill="none" stroke="var(--sky)" stroke-width="1.5" stroke-dasharray="2 3"/>`);
-    }
-    if (ci >= 0) {
-      const a = ang(ci);
-      parts.push(`<circle cx="${pt(r, a)}" r="18" fill="var(--mint)" fill-opacity=".16" class="sp-ring-halo"/>`);
-      parts.push(`<circle cx="${pt(r, a)}" r="11" fill="none" stroke="var(--mint)" stroke-width="1.5"/>`);
-      parts.push(`<circle cx="${pt(r, a)}" r="6" fill="var(--mint)" class="sp-ring-cur"/>`);
-    }
-    return `<svg viewBox="-20 -20 360 360" role="img" aria-label="Wi-Fi channel ring${cur != null ? ', your channel ' + cur : ''}${rec != null ? ', quietest ' + rec : ''}">${parts.join('')}</svg>`;
+  // Watch-style congestion dial: ten hairline segments. Clear channel = a full mint ring; each
+  // neighbour fills more segments, warming from amber to coral. Unknown = an empty track.
+  function mix(a, b, f) {
+    const pa = rgbOf(a);
+    const pb = rgbOf(b);
+    return 'rgb(' + pa.map((v, i) => Math.round(v + (pb[i] - v) * f)).join(',') + ')';
   }
 
-  function spectrum(chs, counts, cur, rec) {
-    const max = Math.max(1, ...counts.values());
-    return `<div class="sp-spec" role="img" aria-label="Neighbouring networks per channel">
-      ${chs.map((ch) => {
-        const n = counts.get(ch) || 0;
-        const lvl = n >= 4 ? 'high' : n >= 2 ? 'mid' : n ? 'low' : 'none';
-        return `<div class="sp-spec-col${ch === cur ? ' is-cur' : ''}${ch === rec ? ' is-rec' : ''}" title="Channel ${ch}: ${n} network${n === 1 ? '' : 's'}">
-          <span class="sp-spec-n">${n || ''}</span>
-          <span class="sp-spec-bar" data-l="${lvl}" style="height:${Math.round((n / max) * 100)}%"></span>
-          <span class="sp-spec-ch">${ch}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
+  function rgbOf(c) {
+    const m = /^#([0-9a-f]{6})$/i.exec(String(c).trim());
+    const n = m ? parseInt(m[1], 16) : 0xb7a9ff;
+    return [n >> 16, (n >> 8) & 255, n & 255];
+  }
+
+  function dialSvg(nowN) {
+    const SEG = 10;
+    const C = 90;
+    const R = 70;
+    const gap = 6;
+    const filled = nowN == null ? 0 : nowN === 0 ? SEG : Math.min(SEG, Math.max(2, Math.ceil(SEG * (1 - Math.exp(-nowN / 2.2)))));
+    const parts = [];
+    for (let i = 0; i < 60; i++) {
+      const a = (-90 + i * 6) * DEG;
+      const major = i % 5 === 0;
+      const r0 = major ? 80 : 81.5;
+      const r1 = 84;
+      parts.push(`<line x1="${(C + r0 * Math.cos(a)).toFixed(2)}" y1="${(C + r0 * Math.sin(a)).toFixed(2)}" x2="${(C + r1 * Math.cos(a)).toFixed(2)}" y2="${(C + r1 * Math.sin(a)).toFixed(2)}" class="sp-dial-tick${major ? ' is-major' : ''}"/>`);
+    }
+    for (let i = 0; i < SEG; i++) {
+      const a0 = (-90 + i * (360 / SEG) + gap / 2) * DEG;
+      const a1 = (-90 + (i + 1) * (360 / SEG) - gap / 2) * DEG;
+      const d = `M${(C + R * Math.cos(a0)).toFixed(2)} ${(C + R * Math.sin(a0)).toFixed(2)} A${R} ${R} 0 0 1 ${(C + R * Math.cos(a1)).toFixed(2)} ${(C + R * Math.sin(a1)).toFixed(2)}`;
+      parts.push(`<path d="${d}" class="sp-seg-track"/>`);
+      if (i < filled) {
+        const col = nowN === 0 ? pal.mint : mix(pal.amber, pal.coral, filled > 1 ? i / (filled - 1) : 0);
+        parts.push(`<path d="${d}" class="sp-seg" stroke="${col}" style="--i:${i};color:${col}"/>`);
+      }
+    }
+    return `<svg viewBox="0 0 180 180" aria-hidden="true">${parts.join('')}</svg>`;
+  }
+
+  // Builds what the spectrum draws: the real survey for one band, nothing invented.
+  function spectrumData(survey, wifi, band, chs, curCh, curBand, recCh) {
+    const nets = (Array.isArray(survey.networks) ? survey.networks : [])
+      .filter((n) => normBand(n.band, n.channel) === band && Number(n.channel) > 0)
+      .map((n) => ({
+        ssid: n.ssid || '',
+        bssid: n.bssid || '',
+        channel: Number(n.channel),
+        widthMHz: num(n.widthMHz),
+        signalPct: num(n.signalPct),
+        own: !!n.own || !!(wifi && ((wifi.bssid && n.bssid === wifi.bssid) || (wifi.ssid && n.ssid && n.ssid === wifi.ssid))),
+      }));
+    const onBand = band === curBand;
+    const neighbours = nets.filter((n) => !n.own).length;
+    const radios = [...new Set(nets.filter((n) => n.own && n.channel !== curCh).map((n) => n.channel))];
+    const summary = 'Wi-Fi spectrum for ' + band + ' GHz: ' + neighbours + ' neighbouring network' + (neighbours === 1 ? '' : 's') + ' heard.' +
+      (curCh != null ? ' Your network is on channel ' + curCh + '.' : '') +
+      (radios.length ? ' Your router\'s other radio is on channel ' + radios.join(', ') + '.' : '') +
+      (recCh != null && recCh !== curCh ? ' Quietest channel is ' + recCh + '.' : '');
+    return {
+      band,
+      channels: chs,
+      networks: nets,
+      current: curCh,
+      currentWidth: onBand && wifi && num(wifi.widthMHz) != null ? wifi.widthMHz : null,
+      recommended: recCh,
+      link: wifi ? { ssid: wifi.ssid || '', bssid: wifi.bssid || '' } : null,
+      ownFallback: onBand && wifi && curCh != null ? { ssid: wifi.ssid || '', signalPct: num(wifi.signalPct) } : null,
+      summary,
+    };
+  }
+
+  let spectrumViz = null;
+  let spectrumBand = null;
+
+  function dropSpectrum() {
+    if (spectrumViz) { spectrumViz.dispose(); spectrumViz = null; }
+    spectrumBand = null;
+  }
+
+  function chanMessage(html) {
+    dropSpectrum();
+    $('[data-chan]').innerHTML = html;
+  }
+
+  // Sets innerHTML only when it changed, so CSS entrance animations do not replay on refresh.
+  function setHtml(node, html) {
+    if (node && node.__html !== html) { node.innerHTML = html; node.__html = html; }
   }
 
   function renderChannel() {
@@ -829,23 +969,23 @@ export function mount(el, ctx) {
     const wifi = store.get('wifi');
     if (survey === undefined || (survey === null && wifiBusy)) {
       bandsEl.innerHTML = '';
-      box.innerHTML = '<p class="empty-state">Listening for nearby networks.</p>';
+      chanMessage('<p class="empty-state">Listening for nearby networks.</p>');
       return;
     }
     if (survey === null) {
       bandsEl.innerHTML = '';
-      box.innerHTML = '<p class="empty-state">Bastion could not list the networks around you, so channel crowding is unknown. Press Refresh above to try again.</p>';
+      chanMessage('<p class="empty-state">Bastion could not list the networks around you, so channel crowding is unknown. Press Refresh above to try again.</p>');
       return;
     }
     if (typeof survey !== 'object' || !survey.supported) {
       bandsEl.innerHTML = '';
-      box.innerHTML = unsupportedBlock(survey, 'Bastion could not list the networks around you, so it cannot compare channels.');
+      chanMessage(unsupportedBlock(survey, 'Bastion could not list the networks around you, so it cannot compare channels.'));
       return;
     }
     const { bands, current: curBand } = surveyBands(survey, wifi);
     if (!bands.length) {
       bandsEl.innerHTML = '';
-      box.innerHTML = '<p class="empty-state">No nearby networks were heard. Either the air is clear or the scan was blocked; press Refresh to try again.</p>';
+      chanMessage('<p class="empty-state">No nearby networks were heard. Either the air is clear or the scan was blocked; press Refresh to try again.</p>');
       return;
     }
     if (!selBand || !bands.includes(selBand)) selBand = curBand && bands.includes(curBand) ? curBand : bands[0];
@@ -860,6 +1000,7 @@ export function mount(el, ctx) {
     const recCh = recObj ? Number(recObj.channel) : null;
     const set = new Set(CHANNELS[selBand] || []);
     for (const ch of counts.keys()) set.add(ch);
+    for (const n of survey.networks || []) if (normBand(n.band, n.channel) === selBand && Number(n.channel) > 0) set.add(Number(n.channel));
     if (curCh != null) set.add(curCh);
     if (recCh != null) set.add(recCh);
     const chs = [...set].filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
@@ -867,11 +1008,16 @@ export function mount(el, ctx) {
     const nowN = recObj && num(recObj.neighboursNow) != null ? recObj.neighboursNow : curCh != null ? counts.get(curCh) || 0 : null;
     const thereN = recObj && num(recObj.neighboursThere) != null ? recObj.neighboursThere : recCh != null ? counts.get(recCh) || 0 : null;
     const already = recCh != null && curCh != null && recCh === curCh;
-    const word = nowN == null ? '' : nowN >= 4 ? 'congested' : nowN >= 2 ? 'busy' : 'clear';
-    const totalNets = [...counts.values()].reduce((a, b) => a + b, 0);
+    const word = nowN == null ? '' : nowN >= 4 ? 'Congested' : nowN >= 2 ? 'Busy' : nowN === 1 ? 'Shared' : 'Clear';
+    // Distinct networks heard (not overlap-weighted counts); the user's own radios are not neighbours.
+    const bandNets = (survey.networks || []).filter((n) => normBand(n.band, n.channel) === selBand);
+    const totalNets = bandNets.length
+      ? bandNets.filter((n) => !(n.own || (wifi && ((wifi.bssid && n.bssid === wifi.bssid) || (wifi.ssid && n.ssid && n.ssid === wifi.ssid))))).length
+      : [...counts.values()].reduce((a, b) => a + b, 0);
     const width = wifi && num(wifi.widthMHz) != null ? wifi.widthMHz : null;
     const dfs = selBand === '5' && recCh != null && recCh >= 52 && recCh <= 144;
     const shouldMove = recCh != null && !already;
+    const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 
     const steps = shouldMove ? [
       'Open your router admin page with the button below and sign in.',
@@ -881,34 +1027,71 @@ export function mount(el, ctx) {
       'Come back and run a speed test to measure the difference.',
     ] : [];
 
-    box.innerHTML = `
-      <div class="sp-chan">
-        <div class="sp-ring">
-          ${ringSvg(chs, counts, curCh, recCh)}
-          <div class="sp-ring-center">
-            <b>${curCh != null ? curCh : '--'}</b>
-            <span>${curCh != null ? nowN + ' neighbour' + (nowN === 1 ? '' : 's') + (word ? ' · ' + word : '') : selBand === curBand ? 'Channel unknown' : 'Not your band'}</span>
+    if (!box.querySelector('[data-chan-ok]')) {
+      dropSpectrum();
+      box.innerHTML = `
+        <div class="sp-chan" data-chan-ok>
+          <div class="sp-chan-legend" data-chan-legend></div>
+          <div class="sp-spectrum" data-spectrum></div>
+          <div class="sp-chan-foot">
+            <div class="sp-dial" data-dial></div>
+            <div class="sp-chan-side">
+              <dl class="sp-facts" data-facts></dl>
+              <div class="sp-chan-notes" data-chan-notes></div>
+            </div>
           </div>
+          <p class="sp-fine sp-chan-fine">Curves are the networks this computer can hear from where it sits: height is signal strength, width is the spectrum each one occupies. Bastion cannot change your router's channel itself; it shows you exactly where to do it.</p>
+          <div data-chan-guide></div>
+        </div>`;
+    }
+    if (!spectrumViz) spectrumViz = createChannelSpectrum(box.querySelector('[data-spectrum]'), { reducedMotion: RM });
+    const animate = spectrumBand !== selBand;
+    spectrumBand = selBand;
+    const spec = spectrumData(survey, wifi, selBand, chs, curCh, curBand, recCh);
+    spectrumViz.update(spec, { animate });
+    // The router's other radios on this band (same network, not the one this computer is joined to).
+    const radioChs = [...new Set(spec.networks.filter((n) => n.own && n.channel !== curCh).map((n) => n.channel))].sort((a, b) => a - b);
+
+    setHtml(box.querySelector('[data-chan-legend]'), `
+      ${curCh != null ? '<span><i class="lg-own"></i>Your network</span>' : ''}
+      ${radioChs.length ? '<span><i class="lg-radio"></i>Your router, other radio</span>' : ''}
+      <span><i class="lg-nb"></i>Neighbours</span>
+      ${shouldMove ? '<span><i class="lg-rec"></i>Quietest channel</span>' : ''}
+      ${selBand === '5' ? '<span><i class="lg-dfs"></i>DFS range</span>' : ''}`);
+
+    const state = nowN == null ? 'unknown' : nowN === 0 ? 'clear' : nowN >= 4 ? 'high' : 'mid';
+    setHtml(box.querySelector('[data-dial]'), `
+      <div class="sp-dial-ring" data-state="${state}" role="img" aria-label="${curCh != null ? 'Channel ' + curCh + ', ' + plural(nowN, 'neighbour') + (word ? ', ' + word.toLowerCase() : '') : 'Current channel unknown on this band'}">
+        ${dialSvg(curCh != null ? nowN : null)}
+        <div class="sp-dial-c" aria-hidden="true">
+          <span class="sp-dial-k">Channel</span>
+          <b class="${curCh != null ? '' : 'is-empty'}">${curCh != null ? curCh : '&ndash;'}</b>
+          <span class="sp-dial-s">${curCh != null ? esc(word) : selBand === curBand ? 'Unknown' : radioChs.length ? 'Not connected here' : 'Not your band'}</span>
         </div>
-        <div class="sp-chan-side">
-          <div class="sp-kv"><span>Current</span><span>${curCh != null ? 'Channel ' + curCh : selBand === curBand ? '<span class="sp-unknown">unknown</span>' : 'Not on ' + selBand + ' GHz'}</span></div>
-          <div class="sp-kv"><span>Neighbours there</span><span>${nowN != null ? nowN + ' network' + (nowN === 1 ? '' : 's') : '<span class="sp-unknown">unknown</span>'}</span></div>
-          <div class="sp-kv"><span>Quietest</span><span class="${shouldMove ? 'sp-gain' : ''}">${recCh != null ? 'Channel ' + recCh + (thereN != null ? ' · ' + thereN + ' network' + (thereN === 1 ? '' : 's') : '') : 'No recommendation'}</span></div>
-          <div class="sp-kv"><span>Heard on this band</span><span>${totalNets} network${totalNets === 1 ? '' : 's'}</span></div>
-          ${recObj && recObj.reason ? `<p class="sp-fine">${esc(recObj.reason)}</p>` : ''}
-          ${already ? '<p class="sp-okline">You are already on the quietest channel nearby. Nothing to change.</p>' : ''}
-          ${!recObj && curCh != null ? '<p class="sp-fine">Bastion did not find a clearly better channel on this band.</p>' : ''}
-          ${dfs && shouldMove ? '<p class="sp-fine">Channel ' + recCh + ' is a DFS channel. The router must leave it briefly if it detects radar, and some older devices cannot use it.</p>' : ''}
-        </div>
-      </div>
-      ${spectrum(chs, counts, curCh, recCh)}
-      <p class="sp-fine">Counts are the networks this computer can hear from where it sits. Bastion cannot change your router's channel itself; it shows you exactly where to do it.</p>
-      ${shouldMove ? `
-        <div class="sp-guide">
-          <p class="sp-guide-title">Move to channel ${recCh}</p>
-          <ol class="sp-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-          <div class="sp-actions"><button class="btn btn--primary" type="button" data-open="router-admin">Open router admin</button></div>
-        </div>` : ''}`;
+      </div>`);
+
+    const fact = (k, v, cls) => `<div class="sp-fact"><dt>${k}</dt><dd class="${cls || ''}">${v}</dd></div>`;
+    setHtml(box.querySelector('[data-facts]'), [
+      fact('Current', curCh != null ? 'Channel <b>' + curCh + '</b>' : selBand === curBand ? '<span class="sp-unknown">unknown</span>' : 'Not on ' + selBand + ' GHz'),
+      curCh == null && radioChs.length
+        ? fact('Your router here', 'Channel <b>' + radioChs.join(', ') + '</b><span class="sp-fact-sub"> · other radio</span>')
+        : fact('Neighbours there', nowN != null ? '<b>' + nowN + '</b> network' + (nowN === 1 ? '' : 's') : '<span class="sp-unknown">unknown</span>', nowN == null ? '' : nowN >= 4 ? 'sp-hot' : nowN >= 2 ? 'sp-warm' : ''),
+      fact('Quietest', recCh != null ? 'Channel <b>' + recCh + '</b>' + (thereN != null ? '<span class="sp-fact-sub"> · ' + plural(thereN, 'network') + '</span>' : '') : 'No recommendation', shouldMove ? 'sp-gain' : ''),
+      fact('Heard on this band', '<b>' + totalNets + '</b> network' + (totalNets === 1 ? '' : 's')),
+    ].join(''));
+
+    setHtml(box.querySelector('[data-chan-notes]'), `
+      ${recObj && recObj.reason ? `<p class="sp-fine">${esc(recObj.reason)}</p>` : ''}
+      ${already ? '<p class="sp-okline">You are already on the quietest channel nearby. Nothing to change.</p>' : ''}
+      ${!recObj && curCh != null ? '<p class="sp-fine">Bastion did not find a clearly better channel on this band.</p>' : ''}
+      ${dfs && shouldMove ? '<p class="sp-fine">Channel ' + recCh + ' is a DFS channel. The router must leave it briefly if it detects radar, and some older devices cannot use it.</p>' : ''}`);
+
+    setHtml(box.querySelector('[data-chan-guide]'), shouldMove ? `
+      <div class="sp-guide">
+        <p class="sp-guide-title">Move to channel ${recCh}</p>
+        <ol class="sp-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+        <div class="sp-actions"><button class="btn btn--primary" type="button" data-open="router-admin">Open router admin</button></div>
+      </div>` : '');
   }
 
   el.addEventListener('click', (e) => {
@@ -977,7 +1160,7 @@ export function mount(el, ctx) {
     gauge.redraw();
     chart.redraw();
   });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (alive) { pal = palette(); chart.redraw(); } });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (alive) { pal = palette(); chart.redraw(); if (spectrumViz) spectrumViz.redraw(); } });
   const w0 = store.get('wifi');
   const s0 = store.get('survey');
   if (w0 === null || s0 === null || (w0 === undefined && s0 === undefined)) refreshWifi();
@@ -988,6 +1171,7 @@ export function mount(el, ctx) {
       if (raf) cancelAnimationFrame(raf);
       gauge.dispose();
       chart.dispose();
+      dropSpectrum();
       clearInterval(staleTimer);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener(PREFS_EVENT, onPrefs);
