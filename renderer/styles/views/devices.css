@@ -1,0 +1,92 @@
+/* Devices view. Scoped under .v-devices. Nebula primitives (.nv-glass, .nv-stat, .pill, .btn)
+   live in shield.css; colours come from tokens.css. */
+
+.v-devices{display:flex;flex-direction:column;gap:24px;padding-bottom:48px;min-width:0}
+.v-devices [hidden]{display:none!important}
+.v-devices .dv-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px}
+.v-devices .dv-head .h-display{margin:10px 0 0}
+.v-devices .dv-head-side{display:flex;flex-direction:column;align-items:flex-start;gap:16px;max-width:52ch}
+.v-devices .dv-head-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.v-devices .dv-lede{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
+.v-devices .dv-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.v-devices .dv-console{display:flex;flex-direction:column;gap:18px}
+.v-devices .dv-numerals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+@media (max-width:900px){.v-devices .dv-numerals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.v-devices .dv-numerals .nv-stat-k{display:inline-flex;align-items:center;gap:8px}
+.v-devices .dv-kdot{width:8px;height:8px;border-radius:50%;flex:none}
+.v-devices .dv-kdot--lav{background:var(--lavender);box-shadow:0 0 10px var(--lavender)}
+.v-devices .dv-kdot--sky{background:var(--sky);box-shadow:0 0 10px var(--sky)}
+.v-devices .dv-kdot--dim{background:transparent;box-shadow:inset 0 0 0 1.5px var(--dim)}
+
+.v-devices .dv-card{padding:24px;display:flex;flex-direction:column;gap:16px}
+.v-devices .dv-card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 20px}
+.v-devices .dv-tools{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.v-devices .dv-meta{font:500 12px/1 var(--nf-m);color:var(--muted);font-variant-numeric:tabular-nums}
+.v-devices .dv-note{margin:0;display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:rgba(183,169,255,.06);border:1px solid var(--line-2);font-size:13px;line-height:1.55;color:var(--muted)}
+.v-devices .dv-fine{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+
+/* filters: pill segment, search: glass field */
+.v-devices .dv-filters{display:inline-flex;flex-wrap:wrap;gap:2px;padding:4px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.v-devices .dv-filter{min-height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--muted);cursor:pointer;font:600 13px/1 var(--nf-u);transition:background .2s,color .2s}
+.v-devices .dv-filter:hover{color:var(--text);background:rgba(183,169,255,.08)}
+.v-devices .dv-filter[aria-pressed="true"]{background:rgba(183,169,255,.16);color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.v-devices .dv-search{display:flex;align-items:center;min-width:0;flex:1 1 240px;max-width:380px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);transition:border-color .2s,box-shadow .2s}
+.v-devices .dv-search::before{content:"";flex:none;width:14px;height:14px;margin-left:14px;border-radius:50%;box-shadow:inset 0 0 0 1.8px var(--dim)}
+.v-devices .dv-search:focus-within{border-color:var(--sky);box-shadow:0 0 0 3px rgba(143,211,255,.15)}
+.v-devices .dv-search input{flex:1;min-width:0;min-height:40px;padding:0 16px 0 10px;border:0;background:transparent;color:var(--text);outline:none;font:400 13.5px/1 var(--nf-u)}
+.v-devices .dv-search input::placeholder{color:var(--dim)}
+.v-devices .dv-switch{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+
+/* device list: glass rows that keep table semantics, collapsing on narrow widths */
+.v-devices .dv-table{display:flex;flex-direction:column;gap:6px}
+.v-devices .dv-tr{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.3fr);gap:12px;align-items:center;padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid var(--line);font-size:14px;transition:background .2s,border-color .2s}
+.v-devices .dv-tr:not(.dv-th):hover{background:rgba(183,169,255,.05);border-color:var(--line-2)}
+.v-devices .dv-th{background:none;border-color:transparent;padding-top:0;padding-bottom:2px;font:600 12px/1 var(--nf-u);color:var(--dim)}
+.v-devices .dv-th span:first-child{padding-left:50px}
+.v-devices .dv-name{display:flex;align-items:center;gap:12px;min-width:0}
+.v-devices .dv-ic{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(183,169,255,.08);color:var(--lavender)}
+.v-devices .dv-tr.is-gw .dv-ic{background:rgba(143,211,255,.1);color:var(--sky);box-shadow:0 0 18px -6px var(--sky)}
+.v-devices .dv-tr.is-me .dv-ic{background:rgba(158,240,196,.1);color:var(--mint);box-shadow:0 0 18px -6px var(--mint)}
+.v-devices .dv-tr.is-gw{border-color:rgba(143,211,255,.2)}
+.v-devices .dv-tr.is-me{border-color:rgba(158,240,196,.2)}
+.v-devices .dv-name-t{display:flex;flex-direction:column;gap:5px;min-width:0}
+.v-devices .dv-name-t b{font:600 14.5px/1.25 var(--nf-u);word-break:break-word}
+.v-devices .dv-badges{display:flex;flex-wrap:wrap;gap:6px}
+.v-devices .dv-badges:empty{display:none}
+.v-devices .dv-mono{font-family:var(--nf-m);font-size:12px;font-variant-numeric:tabular-nums;word-break:break-all;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.v-devices .dv-ip{color:var(--text)}
+.v-devices .dv-mac{color:var(--muted)}
+.v-devices .dv-vendor{font-size:13.5px;color:var(--text);min-width:0;word-break:break-word}
+.v-devices .dv-dim{color:var(--dim)}
+.v-devices .dv-unknown{color:var(--dim);font-style:italic}
+.v-devices .dv-label{display:none}
+@media (max-width:820px){
+  .v-devices .dv-th{display:none}
+  .v-devices .dv-tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 16px;padding:14px}
+  .v-devices .dv-name{grid-column:1/-1}
+  .v-devices .dv-label{display:block;width:100%;font:600 11px/1 var(--nf-u);color:var(--dim);margin-bottom:2px;font-style:normal}
+}
+
+/* connections, grouped by process */
+.v-devices .dv-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
+.v-devices .dv-group{padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;border-radius:22px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.v-devices .dv-group-h{display:flex;align-items:center;gap:12px;min-width:0}
+.v-devices .dv-proc-ic{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(183,169,255,.22),rgba(124,108,255,.12));color:var(--lavender);font:700 15px/1 var(--nf-d)}
+.v-devices .dv-group-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.v-devices .dv-group-t b{font:600 14.5px/1.2 var(--nf-u);word-break:break-word}
+.v-devices .dv-group-n{margin-left:auto}
+.v-devices .dv-conn-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.v-devices .dv-conn{display:grid;grid-template-columns:42px minmax(0,1fr) auto auto;grid-template-areas:"proto remote scope state" "proto svc svc svc";gap:2px 10px;align-items:center;padding:8px 2px;border-top:1px solid var(--line);font-size:13px}
+.v-devices .dv-proto{grid-area:proto;justify-self:start;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.05);font:500 10px/1 var(--nf-m);letter-spacing:.04em;color:var(--muted)}
+.v-devices .dv-remote{grid-area:remote;color:var(--text)}
+.v-devices .dv-svc{grid-area:svc;font-size:12px;color:var(--muted)}
+.v-devices .dv-svc:empty{display:none}
+.v-devices .dv-scope{grid-area:scope;font:500 10.5px/1 var(--nf-m);letter-spacing:.04em;padding:3px 7px;border-radius:6px;color:var(--muted)}
+.v-devices .dv-scope:empty{display:none}
+.v-devices .dv-scope[data-scope="internet"]{background:rgba(143,211,255,.12);color:var(--sky)}
+.v-devices .dv-scope[data-scope="lan"]{background:rgba(183,169,255,.12);color:var(--lavender)}
+.v-devices .dv-scope:is([data-scope="loopback"],[data-scope="multicast"]){background:rgba(255,255,255,.05);color:var(--dim)}
+.v-devices .dv-state{grid-area:state;font:500 10.5px/1 var(--nf-m);color:var(--dim);text-transform:uppercase;text-align:right;min-width:0}
+.v-devices .dv-more{align-self:flex-start;border:0;background:none;padding:4px 0;cursor:pointer;color:var(--lavender);font:600 13px/1 var(--nf-u);border-radius:6px}
+.v-devices .dv-more:hover{text-decoration:underline}

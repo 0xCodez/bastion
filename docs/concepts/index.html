@@ -1,0 +1,166 @@
+<title>Bastion Concepts v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one quiet intro, then a 2×2 wall of concept tiles, each tile a small live poster of its world. */
+:root{
+  --bg:#060708; --panel:#0C0E10; --line:rgba(255,255,255,.08); --fg:#ECEEF0; --muted:#9097A0;
+  --teal:#2DE2BE; --violet:#9B8CFF; --blue:#3B82FF; --amber:#F5B83D;
+  --display:"Geist",system-ui,sans-serif; --mono:"Geist Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1320px;margin:0 auto;padding-block:56px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+h1{margin:10px 0 0;font-weight:600;font-size:clamp(36px,6vw,72px);line-height:1;letter-spacing:-.045em;text-wrap:balance;max-width:16ch}
+.lede{margin:16px 0 0;font-size:16px;line-height:1.6;color:var(--muted);max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:16px}
+.tile{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:22px;background:var(--panel);overflow:hidden;text-decoration:none;color:inherit;transition:transform .5s cubic-bezier(.2,.8,.2,1),border-color .3s}
+.tile:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.18)}
+.tile:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+.poster{position:relative;aspect-ratio:16/9;max-width:100%;overflow:hidden}
+.meta{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding:20px 22px 22px;border-top:1px solid var(--line)}
+.meta h2{margin:0;font-size:24px;font-weight:600;letter-spacing:-.03em}
+.meta p{margin:6px 0 0;font-size:14px;line-height:1.55;color:var(--muted);max-width:46ch}
+.tag{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.open{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:500;white-space:nowrap;transition:background .3s,color .3s}
+.tile:hover .open{background:var(--fg);color:var(--bg)}
+.foot{display:flex;flex-wrap:wrap;gap:12px 28px;font:400 12px var(--mono);color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+
+/* A — dithered router + dotted globe */
+.p-orbit{background:radial-gradient(60% 80% at 50% 110%,rgba(45,226,190,.22),transparent 60%),#04090A}
+.p-orbit .globe{position:absolute;left:50%;bottom:-55%;width:90%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background-image:radial-gradient(circle,rgba(94,240,209,.7) 1px,transparent 1.6px);background-size:9px 9px;-webkit-mask-image:radial-gradient(circle,#000 35%,transparent 70%);mask-image:radial-gradient(circle,#000 35%,transparent 70%);animation:drift 30s linear infinite}
+.p-orbit .router{position:absolute;left:50%;top:30%;width:34%;aspect-ratio:3/1;transform:translateX(-50%) perspective(400px) rotateX(28deg);background-image:radial-gradient(circle,#E6FFF8 1.3px,transparent 1.8px);background-size:5px 5px;border-radius:10px;-webkit-mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.35));mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.35))}
+.p-orbit .ant{position:absolute;top:8%;width:1.4%;height:26%;background-image:radial-gradient(circle,#E6FFF8 1.2px,transparent 1.7px);background-size:5px 5px}
+.p-orbit .wave{position:absolute;left:50%;top:22%;width:30%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;border:1px dashed rgba(45,226,190,.5);animation:ping 3s ease-out infinite}
+.p-orbit .wave:nth-of-type(2){animation-delay:1s}.p-orbit .wave:nth-of-type(3){animation-delay:2s}
+
+/* B — planet horizon + iridescent pill */
+.p-nebula{background:radial-gradient(90% 70% at 50% 0%,#1C1640,#07060E 70%)}
+.p-nebula .planet{position:absolute;left:50%;top:58%;width:220%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 50% 0,#3B2F86,#120F2A 25%,#07060E 45%);box-shadow:0 -2px 0 #DCD6FF,0 -16px 60px rgba(150,130,255,.6),0 -60px 140px rgba(124,108,255,.35)}
+.p-nebula .pill{position:absolute;left:50%;bottom:12%;width:46%;height:16%;transform:translateX(-50%);border-radius:999px;background:rgba(20,18,36,.85);border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.p-nebula .pill::after{content:"";position:absolute;inset:auto -20% -60% -20%;height:120%;background:conic-gradient(from 0deg,#FF5FD2,#7C6CFF,#5FE3FF,#FFC26B,#FF5FD2);filter:blur(18px);opacity:.75;animation:spin 6s linear infinite}
+.p-nebula .orb{position:absolute;width:8px;height:8px;border-radius:50%;background:#B7A9FF;box-shadow:0 0 14px #B7A9FF}
+
+/* C — bright orbital sunrise */
+.p-uplink{background:#000}
+.p-uplink .limb{position:absolute;left:50%;top:62%;width:260%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 50% 0,#0B1B3A,#000 30%);box-shadow:0 -1px 0 #fff,0 -6px 18px rgba(255,255,255,.9),0 -24px 60px rgba(59,130,255,.9),0 -80px 160px rgba(59,130,255,.45)}
+.p-uplink .sun{position:absolute;left:62%;top:52%;width:40%;height:22%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,#fff,rgba(255,236,200,.7) 30%,rgba(59,130,255,.0) 70%);filter:blur(4px)}
+.p-uplink .sat{position:absolute;height:1px;background:linear-gradient(90deg,transparent,#fff);opacity:.8}
+.p-uplink h3{position:absolute;left:7%;top:14%;margin:0;font:600 clamp(16px,3vw,28px)/1.05 "Geist",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#fff;max-width:12ch}
+
+/* D — pixel creatures */
+.p-deep{background:#050608}
+.p-deep canvas{position:absolute;inset:0;width:100%;height:100%}
+.p-deep .q{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-weight:300;font-size:clamp(16px,2.6vw,26px);letter-spacing:-.02em;color:#E8EAEC;white-space:nowrap}
+
+@keyframes drift{to{background-position:180px 0}}
+@keyframes ping{0%{transform:translateX(-50%) scale(.4);opacity:.9}100%{transform:translateX(-50%) scale(2.2);opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<main class="wrap">
+  <header>
+    <div class="eyebrow">Bastion · Windows + macOS · Concepts v2</div>
+    <h1>Four directions for a safer, faster home network.</h1>
+    <p class="lede">Each concept is a working web prototype of the app: run a speed test, start a deep scan of the router, ask Claude, ChatGPT or Grok about your traffic. Open one and click around.</p>
+  </header>
+
+  <section class="grid" aria-label="Concepts">
+    <a class="tile" href="orbit.html">
+      <div class="poster p-orbit" aria-hidden="true">
+        <div class="globe"></div>
+        <div class="wave"></div><div class="wave"></div><div class="wave"></div>
+        <div class="router"></div>
+        <div class="ant" style="left:36%"></div><div class="ant" style="left:44%"></div><div class="ant" style="left:55%"></div><div class="ant" style="left:63%"></div>
+      </div>
+      <div class="meta">
+        <div><div class="tag" style="color:var(--teal)">A · Teal Orbit evolved</div><h2>Orbit Core</h2><p>Your router as a dithered 3D object you can spin, with every open door called out on it. Onboarding modal included.</p></div>
+        <span class="open">Open concept →</span>
+      </div>
+    </a>
+
+    <a class="tile" href="nebula.html">
+      <div class="poster p-nebula" aria-hidden="true">
+        <div class="planet"></div>
+        <div class="orb" style="left:30%;top:34%"></div><div class="orb" style="left:66%;top:26%;background:#8FD3FF;box-shadow:0 0 14px #8FD3FF"></div><div class="orb" style="left:78%;top:44%"></div>
+        <div class="pill"></div>
+      </div>
+      <div class="meta">
+        <div><div class="tag" style="color:var(--violet)">B · Violet Nebula evolved</div><h2>Nebula Voice</h2><p>A planet horizon with your router on it and three AI watchers in orbit. Talk to them through an iridescent voice bar.</p></div>
+        <span class="open">Open concept →</span>
+      </div>
+    </a>
+
+    <a class="tile" href="uplink.html">
+      <div class="poster p-uplink" aria-hidden="true">
+        <div class="limb"></div><div class="sun"></div>
+        <div class="sat" style="left:20%;top:30%;width:70px;transform:rotate(-8deg)"></div>
+        <div class="sat" style="left:55%;top:22%;width:50px;transform:rotate(-12deg)"></div>
+        <div class="sat" style="left:72%;top:36%;width:60px;transform:rotate(-6deg)"></div>
+        <h3>Your network, under watch.</h3>
+      </div>
+      <div class="meta">
+        <div><div class="tag" style="color:var(--blue)">C · Orbital, bright</div><h2>Uplink</h2><p>Satellite-network aesthetic: sunrise over Earth, an exposure map like a sky dome, spec-sheet type. Doubles as the launch site.</p></div>
+        <span class="open">Open concept →</span>
+      </div>
+    </a>
+
+    <a class="tile" href="deep.html">
+      <div class="poster p-deep" aria-hidden="true">
+        <canvas id="deepPreview"></canvas>
+        <div class="q">what's on your network?</div>
+      </div>
+      <div class="meta">
+        <div><div class="tag" style="color:var(--amber)">D · Orbit × Nebula</div><h2>Deep Signal</h2><p>Every device is a pixel creature swimming in the dark. The chatty TV box glows amber, the stranger glows red. Ask the AI about any of them.</p></div>
+        <span class="open">Open concept →</span>
+      </div>
+    </a>
+  </section>
+
+  <footer class="foot">
+    <span>Working name: Bastion</span>
+    <span>References: dithered point clouds, iridescent voice input, pixel-mosaic creatures, orbital networks</span>
+    <span>Sample data only</span>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var c=document.getElementById('deepPreview'); if(!c) return;
+  var ctx=c.getContext('2d'), dpr=Math.min(2,window.devicePixelRatio||1), W=0,H=0;
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function size(){var r=c.getBoundingClientRect();W=r.width;H=r.height;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  var fish=[
+    {x:.2,y:.3,s:1.1,v:.035,tint:[200,210,220],ph:0},
+    {x:.7,y:.75,s:.8,v:-.03,tint:[45,226,190],ph:2},
+    {x:.85,y:.25,s:.6,v:.045,tint:[245,184,61],ph:4},
+    {x:.35,y:.82,s:.55,v:.05,tint:[155,140,255],ph:1},
+    {x:.6,y:.15,s:.45,v:-.05,tint:[255,107,94],ph:3}
+  ];
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    var cell=4;
+    fish.forEach(function(f){
+      var cx=((f.x+f.v*t)%1.2+1.2)%1.2*W-0.1*W, cy=f.y*H, len=90*f.s, dir=f.v>0?1:-1;
+      for(var i=0;i<len;i+=cell){
+        var u=i/len, w=(Math.sin(u*Math.PI)*0.9+ (u<.15?u*2:0))*16*f.s*(1-u*0.4);
+        var off=Math.sin(u*6-t*4+f.ph)*6*u;
+        for(var j=-w;j<=w;j+=cell){
+          var n=Math.sin(i*12.9+j*78.2)*43758.5; n=n-Math.floor(n);
+          var a=(0.35+0.65*n)*(1-Math.abs(j)/(w+1)*0.6);
+          ctx.fillStyle='rgba('+f.tint[0]+','+f.tint[1]+','+f.tint[2]+','+a.toFixed(2)+')';
+          ctx.fillRect(Math.round(cx-dir*i),Math.round(cy+j+off),cell-1,cell-1);
+        }
+      }
+    });
+  }
+  var t0=performance.now();
+  function loop(now){ if(!document.hidden) draw((now-t0)/1000); requestAnimationFrame(loop); }
+  size(); window.addEventListener('resize',size);
+  if(reduce) draw(3); else requestAnimationFrame(loop);
+})();
+</script>

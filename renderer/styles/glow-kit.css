@@ -1,0 +1,1303 @@
+/*
+ * Bastion glow kit: Apple-grade controls on violet-black, in the Nebula Voice visual language
+ * (docs/design-reference-nebula.html).
+ * Classes: gk-slider, gk-toggle, gk-ring, gk-btn (+ --primary, --sm, --icon, --danger), gk-segment.
+ * Markup is upgraded by initGlowKit() in renderer/js/glow-kit.js; see docs/CONTRACT.md.
+ *
+ * Every accent colour (glow stops, slider fill, switch track, primary button) is built from a Nebula token
+ * (--violet, --lavender, --sky, --text, --ground, --ink, --coral...) via --gk-* with the exact Nebula
+ * value as fallback, so the kit renders correctly with or without tokens.css. Neutral surfaces (thumb
+ * pearl, off-track) and the flare's light falloff are fixed values.
+ *
+ * Knobs:
+ *   --gk-dur              rotation period of glow rings, on the element or any ancestor
+ *                         (also data-gk-speed="slow|fast" on element or ancestor; "<seconds>" on the element)
+ *   --gk-radius           corner radius a gk-ring hugs (auto-adopted from its single child)
+ *   --gk-stops            colour stops of the rotating conic glow, on the element itself (each component
+ *                         resets it, so an intelligence ring does not recolour the buttons inside it)
+ *   --gk-flare            length of the slider's anamorphic flare (default 340px)
+ *   --gk-seg-radius       corner radius of a gk-segment (default: pill)
+ *   .gk-ring--inline      ring hugs its content (inline-flex, fit-content) instead of filling the row
+ *   data-gk="nebula"      default palette: lavender, sky, violet, white (no attribute needed)
+ *   data-gk="intelligence" iridescent magenta / violet / teal / amber palette for AI elements
+ *   data-gk-active="false" fades a ring out (e.g. agent idle)
+ *   .gk-still             on any ancestor: freezes all motion (same as prefers-reduced-motion)
+ */
+
+@property --gk-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+:root {
+  --gk-violet: var(--violet, #7C6CFF);
+  --gk-lavender: var(--lavender, #B7A9FF);
+  --gk-sky: var(--sky, #8FD3FF);
+  --gk-magenta: var(--magenta, #FF5FD2);
+  --gk-teal: var(--teal, #3FE3C9);
+  --gk-amber: var(--amber, #FFC772);
+  --gk-coral: var(--coral, #FF8E7A);
+  --gk-white: var(--text, #F3F0FF);
+  --gk-ground: var(--ground, #07060E);
+  --gk-ink: var(--ink, #120C2E);
+  --gk-muted: var(--muted, #ABA6CB);
+  --gk-dim: var(--dim, #857FA9);
+  --gk-line: var(--line, rgba(183, 169, 255, .13));
+  --gk-line-2: var(--line-2, rgba(183, 169, 255, .26));
+
+  --gk-ui: var(--f-ui, "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif);
+  --gk-mono: var(--f-mono, "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace);
+
+  /* Spring with a small overshoot, then a soft settle (iOS-like). */
+  --gk-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067,
+    1.099 24.3%, 1.108 26%, 1.1 27.9%, 1.077 30.1%, 1.034 34.2%, 0.99 41.1%, 0.983 44.5%,
+    0.985 48.6%, 1.001 63.3%, 1.004 66.9%, 1);
+  --gk-out: cubic-bezier(.2, .8, .2, 1);
+
+  /* Nebula: two bright comets (violet -> lavender -> sky -> white) over a faint violet base. */
+  --gk-stops-nebula:
+    color-mix(in srgb, var(--gk-violet) 12%, transparent) 0turn,
+    color-mix(in srgb, var(--gk-violet) 55%, transparent) .07turn,
+    var(--gk-violet) .14turn,
+    var(--gk-lavender) .20turn,
+    var(--gk-sky) .25turn,
+    #FFFFFF .29turn,
+    color-mix(in srgb, var(--gk-violet) 12%, transparent) .42turn,
+    color-mix(in srgb, var(--gk-violet) 12%, transparent) .50turn,
+    color-mix(in srgb, var(--gk-violet) 55%, transparent) .57turn,
+    var(--gk-violet) .64turn,
+    var(--gk-lavender) .70turn,
+    var(--gk-sky) .75turn,
+    #FFFFFF .79turn,
+    color-mix(in srgb, var(--gk-violet) 12%, transparent) .92turn,
+    color-mix(in srgb, var(--gk-violet) 12%, transparent) 1turn;
+
+  /* Intelligence: the voice-bar aurora as a continuous iridescent wheel. */
+  --gk-stops-intelligence:
+    var(--gk-magenta) 0turn,
+    #C36BFF .12turn,
+    var(--gk-violet) .25turn,
+    var(--gk-sky) .37turn,
+    var(--gk-teal) .50turn,
+    var(--mint, #9EF0C4) .60turn,
+    var(--gk-amber) .74turn,
+    var(--gk-coral) .87turn,
+    var(--gk-magenta) 1turn;
+}
+
+@keyframes gk-spin {
+  to { --gk-angle: 360deg; }
+}
+
+@keyframes gk-shimmer {
+  0% { background-position: -80px 0; }
+  62%, 100% { background-position: calc(100% + 80px) 0; }
+}
+
+@keyframes gk-sweep {
+  from { background-position: 100% 0; opacity: 1; }
+  to { background-position: 0% 0; opacity: 1; }
+}
+
+/* The flare's halo breathes while the slider is held or focused. */
+@keyframes gk-flare-breathe {
+  0%, 100% { opacity: .8; transform: scaleX(1); }
+  50% { opacity: 1; transform: scaleX(1.12); }
+}
+
+:is(.gk-ring, .gk-toggle, .gk-btn) {
+  --gk-stops: var(--gk-stops-nebula);
+}
+
+:is(.gk-ring, .gk-toggle, .gk-btn)[data-gk="intelligence"] {
+  --gk-stops: var(--gk-stops-intelligence);
+}
+
+/* Components read --gk-dur with their own fallback, so these apply on the element or any ancestor. */
+[data-gk-speed="slow"] { --gk-dur: 9s; }
+[data-gk-speed="fast"] { --gk-dur: 2.2s; }
+
+/* ------------------------------------------------------------------ ring */
+
+.gk-ring {
+  --gk-w: 1.5px;
+  --gk-gw: 6px;
+  --gk-glow: 16px;
+  --gk-glow-opacity: .62;
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--gk-radius, 14px);
+}
+
+.gk-ring--inline {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.gk-ring--circle,
+.gk-ring[data-gk-shape="circle"] {
+  --gk-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+}
+
+.gk-ring[data-gk="intelligence"] {
+  --gk-w: 2px;
+  --gk-gw: 7px;
+  --gk-glow: 20px;
+  --gk-glow-opacity: .8;
+}
+
+/* Crisp ring: a conic gradient painted only in the border band via mask exclusion. */
+.gk-ring::before,
+.gk-ring__glow::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--gk-w) * -1);
+  padding: var(--gk-w);
+  border-radius: calc(var(--gk-radius, 14px) + var(--gk-w));
+  background: conic-gradient(from var(--gk-angle), var(--gk-stops));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: gk-spin var(--gk-dur, 5s) linear infinite;
+  pointer-events: none;
+  transition: opacity .6s var(--gk-out);
+}
+
+.gk-ring::before {
+  z-index: 1;
+}
+
+/* Glow: a thicker copy of the ring, blurred and saturated, behind the content. */
+.gk-ring__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  filter: blur(var(--gk-glow)) saturate(140%);
+  opacity: var(--gk-glow-opacity);
+  pointer-events: none;
+  transition: opacity .6s var(--gk-out);
+}
+
+.gk-ring__glow::before {
+  inset: calc(var(--gk-gw) * -1);
+  padding: var(--gk-gw);
+  border-radius: calc(var(--gk-radius, 14px) + var(--gk-gw));
+}
+
+.gk-ring[data-gk-active="false"]::before,
+.gk-ring[data-gk-active="false"] > .gk-ring__glow {
+  opacity: 0;
+}
+
+.gk-ring[data-gk-active="false"]::before,
+.gk-ring[data-gk-active="false"] > .gk-ring__glow::before {
+  animation-play-state: paused;
+}
+
+/* ---------------------------------------------------------------- slider */
+
+.gk-slider {
+  --gk-p: .5;
+  --gk-tw: 30px;
+  --gk-th: 20px;
+  --gk-gh: 7px;
+  --gk-mid: 18px;
+  --gk-extra: 0px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label value" "track track";
+  align-items: baseline;
+  gap: 8px 16px;
+  min-width: 160px;
+  color: var(--gk-white);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.gk-slider--ticks { --gk-extra: 12px; }
+.gk-slider--tick-labels { --gk-extra: 28px; }
+
+.gk-slider__label {
+  grid-area: label;
+  min-width: 0;
+  font: 600 13.5px/1.35 var(--gk-ui);
+  color: var(--gk-muted);
+}
+
+.gk-slider__value {
+  grid-area: value;
+  font: 500 12.5px/1.35 var(--gk-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--gk-white);
+  white-space: nowrap;
+}
+
+.gk-slider__track {
+  grid-area: track;
+  position: relative;
+  display: block;
+  height: calc(var(--gk-mid) * 2 + var(--gk-extra));
+  /* Lets the flare measure the track (100cqw) so it fades out at the groove ends. */
+  container-type: inline-size;
+  /*
+   * Clip the flare's transformed box so it never adds scrollable overflow (the mask already fades it
+   * 14px past the groove ends); the margin leaves room for the value bubble and the thumb glow.
+   */
+  overflow: clip;
+  overflow-clip-margin: 44px;
+}
+
+/* Recessed glass groove cut into violet-black. */
+.gk-slider__groove {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--gk-mid);
+  height: var(--gk-gh);
+  margin-top: calc(var(--gk-gh) / -2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(6, 5, 16, .95), rgba(34, 30, 66, .9));
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, .95),
+    inset 0 0 0 1px rgba(183, 169, 255, .12),
+    0 1px 0 rgba(183, 169, 255, .09);
+}
+
+/* Luminous fill: sky into violet into lavender, white-hot under the thumb. */
+.gk-slider__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--gk-tw) / 2 + var(--gk-p) * (100% - var(--gk-tw)));
+  border-radius: inherit;
+  overflow: hidden;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--gk-sky) 45%, transparent) 0%,
+    var(--gk-sky) 16%,
+    var(--gk-violet) 56%,
+    var(--gk-lavender) 90%,
+    var(--gk-white) 100%);
+  box-shadow:
+    0 0 9px color-mix(in srgb, var(--gk-violet) 70%, transparent),
+    0 0 26px color-mix(in srgb, var(--gk-violet) 32%, transparent),
+    0 0 44px color-mix(in srgb, var(--gk-sky) 12%, transparent);
+  transition: filter .3s, opacity .3s;
+}
+
+/* Bright core running through the tube. */
+.gk-slider__fill::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 2px;
+  top: 50%;
+  height: 1px;
+  margin-top: -.5px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(230, 240, 255, .5) 40%, #FFFFFF);
+}
+
+/* Slow shimmer travelling along the fill. */
+.gk-slider__fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0),
+    rgba(220, 236, 255, .75),
+    rgba(255, 255, 255, 0)) no-repeat;
+  background-size: 80px 100%;
+  background-position: -80px 0;
+  mix-blend-mode: screen;
+  animation: gk-shimmer 3.6s cubic-bezier(.45, 0, .25, 1) infinite;
+}
+
+.gk-slider__ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--gk-mid) + var(--gk-gh) / 2 + 7px);
+  height: 5px;
+  pointer-events: none;
+}
+
+.gk-slider__tick {
+  position: absolute;
+  top: 0;
+  left: calc(var(--gk-tw) / 2 + var(--t, 0) * (100% - var(--gk-tw)));
+  width: 1.5px;
+  height: 5px;
+  margin-left: -.75px;
+  border-radius: 1px;
+  background: rgba(183, 169, 255, .26);
+  transition: background .25s, box-shadow .25s;
+}
+
+.gk-slider__tick.is-on {
+  background: var(--gk-lavender);
+  box-shadow: 0 0 6px rgba(124, 108, 255, .9);
+}
+
+.gk-slider__tick-label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  transform: translateX(-50%);
+  font: 500 10.5px/1 var(--gk-mono);
+  color: var(--gk-dim);
+  white-space: nowrap;
+  transition: color .25s;
+}
+
+.gk-slider__tick.is-on .gk-slider__tick-label {
+  color: var(--gk-white);
+}
+
+.gk-slider__tick:first-child .gk-slider__tick-label { transform: translateX(-30%); }
+.gk-slider__tick:last-child .gk-slider__tick-label { transform: translateX(-70%); }
+
+/* Glass pill thumb: pearl at rest, a clear glass lens while dragged. */
+.gk-slider__thumb {
+  position: absolute;
+  z-index: 1;
+  top: var(--gk-mid);
+  left: calc(var(--gk-p) * (100% - var(--gk-tw)));
+  width: var(--gk-tw);
+  height: var(--gk-th);
+  margin-top: calc(var(--gk-th) / -2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1EEFF 46%, #D2CBF4 100%);
+  box-shadow:
+    inset 0 1px 0 #FFFFFF,
+    inset 0 -1px 1px rgba(60, 44, 150, .3),
+    0 0 0 .5px rgba(243, 240, 255, .7),
+    0 3px 10px rgba(4, 2, 14, .8),
+    0 0 18px rgba(124, 108, 255, .42);
+  pointer-events: none;
+  transition:
+    transform .45s var(--gk-spring),
+    background .25s var(--gk-out),
+    box-shadow .25s var(--gk-out),
+    -webkit-backdrop-filter .25s,
+    backdrop-filter .25s;
+}
+
+/* Inner highlight. */
+.gk-slider__thumb::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 2px;
+  height: 46%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  transition: opacity .25s;
+}
+
+/* Hot core of the flare: a small white-sky bloom at the centre of the thumb, above the streak. */
+.gk-slider__thumb::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 10px;
+  margin: -5px 0 0 -11px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #FFFFFF, rgba(214, 236, 255, .85) 35%, rgba(143, 211, 255, 0));
+  filter: blur(1.5px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: scale(.5);
+  pointer-events: none;
+  transition: opacity .3s var(--gk-out), transform .45s var(--gk-out);
+}
+
+/*
+ * Anamorphic flare: a long, very thin horizontal streak through the thumb (sky edges, lavender body,
+ * white centre) over an elliptical halo. Folded at rest, it blooms open while dragging or focused.
+ */
+.gk-slider__flare {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--gk-flare, 340px);
+  height: 22px;
+  transform: translate(-50%, -50%) scaleX(.28);
+  opacity: .35;
+  /* Wide, faint outer streak: the soft anamorphic smear around the sharp line. */
+  background: linear-gradient(90deg,
+    rgba(124, 108, 255, 0) 0%,
+    rgba(124, 108, 255, .22) 22%,
+    rgba(143, 211, 255, .5) 44%,
+    rgba(214, 236, 255, .7) 50%,
+    rgba(143, 211, 255, .5) 56%,
+    rgba(124, 108, 255, .22) 78%,
+    rgba(124, 108, 255, 0) 100%);
+  /*
+   * Two masks, intersected: a vertical one that keeps the smear thin, and a horizontal one that fades
+   * the flare out just past the ends of the groove, so it never spills out of the card or widens the
+   * page. --gk-fs is the flare's net horizontal scale in each state (its own scaleX times the thumb's).
+   */
+  --gk-fs: .28;
+  --gk-dl: calc(var(--gk-p) * (100cqw - var(--gk-tw)) + var(--gk-tw) / 2);
+  --gk-dr: calc((1 - var(--gk-p)) * (100cqw - var(--gk-tw)) + var(--gk-tw) / 2);
+  --gk-xl: calc(50% - var(--gk-dl) / var(--gk-fs));
+  --gk-xr: calc(50% + var(--gk-dr) / var(--gk-fs));
+  -webkit-mask-image:
+    linear-gradient(180deg, transparent 22%, #000 46%, #000 54%, transparent 78%),
+    linear-gradient(90deg, transparent calc(var(--gk-xl) - 14px), #000 calc(var(--gk-xl) + 18px),
+      #000 calc(var(--gk-xr) - 18px), transparent calc(var(--gk-xr) + 14px));
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, transparent 22%, #000 46%, #000 54%, transparent 78%),
+    linear-gradient(90deg, transparent calc(var(--gk-xl) - 14px), #000 calc(var(--gk-xl) + 18px),
+      #000 calc(var(--gk-xr) - 18px), transparent calc(var(--gk-xr) + 14px));
+  mask-composite: intersect;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transition: transform .6s var(--gk-out), opacity .35s var(--gk-out);
+}
+
+/* The sharp line: sky at the tips, lavender body, white at the centre. */
+.gk-slider__flare::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    rgba(143, 211, 255, 0) 0%,
+    rgba(143, 211, 255, .55) 12%,
+    rgba(124, 108, 255, .85) 26%,
+    #B7A9FF 40%,
+    #FFFFFF 50%,
+    #B7A9FF 60%,
+    rgba(124, 108, 255, .85) 74%,
+    rgba(143, 211, 255, .55) 88%,
+    rgba(143, 211, 255, 0) 100%);
+  box-shadow:
+    0 0 3px rgba(214, 206, 255, .95),
+    0 0 8px rgba(183, 169, 255, .8),
+    0 0 16px rgba(143, 211, 255, .45);
+}
+
+/* Elliptical bloom around the core. */
+.gk-slider__flare::after {
+  content: '';
+  position: absolute;
+  left: 26%;
+  right: 26%;
+  top: 50%;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(234, 244, 255, .85),
+    rgba(143, 211, 255, .45) 38%,
+    rgba(124, 108, 255, .22) 68%,
+    rgba(124, 108, 255, 0));
+  filter: blur(4px);
+}
+
+/* Value bubble in mono, shown while interacting. */
+.gk-slider__bubble {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(100% - var(--gk-mid) + var(--gk-th) / 2 + 10px);
+  left: calc(var(--gk-tw) / 2 + var(--gk-p) * (100% - var(--gk-tw)));
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(18, 15, 36, .88);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 0 0 1px var(--gk-line-2),
+    inset 0 1px 0 rgba(255, 255, 255, .1),
+    0 10px 24px rgba(4, 2, 14, .7),
+    0 0 16px rgba(124, 108, 255, .3);
+  font: 500 12.5px/1 var(--gk-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--gk-white);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 6px) scale(.86);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  transition: opacity .2s var(--gk-out) .5s, transform .3s var(--gk-out) .5s;
+}
+
+/* The native range input stays on top for pointer, keyboard and screen readers. */
+.gk-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  top: calc(var(--gk-mid) - 18px);
+  width: 100%;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.gk-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 36px;
+  background: transparent;
+  border: 0;
+}
+
+.gk-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--gk-tw);
+  height: 36px;
+  border: 0;
+  background: transparent;
+}
+
+.gk-slider input[type="range"]::-moz-range-track {
+  height: 36px;
+  background: transparent;
+  border: 0;
+}
+
+.gk-slider input[type="range"]::-moz-range-thumb {
+  width: var(--gk-tw);
+  height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.gk-slider input[type="range"]:focus {
+  outline: none;
+}
+
+/* Hover */
+.gk-slider__track:hover .gk-slider__thumb {
+  transform: scale(1.05);
+}
+
+.gk-slider__track:hover .gk-slider__flare {
+  transform: translate(-50%, -50%) scaleX(.55);
+  --gk-fs: .58;
+  opacity: .7;
+}
+
+/* Dragging: the thumb becomes a glass lens and the flare opens wide. */
+.gk-slider.is-active .gk-slider__thumb {
+  transform: scale(1.22, 1.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26), rgba(183, 169, 255, .1) 55%, rgba(143, 211, 255, .18));
+  -webkit-backdrop-filter: blur(1.5px) saturate(180%) brightness(1.3);
+  backdrop-filter: blur(1.5px) saturate(180%) brightness(1.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .85),
+    inset 0 0 0 1px rgba(214, 206, 255, .5),
+    inset 0 -2px 6px rgba(143, 211, 255, .4),
+    0 4px 14px rgba(4, 2, 14, .7),
+    0 0 26px rgba(124, 108, 255, .7);
+}
+
+.gk-slider.is-active .gk-slider__thumb::before {
+  opacity: .55;
+}
+
+.gk-slider.is-active .gk-slider__thumb::after,
+.gk-slider:has(input:focus-visible) .gk-slider__thumb::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.gk-slider.is-active .gk-slider__flare,
+.gk-slider:has(input:focus-visible) .gk-slider__flare {
+  transform: translate(-50%, -50%) scaleX(1);
+  opacity: 1;
+  --gk-fs: 1;
+}
+
+/* While dragging the thumb is scaled 1.22; counter-scale so the flare keeps its true length
+   (also when keyboard focus is still visible, hence the second, more specific selector). */
+.gk-slider.is-active .gk-slider__flare,
+.gk-slider.is-active:has(input:focus-visible) .gk-slider__flare {
+  transform: translate(-50%, -50%) scaleX(.82);
+}
+
+.gk-slider.is-active .gk-slider__flare::after,
+.gk-slider:has(input:focus-visible) .gk-slider__flare::after {
+  animation: gk-flare-breathe 2.4s ease-in-out infinite;
+}
+
+.gk-slider.is-active .gk-slider__bubble,
+.gk-slider:has(input:focus-visible) .gk-slider__bubble {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  transition-delay: 0s;
+}
+
+.gk-slider.is-active .gk-slider__fill {
+  filter: brightness(1.14) saturate(1.12);
+}
+
+/* Visible keyboard focus: a sky ring, as everywhere in Nebula. */
+.gk-slider:has(input:focus-visible) .gk-slider__thumb {
+  box-shadow:
+    inset 0 1px 0 #FFFFFF,
+    inset 0 -1px 1px rgba(60, 44, 150, .3),
+    0 0 0 3px var(--gk-ground),
+    0 0 0 5px var(--gk-sky),
+    0 0 22px rgba(124, 108, 255, .8);
+}
+
+/* Disabled */
+.gk-slider.is-disabled,
+.gk-slider:has(input:disabled) {
+  opacity: .42;
+}
+
+.gk-slider.is-disabled input[type="range"],
+.gk-slider:has(input:disabled) input[type="range"] {
+  cursor: not-allowed;
+}
+
+.gk-slider.is-disabled .gk-slider__fill,
+.gk-slider:has(input:disabled) .gk-slider__fill {
+  filter: grayscale(.85) brightness(.75);
+  box-shadow: none;
+}
+
+.gk-slider.is-disabled .gk-slider__fill::after,
+.gk-slider:has(input:disabled) .gk-slider__fill::after {
+  display: none;
+}
+
+.gk-slider.is-disabled .gk-slider__track:hover .gk-slider__thumb,
+.gk-slider:has(input:disabled) .gk-slider__track:hover .gk-slider__thumb {
+  transform: none;
+}
+
+.gk-slider.is-disabled .gk-slider__thumb,
+.gk-slider:has(input:disabled) .gk-slider__thumb {
+  box-shadow:
+    inset 0 1px 0 #FFFFFF,
+    0 3px 10px rgba(4, 2, 14, .8);
+}
+
+.gk-slider.is-disabled .gk-slider__flare,
+.gk-slider:has(input:disabled) .gk-slider__flare {
+  opacity: 0;
+}
+
+/* ---------------------------------------------------------------- toggle */
+
+.gk-toggle {
+  --gk-sw: 51px;
+  --gk-sh: 31px;
+  --gk-kp: 2px;
+  --gk-stretch: 7px;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--gk-white);
+  font: 600 14px/1.35 var(--gk-ui);
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.gk-toggle--row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.gk-toggle__label {
+  color: var(--gk-muted);
+  transition: color .25s;
+}
+
+.gk-toggle[aria-checked="true"] .gk-toggle__label {
+  color: var(--gk-white);
+}
+
+.gk-toggle__track {
+  position: relative;
+  flex: none;
+  display: block;
+  width: var(--gk-sw);
+  height: var(--gk-sh);
+  border-radius: 999px;
+  background: #2A2648;
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 169, 255, .14),
+    inset 0 1px 3px rgba(4, 2, 14, .85);
+  transition: background .35s var(--gk-out), box-shadow .35s var(--gk-out);
+}
+
+.gk-toggle:hover .gk-toggle__track {
+  background: #332E58;
+}
+
+.gk-toggle[aria-checked="true"] .gk-toggle__track {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--gk-violet) 82%, #FFFFFF) 0%,
+    var(--gk-violet) 48%,
+    color-mix(in srgb, var(--gk-violet) 78%, var(--gk-ink)) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 206, 255, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .4),
+    inset 0 -3px 7px rgba(18, 12, 46, .45);
+}
+
+.gk-toggle[aria-checked="true"][data-gk="intelligence"] .gk-toggle__track {
+  background: linear-gradient(120deg, #C36BFF 0%, var(--gk-violet) 50%, #3FB8E3 100%);
+}
+
+/* Running ring of light around the track when on. */
+.gk-toggle__track::before,
+.gk-toggle__track::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: conic-gradient(from var(--gk-angle), var(--gk-stops));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .45s var(--gk-out);
+}
+
+.gk-toggle__track::before {
+  inset: -3.5px;
+  padding: 1.5px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Glow sits below the opaque track (the button is the stacking context). */
+.gk-toggle__track::after {
+  z-index: -1;
+  inset: -5px;
+  filter: blur(10px) saturate(140%);
+}
+
+.gk-toggle[aria-checked="true"] .gk-toggle__track::before {
+  opacity: 1;
+  animation: gk-spin var(--gk-dur, 3.6s) linear infinite;
+}
+
+.gk-toggle[aria-checked="true"] .gk-toggle__track::after {
+  opacity: .75;
+  animation: gk-spin var(--gk-dur, 3.6s) linear infinite;
+}
+
+/* Knob with specular highlight: lavender pearl when off, white when on. */
+.gk-toggle__knob {
+  position: absolute;
+  top: var(--gk-kp);
+  left: var(--gk-kp);
+  width: calc(var(--gk-sh) - var(--gk-kp) * 2);
+  height: calc(var(--gk-sh) - var(--gk-kp) * 2);
+  border-radius: 999px;
+  background: radial-gradient(120% 95% at 50% 0%, #E9E5FF 0%, #C2BCE6 52%, #9690BC 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .8),
+    inset 0 -1px 1px rgba(30, 20, 80, .25),
+    0 3px 8px rgba(4, 2, 14, .6),
+    0 1px 1px rgba(4, 2, 14, .5);
+  transition: transform .55s var(--gk-spring), width .35s var(--gk-spring), background .3s var(--gk-out);
+}
+
+.gk-toggle__knob::before {
+  content: '';
+  position: absolute;
+  left: 20%;
+  top: 8%;
+  width: 60%;
+  height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0));
+}
+
+.gk-toggle[aria-checked="true"] .gk-toggle__knob {
+  transform: translateX(calc(var(--gk-sw) - var(--gk-sh)));
+  background: radial-gradient(120% 95% at 50% 0%, #FFFFFF 0%, #F7F5FF 46%, #DCD6F7 100%);
+  box-shadow:
+    inset 0 1px 0 #FFFFFF,
+    inset 0 -1px 1px rgba(30, 20, 80, .2),
+    0 3px 8px rgba(18, 12, 46, .6),
+    0 0 12px rgba(183, 169, 255, .55);
+}
+
+/* Pressed: the knob stretches toward the travel direction. */
+.gk-toggle:active .gk-toggle__knob {
+  width: calc(var(--gk-sh) - var(--gk-kp) * 2 + var(--gk-stretch));
+}
+
+.gk-toggle[aria-checked="true"]:active .gk-toggle__knob {
+  transform: translateX(calc(var(--gk-sw) - var(--gk-sh) - var(--gk-stretch)));
+}
+
+.gk-toggle:focus {
+  outline: none;
+}
+
+.gk-toggle:focus-visible .gk-toggle__track {
+  outline: 2px solid var(--gk-sky);
+  outline-offset: 5px;
+}
+
+.gk-toggle:disabled,
+.gk-toggle[aria-disabled="true"] {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.gk-toggle:disabled:active .gk-toggle__knob,
+.gk-toggle[aria-disabled="true"]:active .gk-toggle__knob {
+  width: calc(var(--gk-sh) - var(--gk-kp) * 2);
+}
+
+.gk-toggle[aria-checked="true"]:disabled:active .gk-toggle__knob,
+.gk-toggle[aria-checked="true"][aria-disabled="true"]:active .gk-toggle__knob {
+  transform: translateX(calc(var(--gk-sw) - var(--gk-sh)));
+}
+
+.gk-toggle:disabled .gk-toggle__track::before,
+.gk-toggle:disabled .gk-toggle__track::after,
+.gk-toggle[aria-disabled="true"] .gk-toggle__track::before,
+.gk-toggle[aria-disabled="true"] .gk-toggle__track::after {
+  animation-play-state: paused;
+}
+
+.gk-toggle:disabled .gk-toggle__track::after,
+.gk-toggle[aria-disabled="true"] .gk-toggle__track::after {
+  opacity: .25;
+}
+
+/* ---------------------------------------------------------------- button */
+
+.gk-btn {
+  --gk-br: var(--gk-btn-radius, 999px);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 22px;
+  border: 1px solid rgba(183, 169, 255, .5);
+  border-radius: var(--gk-br);
+  background: rgba(183, 169, 255, .05);
+  color: var(--gk-white);
+  font: 700 14px/1 var(--gk-ui);
+  letter-spacing: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color .25s var(--gk-out),
+    background-color .25s var(--gk-out),
+    color .25s var(--gk-out),
+    box-shadow .35s var(--gk-out),
+    transform .4s var(--gk-spring);
+}
+
+.gk-btn > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Light sweep, painted between the background and the label. */
+.gk-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(105deg,
+    rgba(183, 169, 255, 0) 36%,
+    rgba(214, 206, 255, .22) 50%,
+    rgba(183, 169, 255, 0) 64%) no-repeat;
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gk-btn:hover {
+  border-color: var(--gk-lavender);
+  background-color: rgba(183, 169, 255, .12);
+  box-shadow: 0 0 22px rgba(124, 108, 255, .22);
+}
+
+.gk-btn:hover::after {
+  animation: gk-sweep 1.1s var(--gk-out) forwards;
+}
+
+.gk-btn:active {
+  transform: scale(.97);
+}
+
+/* Focus: a running ring of light just outside the button. */
+.gk-btn::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  padding: 1.5px;
+  border-radius: calc(var(--gk-br) + 5px);
+  background: conic-gradient(from var(--gk-angle), var(--gk-stops));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s var(--gk-out);
+}
+
+.gk-btn:focus {
+  outline: none;
+}
+
+.gk-btn:focus-visible::before {
+  opacity: 1;
+  animation: gk-spin var(--gk-dur, 3s) linear infinite;
+}
+
+.gk-btn:focus-visible {
+  box-shadow: 0 0 24px rgba(124, 108, 255, .5);
+}
+
+/* Primary: violet gradient pill with dark ink label. */
+.gk-btn--primary {
+  border-color: rgba(214, 206, 255, .35);
+  background: linear-gradient(135deg, var(--gk-lavender) 0%, var(--gk-violet) 100%);
+  color: var(--gk-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .45),
+    0 14px 36px -14px rgba(124, 108, 255, .9);
+}
+
+.gk-btn--primary::after {
+  background-image: linear-gradient(105deg,
+    rgba(143, 211, 255, 0) 34%,
+    rgba(214, 236, 255, .45) 47%,
+    rgba(255, 255, 255, .9) 50%,
+    rgba(214, 236, 255, .45) 53%,
+    rgba(143, 211, 255, 0) 66%);
+}
+
+.gk-btn--primary:hover {
+  border-color: rgba(230, 224, 255, .6);
+  background-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .5),
+    0 18px 44px -12px rgba(124, 108, 255, 1),
+    0 0 34px rgba(183, 169, 255, .3);
+}
+
+.gk-btn--primary:focus-visible {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .5),
+    0 18px 44px -12px rgba(124, 108, 255, 1),
+    0 0 30px rgba(143, 211, 255, .4);
+}
+
+.gk-btn--danger {
+  border-color: rgba(255, 142, 122, .55);
+  background: rgba(255, 142, 122, .05);
+  color: var(--gk-coral);
+}
+
+.gk-btn--danger:hover {
+  border-color: var(--gk-coral);
+  background-color: rgba(255, 142, 122, .13);
+  box-shadow: 0 0 22px rgba(255, 142, 122, .25);
+}
+
+.gk-btn--danger::after {
+  background-image: linear-gradient(105deg,
+    rgba(255, 142, 122, 0) 36%,
+    rgba(255, 190, 176, .22) 50%,
+    rgba(255, 142, 122, 0) 64%);
+}
+
+.gk-btn--sm {
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.gk-btn--icon {
+  --gk-br: 50%;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.gk-btn--icon::before {
+  border-radius: 50%;
+}
+
+.gk-btn--icon.gk-btn--sm {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+
+.gk-btn:disabled,
+.gk-btn[aria-disabled="true"] {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.gk-btn:disabled::after,
+.gk-btn[aria-disabled="true"]::after {
+  display: none;
+}
+
+/* --------------------------------------------------------------- segment */
+
+.gk-segment {
+  --gk-seg-x: 0px;
+  --gk-seg-y: 0px;
+  --gk-seg-w: 0px;
+  --gk-seg-h: 0px;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: var(--gk-seg-radius, 999px);
+  background: rgba(14, 12, 28, .6);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 0 0 1px var(--gk-line),
+    inset 0 1px 2px rgba(4, 2, 14, .6);
+}
+
+.gk-segment > [role="tab"] {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0;
+  border-radius: calc(var(--gk-seg-radius, 999px) - 2px);
+  background: none;
+  color: var(--gk-muted);
+  font: 600 13.5px/1 var(--gk-ui);
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .25s var(--gk-out);
+}
+
+.gk-segment > [role="tab"]:hover {
+  color: var(--gk-white);
+}
+
+.gk-segment > [role="tab"][aria-selected="true"] {
+  color: var(--gk-white);
+}
+
+.gk-segment > [role="tab"]:focus {
+  outline: none;
+}
+
+.gk-segment > [role="tab"]:focus-visible {
+  outline: 2px solid var(--gk-sky);
+  outline-offset: -2px;
+}
+
+.gk-segment > [role="tab"]:disabled,
+.gk-segment > [role="tab"][aria-disabled="true"] {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.gk-segment > [role="tab"]:disabled:hover,
+.gk-segment > [role="tab"][aria-disabled="true"]:hover {
+  color: var(--gk-muted);
+}
+
+/* Sliding frosted lavender thumb. */
+.gk-segment__thumb {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  width: var(--gk-seg-w);
+  height: var(--gk-seg-h);
+  transform: translate(var(--gk-seg-x), var(--gk-seg-y));
+  border-radius: calc(var(--gk-seg-radius, 999px) - 2px);
+  /* Fill ~3:1 at the top against the track; the 1px edge (6.6:1) carries WCAG 1.4.11 everywhere,
+     and white label text on the fill stays above 4.5:1. */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gk-lavender) 50%, transparent), color-mix(in srgb, var(--gk-lavender) 36%, transparent));
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .4),
+    inset 0 0 0 1px rgba(214, 206, 255, .6),
+    0 6px 16px rgba(4, 2, 14, .55),
+    0 0 20px rgba(124, 108, 255, .28);
+  pointer-events: none;
+}
+
+.gk-segment.is-ready .gk-segment__thumb {
+  transition:
+    transform .5s var(--gk-spring),
+    width .5s var(--gk-spring),
+    height .5s var(--gk-spring),
+    opacity .2s;
+}
+
+.gk-segment:has(> [role="tab"]:active) .gk-segment__thumb {
+  background: linear-gradient(180deg, rgba(183, 169, 255, .4), rgba(183, 169, 255, .2));
+}
+
+/* ---------------------------------------------------- reduced motion / still */
+
+@media (prefers-reduced-motion: reduce) {
+  .gk-ring::before,
+  .gk-ring__glow::before,
+  .gk-toggle__track::before,
+  .gk-toggle__track::after,
+  .gk-btn::before {
+    animation: none !important;
+    --gk-angle: 210deg;
+  }
+
+  .gk-slider__flare::after {
+    animation: none !important;
+  }
+
+  .gk-slider__fill::after,
+  .gk-btn::after {
+    display: none;
+  }
+
+  .gk-slider__thumb,
+  .gk-slider__thumb::after,
+  .gk-slider__flare,
+  .gk-slider__bubble,
+  .gk-toggle__knob,
+  .gk-segment.is-ready .gk-segment__thumb,
+  .gk-btn {
+    transition-duration: .12s !important;
+    transition-delay: 0s !important;
+    transition-timing-function: linear !important;
+  }
+}
+
+.gk-still .gk-ring::before,
+.gk-still .gk-ring__glow::before,
+.gk-still .gk-toggle__track::before,
+.gk-still .gk-toggle__track::after,
+.gk-still .gk-btn::before,
+.gk-ring.gk-still::before,
+.gk-ring.gk-still > .gk-ring__glow::before {
+  animation: none !important;
+  --gk-angle: 210deg;
+}
+
+.gk-still .gk-slider__flare::after {
+  animation: none !important;
+}
+
+.gk-still .gk-slider__fill::after,
+.gk-still .gk-btn::after {
+  display: none;
+}
+
+.gk-still .gk-slider__thumb,
+.gk-still .gk-slider__thumb::after,
+.gk-still .gk-slider__flare,
+.gk-still .gk-slider__bubble,
+.gk-still .gk-toggle__knob,
+.gk-still .gk-segment.is-ready .gk-segment__thumb,
+.gk-still .gk-btn {
+  transition-duration: .12s !important;
+  transition-delay: 0s !important;
+  transition-timing-function: linear !important;
+}
+
+@media (forced-colors: active) {
+  .gk-ring::before,
+  .gk-ring__glow,
+  .gk-toggle__track::before,
+  .gk-toggle__track::after,
+  .gk-slider__flare,
+  .gk-slider__thumb::after {
+    display: none;
+  }
+
+  .gk-toggle__track,
+  .gk-slider__groove,
+  .gk-segment__thumb {
+    border: 1px solid CanvasText;
+  }
+
+  .gk-toggle[aria-checked="true"] .gk-toggle__track,
+  .gk-slider__fill {
+    background: Highlight;
+  }
+
+  /* box-shadow and the conic ::before are dropped in forced colours; give focus a system outline. */
+  .gk-slider__thumb {
+    border: 1px solid ButtonText;
+  }
+
+  .gk-slider:has(input:focus-visible) .gk-slider__thumb {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .gk-btn:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}

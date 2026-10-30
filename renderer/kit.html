@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QoO+ij2CMebxwDGgfV3GELZNE7X7FH1zKjuBNet0frs='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'">
+<title>Bastion Control Kit</title>
+<link rel="stylesheet" href="../node_modules/@fontsource-variable/bricolage-grotesque/index.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/400.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/500.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/700.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/jetbrains-mono/400.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/jetbrains-mono/500.css">
+<link rel="stylesheet" href="styles/glow-kit.css">
+<style>
+[hidden]{display:none!important}
+/* Nebula Voice design tokens (docs/design-reference-nebula.html). */
+:root{
+  color-scheme:dark;
+  --ground:#07060E; --ground-2:#0D0B1A;
+  --panel:rgba(28,24,54,.66); --panel-2:rgba(14,12,28,.78);
+  --line:rgba(183,169,255,.13); --line-2:rgba(183,169,255,.26);
+  --text:#F3F0FF; --muted:#ABA6CB; --dim:#857FA9;
+  --violet:#7C6CFF; --lavender:#B7A9FF; --sky:#8FD3FF; --mint:#9EF0C4; --coral:#FF8E7A; --amber:#FFC772;
+  --magenta:#FF5FD2; --teal:#3FE3C9; --clay:#E8A07F; --ink:#120C2E;
+  --f-display:"Bricolage Grotesque Variable","Bricolage Grotesque","Plus Jakarta Sans",system-ui,sans-serif;
+  --f-ui:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --gl:max(16px,env(safe-area-inset-left,0px));
+  --gr:max(16px,env(safe-area-inset-right,0px));
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html{background:var(--ground)}
+body{margin:0;background:var(--ground);color:var(--text);font:400 15px/1.55 var(--f-ui);-webkit-font-smoothing:antialiased;overflow-x:clip}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:10px}
+.wrap{width:100%;max-width:1280px;margin:0 auto;padding-left:max(var(--gl),clamp(16px,4vw,48px));padding-right:max(var(--gr),clamp(16px,4vw,48px))}
+.eyebrow{font:500 12px/1.2 var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--lavender);margin:0}
+.mono{font-family:var(--f-mono);font-size:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* page: planet-horizon glow behind the header */
+.top{position:relative;overflow:hidden;isolation:isolate;padding-top:calc(72px + env(safe-area-inset-top,0px));padding-bottom:64px}
+.top::before{content:'';position:absolute;z-index:-1;left:50%;bottom:-560px;width:1600px;height:720px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,#2A2266,#161236 40%,var(--ground) 72%);box-shadow:0 -2px 0 rgba(244,240,255,.55),0 -10px 40px rgba(183,169,255,.35),0 -60px 140px rgba(124,108,255,.28);pointer-events:none}
+.top::after{content:'';position:absolute;z-index:-2;inset:0;background:radial-gradient(60% 70% at 50% 100%,rgba(124,108,255,.22),rgba(124,108,255,0) 70%);pointer-events:none}
+.top h1{margin:14px 0 0;font:700 clamp(46px,7vw,92px)/1 var(--f-display);letter-spacing:-.045em;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.top p.lede{margin:18px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;margin-top:28px}
+
+section.spec{border-top:1px solid var(--line)}
+section.spec>.wrap{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px 48px;padding-top:48px;padding-bottom:56px}
+section.spec h2{margin:8px 0 0;font:700 32px/1.05 var(--f-display);letter-spacing:-.035em}
+section.spec .note{margin:12px 0 0;color:var(--muted);font-size:14px;max-width:34ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px}
+.cell{position:relative;min-width:0;padding:22px 22px 26px;border-radius:24px;background:linear-gradient(180deg,rgba(30,26,60,.72),rgba(14,12,28,.78));border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 30px 60px -40px rgba(0,0,0,.9);display:flex;flex-direction:column;gap:18px}
+.cell .state{font:500 11.5px/1 var(--f-mono);color:var(--dim)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.wide{grid-column:span 2}
+@media (max-width:1100px){.wide{grid-column:auto}}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+@media (max-width:820px){section.spec>.wrap{grid-template-columns:minmax(0,1fr)}}
+
+/* specimens wrapped by rings */
+.card{position:relative;padding:22px;border-radius:14px;background:linear-gradient(180deg,rgba(30,26,60,.92),rgba(14,12,28,.96));display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.card.round{border-radius:30px}
+.card.round::before{content:'';position:absolute;inset:-1px -1px auto;height:120px;background:radial-gradient(60% 100% at 30% 0%,rgba(124,108,255,.2),transparent 70%);pointer-events:none}
+.card>*{position:relative}
+.card h3{margin:0;font:700 19px/1.15 var(--f-display);letter-spacing:-.025em}
+.card p{margin:0;color:var(--muted);font-size:13.5px}
+/* voice prompt bar, as in the reference dock */
+.prompt{position:relative;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 20px;border-radius:999px;background:rgba(18,15,36,.86);overflow:hidden}
+.prompt::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--magenta),var(--violet),var(--teal),var(--amber),transparent);opacity:.85;pointer-events:none}
+.prompt input{flex:1;min-width:0;border:0;background:none;outline:none;font:400 15px/1.2 var(--f-ui);color:var(--text)}
+.prompt input::placeholder{color:var(--dim)}
+.prompt:focus-within{box-shadow:inset 0 0 0 1px var(--line-2)}
+.panel-copy{margin:14px 0 0;color:var(--muted);font-size:14px}
+.log{margin:0;min-height:120px;max-height:220px;overflow:auto;padding:16px 18px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);font:400 12px/1.6 var(--f-mono);color:#D9D4F7;white-space:pre-wrap}
+.keys{margin:0;padding:0;list-style:none;display:grid;gap:8px;color:var(--muted);font-size:14px}
+.keys b{font:500 12px/1 var(--f-mono);color:var(--text);border:1px solid var(--line-2);border-radius:6px;padding:3px 7px;margin-right:8px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">Bastion · Control kit · QA</p>
+    <h1>Glow kit</h1>
+    <p class="lede">Every control in every state, on Nebula violet-black. Sliders, switches, rings, buttons and segmented controls are plain accessible markup upgraded by <span class="mono">initGlowKit()</span>.</p>
+    <div class="bar">
+      <div class="gk-segment" role="tablist" aria-label="Motion" id="motion">
+        <button role="tab" aria-selected="true" data-value="live">Live motion</button>
+        <button role="tab" aria-selected="false" data-value="still">Still</button>
+      </div>
+      <button class="gk-btn gk-btn--sm" id="reinit" type="button">Tear down and re-init</button>
+      <span class="mono" id="status" style="color:var(--dim)">Upgraded</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="spec" aria-labelledby="h-slider">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">01</p>
+        <h2 id="h-slider">Slider</h2>
+        <p class="note">Native range input kept for keyboard and screen readers. Drag for the glass lens, the value bubble and the anamorphic flare. Tab in for the focus state, which blooms the flare too.</p>
+      </div>
+      <div class="stack">
+        <div class="grid">
+          <div class="cell">
+            <span class="state">rest / percent</span>
+            <label class="gk-slider" data-unit="%"><span>Scan depth</span><input type="range" name="depth" min="0" max="100" value="64"></label>
+          </div>
+          <div class="cell">
+            <span class="state">dragging (pinned) / flare open</span>
+            <label class="gk-slider" data-unit="%" data-pin="active"><span>Guest bandwidth</span><input type="range" name="guest" min="0" max="100" value="42"></label>
+          </div>
+          <div class="cell">
+            <span class="state">ticks / step 0.05</span>
+            <label class="gk-slider" data-ticks="5"><span>Alert threshold</span><input type="range" name="threshold" min="0" max="1" step="0.05" value="0.35"></label>
+          </div>
+          <div class="cell">
+            <span class="state">ticks per step / tick labels / app valuetext</span>
+            <label class="gk-slider" data-ticks data-tick-labels="20,40,80,160"><span>Channel width</span><input type="range" name="width" id="channel-width" min="0" max="3" step="1" value="2" aria-valuetext="80 MHz"></label>
+          </div>
+          <div class="cell">
+            <span class="state">disabled</span>
+            <label class="gk-slider" data-unit="%"><span>Transmit power</span><input type="range" name="power" min="0" max="100" value="40" disabled></label>
+          </div>
+          <div class="cell">
+            <span class="state">disabled / ticks</span>
+            <label class="gk-slider" data-ticks="3" data-tick-labels="Low,Mid,High"><span>Sensitivity</span><input type="range" name="sensitivity" min="0" max="2" value="1" disabled></label>
+          </div>
+          <div class="cell">
+            <span class="state">programmatic value</span>
+            <label class="gk-slider" data-unit=" s" data-decimals="1"><span>Poll interval</span><input type="range" name="interval" min="0.5" max="10" step="0.5" value="2"></label>
+            <div class="row"><button class="gk-btn gk-btn--sm" id="randomize" type="button">Set values from code</button></div>
+          </div>
+          <div class="cell">
+            <span class="state">edges / min and max</span>
+            <div class="stack">
+              <label class="gk-slider" data-unit="%"><span>At minimum</span><input type="range" name="edge-min" min="0" max="100" value="0"></label>
+              <label class="gk-slider" data-unit="%"><span>At maximum</span><input type="range" name="edge-max" min="0" max="100" value="100"></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec" aria-labelledby="h-toggle">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">02</p>
+        <h2 id="h-toggle">Switch</h2>
+        <p class="note">role="switch" with aria-checked. Spring travel, the knob stretches while pressed, and a ring of light runs around the violet track when on.</p>
+      </div>
+      <div class="grid">
+        <div class="cell">
+          <span class="state">off</span>
+          <button class="gk-toggle" role="switch" aria-checked="false" data-name="auto-scan">Auto scan</button>
+        </div>
+        <div class="cell">
+          <span class="state">on / nebula</span>
+          <button class="gk-toggle" role="switch" aria-checked="true" data-name="watch">Watch network</button>
+        </div>
+        <div class="cell">
+          <span class="state">on / intelligence palette</span>
+          <button class="gk-toggle" role="switch" aria-checked="true" data-gk="intelligence" data-name="agent">Agent watch</button>
+        </div>
+        <div class="cell">
+          <span class="state">no visible label (aria-label)</span>
+          <div class="row"><button class="gk-toggle" role="switch" aria-checked="false" aria-label="Notifications" data-name="notify"></button></div>
+        </div>
+        <div class="cell">
+          <span class="state">row layout</span>
+          <button class="gk-toggle gk-toggle--row" role="switch" aria-checked="true" data-name="row">Block known trackers</button>
+        </div>
+        <div class="cell">
+          <span class="state">disabled off / disabled on</span>
+          <div class="stack">
+            <button class="gk-toggle" role="switch" aria-checked="false" disabled>Remote admin</button>
+            <button class="gk-toggle" role="switch" aria-checked="true" disabled>Firewall</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">slow / fast ring</span>
+          <div class="stack">
+            <button class="gk-toggle" role="switch" aria-checked="true" data-gk-speed="slow" data-name="slow">Slow ring</button>
+            <button class="gk-toggle" role="switch" aria-checked="true" data-gk-speed="fast" data-name="fast">Fast ring</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">added after init (observer)</span>
+          <div class="stack" id="dynamic"></div>
+          <div class="row"><button class="gk-btn gk-btn--sm" id="add-dynamic" type="button">Add a switch</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec" aria-labelledby="h-ring">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">03</p>
+        <h2 id="h-ring">Ring</h2>
+        <p class="note">A conic gradient runs around any element via @property --gk-angle, painted only in the border band with a blurred copy behind. Nebula by default, iridescent for intelligence. The ring adopts the radius of the element it wraps.</p>
+      </div>
+      <div class="stack">
+        <div class="grid">
+          <div class="cell">
+            <span class="state">nebula / small radius</span>
+            <div class="gk-ring">
+              <div class="card"><h3>Small radius</h3><p>14 px corners. Default speed.</p></div>
+            </div>
+          </div>
+          <div class="cell">
+            <span class="state">nebula / glass card / slow</span>
+            <div class="gk-ring" data-gk-speed="slow">
+              <div class="card round"><h3>Glass card</h3><p>30 px radius adopted from the card. data-gk-speed="slow".</p></div>
+            </div>
+          </div>
+          <div class="cell">
+            <span class="state">intelligence / glass card</span>
+            <div class="gk-ring" data-gk="intelligence">
+              <div class="card round"><h3>Agent card</h3><p>Magenta, violet, teal and amber, like the voice aurora.</p></div>
+            </div>
+          </div>
+          <div class="cell">
+            <span class="state">circle around an icon button / inline</span>
+            <div class="row">
+              <div class="gk-ring gk-ring--circle" data-gk-speed="fast">
+                <button class="gk-btn gk-btn--icon" type="button" aria-label="Scan now">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+                </button>
+              </div>
+              <div class="gk-ring gk-ring--circle" data-gk="intelligence">
+                <button class="gk-btn gk-btn--icon" type="button" aria-label="Ask an agent">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+                </button>
+              </div>
+              <div class="gk-ring gk-ring--inline">
+                <button class="gk-btn gk-btn--sm" type="button">Inline ring</button>
+              </div>
+            </div>
+          </div>
+          <div class="cell">
+            <span class="state">active="false" (faded out)</span>
+            <div class="gk-ring" data-gk-active="false" id="idle-ring">
+              <div class="card round"><h3>Idle</h3><p>The ring fades back in when active.</p></div>
+            </div>
+            <div class="row"><button class="gk-toggle" role="switch" aria-checked="false" id="idle-switch">Active</button></div>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">intelligence / voice prompt bar (visual specimen, sends nothing)</span>
+          <div class="gk-ring" data-gk="intelligence" id="prompt-ring">
+            <form class="prompt" id="prompt">
+              <label class="sr" for="prompt-input">Prompt</label>
+              <input id="prompt-input" type="text" placeholder="Ask about your network" autocomplete="off">
+              <button class="gk-btn gk-btn--primary gk-btn--sm" type="submit">Ask</button>
+            </form>
+          </div>
+          <div class="row"><button class="gk-toggle" role="switch" aria-checked="false" id="thinking-switch" data-gk="intelligence">Thinking (fast ring)</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec" aria-labelledby="h-btn">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">04</p>
+        <h2 id="h-btn">Button</h2>
+        <p class="note">Violet gradient pill and lavender outline. Hover for the light sweep, Tab in for the running focus ring, press for the spring scale.</p>
+      </div>
+      <div class="grid">
+        <div class="cell">
+          <span class="state">primary / outline</span>
+          <div class="row">
+            <button class="gk-btn gk-btn--primary" type="button">Run full scan</button>
+            <button class="gk-btn" type="button">Details</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">small / danger</span>
+          <div class="row">
+            <button class="gk-btn gk-btn--primary gk-btn--sm" type="button">Apply</button>
+            <button class="gk-btn gk-btn--sm" type="button">Cancel</button>
+            <button class="gk-btn gk-btn--danger gk-btn--sm" type="button">Close port</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">disabled</span>
+          <div class="row">
+            <button class="gk-btn gk-btn--primary" type="button" disabled>Run full scan</button>
+            <button class="gk-btn" type="button" disabled>Details</button>
+            <button class="gk-btn gk-btn--danger" type="button" disabled>Remove</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">icon / with icon / link</span>
+          <div class="row">
+            <button class="gk-btn gk-btn--icon" type="button" aria-label="Refresh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+            </button>
+            <button class="gk-btn gk-btn--icon gk-btn--sm" type="button" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <button class="gk-btn gk-btn--primary" type="button">
+              Continue
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <a class="gk-btn gk-btn--sm" href="#h-btn">Anchor</a>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">intelligence focus ring</span>
+          <div class="row">
+            <button class="gk-btn gk-btn--primary" type="button" data-gk="intelligence">Ask Claude</button>
+            <button class="gk-btn" type="button" data-gk="intelligence">Explain</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec" aria-labelledby="h-seg">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">05</p>
+        <h2 id="h-seg">Segment</h2>
+        <p class="note">role="tablist" of role="tab". The frosted lavender thumb springs to the selected tab. Arrow keys, Home and End move and select; aria-controls panels are shown and hidden.</p>
+      </div>
+      <div class="grid">
+        <div class="cell wide">
+          <span class="state">with panels</span>
+          <div>
+            <div class="gk-segment" role="tablist" aria-label="View">
+              <button role="tab" id="t-over" aria-selected="true" aria-controls="p-over">Overview</button>
+              <button role="tab" id="t-dev" aria-selected="false" aria-controls="p-dev">Devices</button>
+              <button role="tab" id="t-traffic" aria-selected="false" aria-controls="p-traffic">Traffic</button>
+            </div>
+            <p class="panel-copy" role="tabpanel" id="p-over" aria-labelledby="t-over">Overview panel.</p>
+            <p class="panel-copy" role="tabpanel" id="p-dev" aria-labelledby="t-dev" hidden>Devices panel.</p>
+            <p class="panel-copy" role="tabpanel" id="p-traffic" aria-labelledby="t-traffic" hidden>Traffic panel.</p>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">bands / one disabled</span>
+          <div class="gk-segment" role="tablist" aria-label="Band">
+            <button role="tab" aria-selected="false" data-value="2.4">2.4 GHz</button>
+            <button role="tab" aria-selected="true" data-value="5">5 GHz</button>
+            <button role="tab" aria-selected="false" data-value="6" disabled>6 GHz</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">full width</span>
+          <div class="gk-segment" role="tablist" aria-label="Provider" style="display:flex">
+            <button role="tab" aria-selected="true" data-value="claude">Claude</button>
+            <button role="tab" aria-selected="false" data-value="openai">ChatGPT</button>
+            <button role="tab" aria-selected="false" data-value="grok">Grok</button>
+          </div>
+        </div>
+        <div class="cell">
+          <span class="state">rounded rectangle (--gk-seg-radius: 14px)</span>
+          <div class="gk-segment" role="tablist" aria-label="Range" style="--gk-seg-radius:14px">
+            <button role="tab" aria-selected="false" data-value="1h">1 h</button>
+            <button role="tab" aria-selected="true" data-value="24h">24 h</button>
+            <button role="tab" aria-selected="false" data-value="7d">7 d</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec" aria-labelledby="h-log">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">06</p>
+        <h2 id="h-log">Events</h2>
+        <p class="note">Every 'change' the kit dispatches, newest first.</p>
+      </div>
+      <div class="stack">
+        <pre class="log" id="log" aria-live="polite"></pre>
+        <ul class="keys">
+          <li><b>Tab</b>Move between controls; focus is always visible.</li>
+          <li><b>Space</b>Flip a switch, press a button.</li>
+          <li><b>Arrows</b>Step a slider or move a segment.</li>
+          <li><b>Home / End</b>Jump to the first or last value or tab.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { initGlowKit } from './js/glow-kit.js';
+
+let cleanup = initGlowKit(document);
+const log = document.getElementById('log');
+const status = document.getElementById('status');
+let added = 0;
+
+// Specimens pinned in the dragging state (the kit clears is-active on teardown and on pointerup).
+function pin() {
+  for (const el of document.querySelectorAll('.gk-slider[data-pin="active"]')) el.classList.add('is-active');
+}
+pin();
+
+function write(line) {
+  const time = new Date().toTimeString().slice(0, 8);
+  log.textContent = `${time}  ${line}\n${log.textContent}`.slice(0, 6000);
+}
+
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.matches('.gk-toggle')) write(`switch   ${el.dataset.name || el.id || el.textContent.trim()} -> ${e.detail.checked ? 'on' : 'off'}`);
+  else if (el.matches('.gk-segment')) write(`segment  ${el.getAttribute('aria-label')} -> ${e.detail.value}`);
+  else if (el.matches('.gk-slider input')) write(`slider   ${el.name} -> ${el.value}`);
+});
+
+// Keep the pinned slider pinned after a real drag on it ends.
+document.addEventListener('pointerup', () => requestAnimationFrame(pin));
+
+// App-owned aria-valuetext: the kit shows it in the readout and bubble and never removes it.
+const channelWidth = document.getElementById('channel-width');
+channelWidth.addEventListener('input', () => {
+  channelWidth.setAttribute('aria-valuetext', `${[20, 40, 80, 160][Number(channelWidth.value)]} MHz`);
+});
+
+document.getElementById('motion').addEventListener('change', (e) => {
+  document.documentElement.classList.toggle('gk-still', e.detail.value === 'still');
+});
+
+document.getElementById('randomize').addEventListener('click', () => {
+  for (const input of document.querySelectorAll('.gk-slider input:not(:disabled)')) {
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const step = Number(input.step || 1);
+    input.value = String(min + Math.round((Math.random() * (max - min)) / step) * step);
+  }
+  channelWidth.setAttribute('aria-valuetext', `${[20, 40, 80, 160][Number(channelWidth.value)]} MHz`);
+  write('slider   values set from code (no events fire; visuals follow)');
+});
+
+document.getElementById('add-dynamic').addEventListener('click', () => {
+  added += 1;
+  const el = document.createElement('button');
+  el.className = 'gk-toggle';
+  el.setAttribute('role', 'switch');
+  el.setAttribute('aria-checked', added % 2 ? 'true' : 'false');
+  el.dataset.name = `dynamic-${added}`;
+  el.textContent = `Dynamic ${added}`;
+  document.getElementById('dynamic').append(el);
+});
+
+document.getElementById('idle-switch').addEventListener('change', (e) => {
+  document.getElementById('idle-ring').dataset.gkActive = e.detail.checked ? 'true' : 'false';
+});
+
+document.getElementById('thinking-switch').addEventListener('change', (e) => {
+  const ring = document.getElementById('prompt-ring');
+  if (e.detail.checked) ring.dataset.gkSpeed = 'fast';
+  else delete ring.dataset.gkSpeed;
+});
+
+document.getElementById('prompt').addEventListener('submit', (e) => {
+  e.preventDefault();
+  write('prompt   specimen only; nothing is sent from this page');
+});
+
+document.getElementById('reinit').addEventListener('click', () => {
+  cleanup();
+  status.textContent = 'Torn down';
+  setTimeout(() => {
+    cleanup = initGlowKit(document);
+    // A second call must find nothing left to do; its cleanup must not undo the first.
+    initGlowKit(document)();
+    pin();
+    status.textContent = `Re-initialised ${new Date().toTimeString().slice(0, 8)}`;
+  }, 400);
+});
+</script>
+</body>
+</html>

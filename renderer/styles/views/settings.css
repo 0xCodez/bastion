@@ -1,0 +1,74 @@
+/* Settings view. Scoped under .v-settings. Nebula primitives (.nv-glass, .pill, .btn, .nv-mini,
+   glow-kit tuning) live in shield.css; colours come from tokens.css. */
+
+.v-settings{display:flex;flex-direction:column;gap:20px;padding-bottom:48px;min-width:0}
+.v-settings [hidden]{display:none!important}
+.v-settings .st-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;margin-bottom:4px}
+.v-settings .st-head .h-display{margin:10px 0 0}
+.v-settings .st-lede{margin:0;max-width:46ch;color:var(--muted);font-size:15px;line-height:1.55}
+
+.v-settings .st-block{padding:8px}
+.v-settings .st-block-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px;padding:16px 16px 14px}
+.v-settings .st-h{margin:0;font:700 21px/1.15 var(--nf-d);letter-spacing:-.025em;text-transform:none;color:var(--text)}
+.v-settings .st-meta{min-height:28px;padding:0 11px;border-radius:999px;display:inline-flex;align-items:center;font:500 11.5px/1.2 var(--nf-m);color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.v-settings .st-meta:empty{display:none}
+
+.v-settings .st-fine{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+.v-settings .st-mono{font-family:var(--nf-m);font-size:12px;color:var(--lavender);word-break:break-all}
+
+/* providers */
+.v-settings .st-providers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px}
+.v-settings .st-prov{padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.v-settings .st-prov-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.v-settings .st-prov-h h3{display:inline-flex;align-items:center;gap:10px;margin:0;font:700 20px/1.1 var(--nf-d);letter-spacing:-.025em;text-transform:none}
+.v-settings .st-dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 10px rgba(243,240,255,.3)}
+.v-settings .st-label{display:block;margin-bottom:6px;font:600 12.5px/1.2 var(--nf-u);letter-spacing:0;text-transform:none;color:var(--muted)}
+/* glass input row */
+.v-settings .st-keyrow{display:flex;align-items:center;gap:6px;min-width:0;padding:4px;border-radius:16px;border:1px solid var(--line-2);background:rgba(7,6,14,.45);box-shadow:inset 0 1px 2px rgba(0,0,0,.5);transition:border-color .2s,box-shadow .2s}
+.v-settings .st-keyrow:focus-within{border-color:var(--sky);box-shadow:inset 0 1px 2px rgba(0,0,0,.5),0 0 0 3px rgba(143,211,255,.15)}
+.v-settings .st-keyrow + .st-keyrow{margin-top:8px}
+.v-settings .st-keyrow .btn,.v-settings .st-keyrow .nv-mini{flex:none;min-height:38px}
+.v-settings .st-save{padding:0 18px;font-size:13px}
+.v-settings .st-input{flex:1;min-width:0;min-height:38px;padding:0 10px;border:0;border-radius:12px;background:transparent;color:var(--text);font:400 14px/1 var(--nf-u);outline:none;text-overflow:ellipsis}
+.v-settings .st-input::placeholder{color:var(--dim)}
+.v-settings .st-input:disabled{opacity:.5}
+.v-settings .st-mono-input{font-family:var(--nf-m);font-size:13px}
+.v-settings .st-select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:34px;font-family:var(--nf-m);font-size:13px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--lavender) 50%),linear-gradient(135deg,var(--lavender) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.v-settings .st-select option{background:var(--ground-2);color:var(--text)}
+.v-settings .st-prov-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.v-settings .st-link{margin-left:auto;border:0;background:none;padding:6px 0;cursor:pointer;color:var(--lavender);font:600 13px/1 var(--nf-u);border-radius:6px}
+.v-settings .st-link:hover{text-decoration:underline}
+.v-settings .st-model{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.v-settings .st-note{margin:0;padding:10px 12px;border-radius:14px;border:1px solid var(--line-2);background:rgba(183,169,255,.06);font-size:13px;line-height:1.5;color:var(--text);word-break:break-word}
+.v-settings .st-note--ok{border-color:rgba(158,240,196,.3);background:rgba(158,240,196,.07);color:#CDF6E0}
+.v-settings .st-note--warn{border-color:rgba(255,199,114,.3);background:rgba(255,199,114,.07);color:#F3E2BE}
+.v-settings .st-note--risk{border-color:rgba(255,142,122,.32);background:rgba(255,142,122,.07);color:#FFD3CA}
+
+/* preferences: Apple-style glow sliders and violet switches */
+.v-settings .st-prefs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:900px){.v-settings .st-prefs{grid-template-columns:minmax(0,1fr)}}
+.v-settings .st-pref,.v-settings .st-switches{padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+/* the big readout below replaces the kit's small numeric value */
+.v-settings .st-pref .gk-slider__value{display:none}
+.v-settings .st-out{font:700 32px/1 var(--nf-d);letter-spacing:-.035em;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.v-settings .st-switches{grid-column:1/-1}
+.v-settings .st-switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line);font:500 15px/1.4 var(--nf-u)}
+.v-settings .st-switch:first-child{border-top:0;padding-top:0}
+
+/* privacy */
+.v-settings .st-privacy{padding:0 8px 8px;display:flex;flex-direction:column;gap:12px}
+.v-settings .st-leaves{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.v-settings .st-leaves li{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.v-settings .st-leaves li:last-child{background:rgba(158,240,196,.05);border-color:rgba(158,240,196,.2)}
+.v-settings .st-leaves b{font:700 15px/1.4 var(--nf-d);letter-spacing:-.01em;text-transform:none}
+.v-settings .st-leaves span{font-size:13.5px;line-height:1.55;color:#E6E2FF}
+@media (max-width:640px){.v-settings .st-leaves li{grid-template-columns:minmax(0,1fr)}}
+.v-settings .st-snap{padding:0 8px}
+.v-settings .st-snap summary{cursor:pointer;width:max-content;max-width:100%;font:600 13px/1.4 var(--nf-u);color:var(--lavender);padding:6px 0;border-radius:6px}
+.v-settings .st-pre{margin:10px 0 0;max-height:320px;overflow:auto;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(7,6,14,.55);font:400 12px/1.5 var(--nf-m);color:var(--muted);white-space:pre-wrap;word-break:break-word}
+
+/* local data */
+.v-settings .st-local{padding:0 16px 16px;display:flex;flex-direction:column;gap:14px}
+.v-settings .st-local-actions{display:flex;flex-wrap:wrap;gap:8px}

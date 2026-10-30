@@ -1,0 +1,174 @@
+/* Bastion motion kit (Nebula Voice look). Keyframes + utility classes shared by every view.
+   Load after the design tokens. Every color falls back to the Nebula token value, so the
+   file also works on its own. Light is lavender / sky with a white-hot core; coral marks risk. Spec: docs/UI-NOTES.md. JS helpers: renderer/js/motion.js. */
+
+/* Where the shell (tokens.css) already has a token, --mo-* aliases it so the two cannot
+   drift; the fallback is the same value for when motion.css loads on its own. */
+:root{
+  --mo-ease-out:var(--ease-out,cubic-bezier(.2,.8,.2,1));
+  --mo-ease-inout:var(--ease-io,cubic-bezier(.65,0,.2,1));
+  --mo-ease-std:cubic-bezier(.4,0,.2,1);
+  --mo-dur-quick:120ms;
+  --mo-dur-base:200ms;
+  --mo-dur-progress:var(--t-med,350ms);
+  --mo-dur-panel:520ms;
+  --mo-dur-flare:var(--t-slow,900ms);
+  --mo-dur-reveal:1100ms;
+  --mo-dur-long:1800ms;
+  --mo-flare-color:var(--lavender,#B7A9FF);
+  --mo-flare-wing:var(--sky,#8FD3FF);
+}
+
+/* ---------- reveal ----------
+   Visible at rest. The hidden start frame only applies while the animation runs
+   (fill-mode backwards), so content can never get stuck invisible.
+   Per-element delay: style="--d:.2s". Children of .mo-reveal-stagger cascade. */
+.mo-reveal{animation:mo-rise var(--mo-dur-reveal) var(--mo-ease-out) backwards;animation-delay:var(--d,0s)}
+.mo-reveal--quick{animation-duration:var(--mo-dur-panel)}
+.mo-reveal-stagger>*{animation:mo-rise var(--mo-dur-panel) var(--mo-ease-out) backwards;animation-delay:calc(var(--d,0s) + var(--mo-i,0) * 50ms)}
+.mo-reveal-stagger>:nth-child(2){--mo-i:1}
+.mo-reveal-stagger>:nth-child(3){--mo-i:2}
+.mo-reveal-stagger>:nth-child(4){--mo-i:3}
+.mo-reveal-stagger>:nth-child(5){--mo-i:4}
+.mo-reveal-stagger>:nth-child(6){--mo-i:5}
+.mo-reveal-stagger>:nth-child(7){--mo-i:6}
+.mo-reveal-stagger>:nth-child(8){--mo-i:7}
+.mo-reveal-stagger>:nth-child(9){--mo-i:8}
+.mo-reveal-stagger>:nth-child(n+10){--mo-i:9}
+@keyframes mo-rise{from{opacity:0;translate:0 22px}}
+@keyframes mo-fade{from{opacity:0}}
+
+/* ---------- flare ----------
+   .mo-flare: a light streak sweeps across the element on hover / keyboard focus, or
+   continuously every few seconds with .is-on. Uses the host's ::after and clips its
+   overflow, so do not put it on elements that need either.
+   .mo-flare-burst: the one-shot streak injected by flareBurst() in motion.js. */
+.mo-flare{position:relative;overflow:hidden;isolation:isolate}
+.mo-flare::after{
+  content:"";position:absolute;z-index:1;top:50%;left:0;width:55%;height:1px;
+  pointer-events:none;opacity:0;transform:translateX(-120%);
+  background:linear-gradient(90deg,transparent,var(--mo-flare-color) 30%,var(--sun,#FFFFFF) 50%,var(--mo-flare-color) 70%,transparent);
+  box-shadow:0 0 10px 1px color-mix(in srgb,var(--mo-flare-color) 60%,transparent);
+}
+.mo-flare:hover::after,.mo-flare:focus-visible::after,.mo-flare:focus-within::after{animation:mo-flare-sweep var(--mo-dur-flare) var(--mo-ease-out) 1}
+.mo-flare.is-on::after{animation:mo-flare-idle 6s var(--mo-ease-out) infinite}
+@keyframes mo-flare-idle{
+  0%{opacity:0;transform:translateX(-120%)}
+  3%{opacity:1}
+  15%{opacity:0;transform:translateX(280%)}
+  100%{opacity:0;transform:translateX(280%)}
+}
+
+.mo-flare-host{position:relative}
+.mo-flare-burst{
+  position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;
+  border-radius:inherit;mix-blend-mode:screen;
+}
+/* Sweeping streak: white-hot core, lavender wings, sky haze, wide thin glow (anamorphic). */
+.mo-flare-burst::before{
+  content:"";position:absolute;top:50%;left:0;width:60%;height:2px;margin-top:-1px;
+  background:linear-gradient(90deg,transparent,var(--mo-flare-color) 25%,var(--sun,#FFFFFF) 50%,var(--mo-flare-color) 75%,transparent);
+  box-shadow:0 0 12px 2px color-mix(in srgb,var(--mo-flare-wing) 55%,transparent),0 0 36px 6px color-mix(in srgb,var(--mo-flare-color) 35%,transparent);
+  opacity:0;transform:translateX(-110%);
+  animation:mo-flare-sweep var(--mo-dur-flare) var(--mo-ease-out) forwards;
+}
+/* Full-width hairline that flashes as the streak passes the middle. */
+.mo-flare-burst::after{
+  content:"";position:absolute;top:50%;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--mo-flare-color) 70%,transparent) 20%,var(--sun,#FFFFFF) 50%,color-mix(in srgb,var(--mo-flare-color) 70%,transparent) 80%,transparent);
+  opacity:0;transform:scaleX(.2);
+  animation:mo-flare-line var(--mo-dur-flare) var(--mo-ease-out) forwards;
+}
+.mo-flare-burst--risk{--mo-flare-color:var(--coral,#FF8E7A);--mo-flare-wing:var(--amber,#FFC772)}
+@keyframes mo-flare-sweep{
+  0%{opacity:0;transform:translateX(-110%) scaleY(.6)}
+  15%{opacity:1}
+  80%{opacity:.9}
+  100%{opacity:0;transform:translateX(280%) scaleY(1)}
+}
+@keyframes mo-flare-line{
+  0%{opacity:0;transform:scaleX(.2)}
+  45%{opacity:.85;transform:scaleX(1)}
+  100%{opacity:0;transform:scaleX(1.05)}
+}
+
+/* ---------- shimmer ----------
+   Placeholder while real data is loading. Never put invented numbers under it.
+   Block: <div class="mo-shimmer" style="height:92px"></div>
+   Inline text slot: <span class="mo-shimmer mo-shimmer--text"></span> */
+.mo-shimmer{
+  position:relative;color:transparent!important;user-select:none;
+  background-color:var(--panel-2,rgba(14,12,28,.78));border-radius:10px;
+  background-image:linear-gradient(100deg,transparent 30%,rgba(183,169,255,.08) 45%,color-mix(in srgb,var(--sky,#8FD3FF) 16%,transparent) 50%,rgba(183,169,255,.08) 55%,transparent 70%);
+  background-size:250% 100%;background-repeat:no-repeat;
+  animation:mo-shimmer 1.6s linear infinite;
+}
+.mo-shimmer>*{visibility:hidden}
+.mo-shimmer--text{display:inline-block;min-width:6ch;height:1em;vertical-align:-.1em}
+@keyframes mo-shimmer{from{background-position:150% 0}to{background-position:-100% 0}}
+
+/* ---------- status pulses ----------
+   Put on the status dot / tag itself; the pulse follows its border-radius.
+   .mo-pulse-risk: coral ring for an open backdoor (status risk / severity critical-high).
+   .mo-pulse-ok: slow calm breath for "all clear" / live. .mo-pulse-warn for warnings. */
+.mo-pulse-risk{animation:mo-pulse-risk 1.6s ease-out infinite}
+.mo-pulse-warn{animation:mo-pulse-warn 2s ease-out infinite}
+.mo-pulse-ok{animation:mo-pulse-ok 2.4s ease-in-out infinite}
+@keyframes mo-pulse-risk{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--coral,#FF8E7A) 60%,transparent),0 0 12px color-mix(in srgb,var(--coral,#FF8E7A) 70%,transparent)}
+  70%{box-shadow:0 0 0 10px color-mix(in srgb,var(--coral,#FF8E7A) 0%,transparent),0 0 12px color-mix(in srgb,var(--coral,#FF8E7A) 70%,transparent)}
+  100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--coral,#FF8E7A) 0%,transparent),0 0 12px color-mix(in srgb,var(--coral,#FF8E7A) 70%,transparent)}
+}
+@keyframes mo-pulse-warn{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--amber,#FFC772) 45%,transparent)}
+  70%{box-shadow:0 0 0 8px color-mix(in srgb,var(--amber,#FFC772) 0%,transparent)}
+  100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--amber,#FFC772) 0%,transparent)}
+}
+@keyframes mo-pulse-ok{
+  0%,100%{box-shadow:0 0 6px color-mix(in srgb,var(--mint,#9EF0C4) 55%,transparent)}
+  50%{box-shadow:0 0 16px 1px color-mix(in srgb,var(--mint,#9EF0C4) 85%,transparent)}
+}
+
+/* ---------- small loops ---------- */
+.mo-blink{animation:mo-blink 2s ease-in-out infinite}
+@keyframes mo-blink{50%{opacity:.35}}
+.mo-spin{
+  display:inline-block;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--lavender,#B7A9FF);border-right-color:transparent;
+  animation:mo-spin .7s linear infinite;
+}
+@keyframes mo-spin{to{transform:rotate(360deg)}}
+
+/* Caret shown by typewriter() while it types. */
+.mo-caret::after{
+  content:"";display:inline-block;width:.5em;height:1.05em;margin-left:2px;vertical-align:-.15em;
+  background:var(--lavender,#B7A9FF);animation:mo-caret 1s steps(1) infinite;
+}
+@keyframes mo-caret{50%{opacity:0}}
+
+/* Indeterminate progress for work with no measurable fraction (e.g. a port probe).
+   When the engine reports progress 0-1, use a real width instead. */
+.mo-progress-indet{position:relative;height:6px;border-radius:99px;overflow:hidden;background:#1E1A3A}
+.mo-progress-indet::before{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:30%;
+  border-radius:inherit;background:linear-gradient(90deg,transparent,var(--violet,#7C6CFF),var(--sky,#8FD3FF),transparent);
+  animation:mo-indet 1.4s var(--mo-ease-inout) infinite;
+}
+@keyframes mo-indet{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+
+/* Number that just changed: brief sky tint, then back to the text colour. */
+.mo-changed{animation:mo-changed 1.2s var(--mo-ease-out)}
+@keyframes mo-changed{from{color:var(--sky,#8FD3FF);text-shadow:0 0 18px color-mix(in srgb,var(--violet,#7C6CFF) 60%,transparent)}}
+
+/* ---------- reduced motion: jump to the end state ---------- */
+@media (prefers-reduced-motion: reduce){
+  .mo-reveal,.mo-reveal-stagger>*,.mo-blink,.mo-pulse-risk,.mo-pulse-warn,.mo-pulse-ok,
+  .mo-spin,.mo-changed,.mo-shimmer,.mo-progress-indet::before,.mo-caret::after{animation:none}
+  .mo-flare::after,.mo-flare-burst{display:none}
+  /* Static stand-ins so state is still readable without movement. */
+  .mo-pulse-risk{box-shadow:0 0 0 3px color-mix(in srgb,var(--coral,#FF8E7A) 35%,transparent),0 0 12px color-mix(in srgb,var(--coral,#FF8E7A) 70%,transparent)}
+  .mo-pulse-warn{box-shadow:0 0 0 3px color-mix(in srgb,var(--amber,#FFC772) 30%,transparent)}
+  .mo-pulse-ok{box-shadow:0 0 10px color-mix(in srgb,var(--mint,#9EF0C4) 70%,transparent)}
+  .mo-shimmer{background-image:none}
+  .mo-progress-indet::before{left:35%;transform:none}
+}

@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bastion Orbit Core</title>
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+/* Layout: app shell — sidebar + main. Hero = dithered 3D router point cloud sitting on a dot-matrix globe horizon,
+   HUD callouts tied to 3D anchors. Below: speed / traffic / shield cards, then a wide agent console. */
+:root{
+  color-scheme:dark;
+  --bg:#04090A; --bg-2:#060E0F; --surface:#091413; --surface-2:#0D1B19; --raise:#11221F;
+  --line:#132824; --line-2:#1C3A34;
+  --fg:#E4F3EF; --fg-rgb:228,243,239; --fg-soft:#C3D9D3; --muted:#86A59E;
+  --accent:#2DE2BE; --accent-rgb:45,226,190; --accent-hi:#6BF2D6; --accent-ink:#03120E;
+  --warn:#F5B83D; --warn-rgb:245,184,61; --warn-soft:#F7D894;
+  --crit:#FF6B5E; --crit-rgb:255,107,94; --crit-soft:#FFB0A8;
+  --iri-1:#7FD8FF; --iri-2:#B49CFF;
+  --claude:#D97757; --claude-ink:#1C0B04; --gpt:#E8EEEC; --grok:#AFC0FF;
+  --px-0:#0F3D35; --px-1:#1F7D6B; --px-2:#5ADDC2; --px-3:#E6FFF9;
+  --nx-0:#2B3130; --nx-1:#5E6866; --nx-2:#ADB8B5; --nx-3:#F5F8F7;
+  --cl-0:#4A2418; --cl-1:#8E4732; --cl-2:#DE7B5B; --cl-3:#FFD6C4;
+  --gp-0:#2C3332; --gp-1:#6B7774; --gp-2:#C6D0CD; --gp-3:#FFFFFF;
+  --gk-0:#232A4A; --gk-1:#4C5AA2; --gk-2:#9EAFFF; --gk-3:#E8EDFF;
+  --dot-rgb:176,204,197;
+  --ob-bg:#050707; --ob-card:#0B0F0F; --ob-line:#1E2726; --white:#F2F6F5; --white-hi:#FFFFFF;
+  --switch-off:#1A2E2A; --shadow:rgba(0,0,0,.6);
+  --font-ui:'Geist',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:400 14px/1.5 var(--font-ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+[hidden]{display:none!important}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ob-open,.ob-open body{overflow:hidden}
+
+/* staged intro */
+.js .rise{opacity:0;transform:translateY(14px)}
+.go .rise{animation:rise .9s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.back{position:fixed;z-index:60;top:calc(12px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px 0 10px;border-radius:999px;background:rgba(9,20,19,.82);border:1px solid var(--line-2);color:var(--fg-soft);text-decoration:none;font-size:13px;font-weight:500;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:border-color .2s,color .2s}
+.back:hover{color:var(--fg);border-color:rgba(var(--accent-rgb),.5)}
+
+.shell{max-width:1480px;margin:0 auto;padding-block:64px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{display:flex;border:1px solid var(--line);border-radius:26px;background:var(--bg-2);overflow:hidden;box-shadow:0 60px 160px -60px var(--shadow)}
+
+/* sidebar */
+.side{width:236px;flex:none;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg,rgba(var(--accent-rgb),.03),transparent 40%)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 10px 22px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,var(--accent),var(--px-1));display:grid;place-items:center;box-shadow:0 6px 24px -6px rgba(var(--accent-rgb),.7);flex:none}
+.brand b{font-size:18px;letter-spacing:-.02em;font-weight:650}
+.brand small{display:block;font:500 10.5px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 12px;border-radius:12px;border:0;background:transparent;color:var(--muted);font-size:14px;font-weight:500;text-align:left;transition:background .2s,color .2s;white-space:nowrap}
+.nav-btn:hover{background:rgba(var(--accent-rgb),.06);color:var(--fg)}
+.nav-btn[aria-current="page"]{background:rgba(var(--accent-rgb),.1);color:var(--fg);box-shadow:inset 2px 0 0 var(--accent)}
+.nav-btn svg{flex:none}
+.badge{margin-left:auto;font:600 11px var(--font-mono);padding:2px 8px;border-radius:99px;background:rgba(var(--accent-rgb),.14);color:var(--accent-hi)}
+.badge.crit{background:rgba(var(--crit-rgb),.16);color:var(--crit-soft)}
+.watch{margin-top:auto;padding:16px;border-radius:16px;border:1px solid rgba(var(--accent-rgb),.18);background:linear-gradient(160deg,rgba(var(--accent-rgb),.12),rgba(var(--accent-rgb),.02));display:flex;flex-direction:column;gap:8px}
+.watch h2{margin:0;font-size:13px;font-weight:600}
+.watch p{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.wchips{display:flex;gap:6px;flex-wrap:wrap}
+.wchip{font:500 10.5px var(--font-mono);letter-spacing:.06em;padding:4px 8px;border-radius:6px;border:1px solid rgba(var(--accent-rgb),.3);color:var(--fg-soft);background:var(--bg-2);transition:opacity .2s}
+.wchip.off{opacity:.35;text-decoration:line-through}
+
+/* main */
+.main{flex:1;min-width:0;padding:20px;display:flex;flex-direction:column;gap:20px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding:4px 6px 0}
+.top h1{margin:0;font-size:22px;font-weight:600;letter-spacing:-.02em}
+.top p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.top-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.link{border:0;background:none;color:var(--accent);font-size:13px;font-weight:500;padding:8px 4px;border-radius:6px;display:inline-flex;align-items:center;gap:6px}
+.link:hover{color:var(--accent-hi)}
+.tag{font:500 11px var(--font-mono);color:var(--muted);padding:5px 10px;border:1px solid var(--line-2);border-radius:99px}
+
+/* hero */
+.hero{position:relative;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:radial-gradient(120% 80% at 70% 0%,rgba(var(--accent-rgb),.07),transparent 60%),var(--surface)}
+.stage{position:relative;height:600px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.stage canvas.grabbing{cursor:grabbing}
+.hud{position:absolute;z-index:2;pointer-events:none;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--line-2);background:rgba(4,9,10,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font:500 11px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;color:var(--fg-soft);transition:color .3s,border-color .3s}
+.hud .k{color:var(--muted)}
+.hud b{font-weight:600;color:var(--accent)}
+.hud.crit{border-color:rgba(var(--crit-rgb),.5);color:var(--crit-soft)}
+.hud.crit b{color:var(--crit)}
+.hud-radio{right:7%;top:7%}
+.hud-wan{right:3%;top:46%}
+.hud-lan{left:456px;bottom:8%}
+.hint{position:absolute;right:16px;bottom:14px;z-index:2;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);pointer-events:none;display:flex;gap:6px;align-items:center}
+.hero-copy{position:absolute;z-index:3;left:28px;top:28px;bottom:28px;width:400px;display:flex;flex-direction:column;justify-content:space-between;gap:16px;pointer-events:none}
+.hero-copy > *{pointer-events:auto}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 10px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid;align-self:flex-start}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;animation:blink 1.6s ease-in-out infinite}
+.pill.ok{color:var(--accent-hi);background:rgba(var(--accent-rgb),.1);border-color:rgba(var(--accent-rgb),.32)}
+.pill.warn{color:var(--warn-soft);background:rgba(var(--warn-rgb),.1);border-color:rgba(var(--warn-rgb),.32)}
+.pill.crit{color:var(--crit-soft);background:rgba(var(--crit-rgb),.1);border-color:rgba(var(--crit-rgb),.35)}
+@keyframes blink{50%{opacity:.35}}
+.hc-top{display:flex;flex-direction:column;gap:12px}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.timer{font-size:64px;font-weight:500;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.sub{margin:0;font-size:13px;color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:28px}
+.stats dt{font-size:12px;color:var(--muted)}
+.stats dd{margin:4px 0 0;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stats dd small{font-size:12px;font-weight:400;color:var(--muted)}
+.stats dl{margin:0}
+.hc-actions{display:flex;flex-wrap:wrap;gap:10px}
+.gw{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line-2);background:rgba(4,9,10,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.gw .ic{width:36px;height:36px;border-radius:10px;background:var(--raise);display:grid;place-items:center;flex:none}
+.gw b{display:block;font-size:14px;font-weight:600}
+.gw span{font-size:12px;color:var(--muted)}
+.bars{margin-left:auto;display:flex;align-items:flex-end;gap:3px;height:16px}
+.bars i{width:3px;background:var(--accent);border-radius:1px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid transparent;font-size:14px;font-weight:600;transition:background .2s,border-color .2s,transform .15s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.35),0 12px 32px -10px rgba(var(--accent-rgb),.6)}
+.btn-primary:hover:not([disabled]){background:var(--accent-hi)}
+.btn-ghost{border-color:rgba(var(--accent-rgb),.3);background:rgba(var(--accent-rgb),.06);color:var(--fg-soft)}
+.btn-ghost:hover:not([disabled]){background:rgba(var(--accent-rgb),.14);color:var(--fg)}
+.btn-sm{min-height:36px;padding:0 13px;font-size:12px}
+.btn-crit{border-color:rgba(var(--crit-rgb),.45);background:rgba(var(--crit-rgb),.1);color:var(--crit-soft)}
+.btn-crit:hover:not([disabled]){background:rgba(var(--crit-rgb),.2)}
+.btn-amber{border-color:rgba(var(--warn-rgb),.45);background:rgba(var(--warn-rgb),.1);color:var(--warn-soft)}
+.btn-amber:hover:not([disabled]){background:rgba(var(--warn-rgb),.2)}
+.wide{width:100%}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.card{position:relative;min-width:0;display:flex;flex-direction:column;gap:16px;padding:22px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface-2),var(--surface))}
+.card-wide{grid-column:1/-1}
+.card.flash{animation:flash 1.4s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),.6)}100%{box-shadow:0 0 0 18px rgba(var(--accent-rgb),0)}}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.card-h h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.meta{font-size:11.5px;color:var(--muted);margin:2px 0 0}
+
+/* gauge */
+.gauge{position:relative;width:min(100%,300px);margin:0 auto}
+.gauge svg{width:100%;height:auto;display:block;overflow:visible}
+#gVal{stroke-dasharray:100;transition:stroke .4s}
+.g-read{position:absolute;left:0;right:0;top:60%;text-align:center;pointer-events:none}
+.g-phase{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.g-num{font-size:40px;font-weight:600;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
+.g-unit{font-size:11px;color:var(--muted)}
+.res{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0}
+.res div{padding:10px;border-radius:12px;background:var(--bg-2);border:1px solid var(--line)}
+.res dt{font-size:11px;color:var(--muted)}
+.res dd{margin:2px 0 0;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.tip{display:flex;gap:12px;padding:14px;border-radius:14px;background:rgba(var(--warn-rgb),.07);border:1px solid rgba(var(--warn-rgb),.22);transition:background .4s,border-color .4s}
+.tip p{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--warn-soft)}
+.tip.done{background:rgba(var(--accent-rgb),.07);border-color:rgba(var(--accent-rgb),.25)}
+.tip.done p{color:var(--fg-soft);margin:0}
+.tip svg{flex:none;margin-top:1px}
+
+/* traffic */
+.tr-now{display:flex;gap:24px}
+.tr-now div{display:flex;align-items:baseline;gap:6px}
+.tr-now .k{font:500 11px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tr-now b{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tr-now .u{font-size:12px;color:var(--muted)}
+#trCanvas{width:100%;height:140px;display:block}
+.legend{display:flex;gap:16px;font-size:11px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:2px;background:var(--accent)}
+.legend i.o{background:var(--warn)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-hi)}
+.live i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.6s infinite}
+.devs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.dev{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.dev .n{flex:1;min-width:0}
+.dev b{display:block;font-size:13px;font-weight:500}
+.dev small{font-size:11.5px;color:var(--muted)}
+.dev small.w{color:var(--warn-soft)}
+.dev small.c{color:var(--crit-soft)}
+.dev .v{font:500 13px var(--font-mono);font-variant-numeric:tabular-nums}
+.done-chip{font:500 11px var(--font-mono);color:var(--accent-hi);padding:6px 10px;border-radius:99px;background:rgba(var(--accent-rgb),.1)}
+
+/* shield */
+.sh-meta{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.sh-meta b{color:var(--fg);font-weight:600}
+.bar{height:6px;border-radius:99px;background:var(--raise);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--px-1),var(--accent));transition:width .7s cubic-bezier(.2,.7,.2,1)}
+.doors{list-style:none;margin:0;padding:0}
+.door{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.door:last-child{border-bottom:0}
+.door b{display:block;font-size:13px;font-weight:500}
+.door small{display:block;font:400 11px var(--font-mono);color:var(--muted);overflow-wrap:anywhere}
+.door.fixed b{color:var(--fg-soft)}
+.st{width:18px;height:18px;display:grid;place-items:center}
+.st .dot{width:8px;height:8px;border-radius:50%}
+.st .dot.crit{background:var(--crit);box-shadow:0 0 10px var(--crit)}
+.st .dot.warn{background:var(--warn);box-shadow:0 0 8px rgba(var(--warn-rgb),.6)}
+.st .ring{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line-2)}
+.st .spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(var(--accent-rgb),.2);border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sub-h{margin:6px 0 0;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);outline:none}
+.togs{display:flex;flex-direction:column}
+.tog{display:flex;align-items:center;gap:12px;padding:9px 0}
+.tog .n{flex:1;min-width:0}
+.tog b{display:block;font-size:13px;font-weight:500}
+.tog small{font-size:11.5px;color:var(--muted)}
+.switch{position:relative;width:44px;height:26px;flex:none;border-radius:99px;border:0;background:var(--switch-off);transition:background .25s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .25s cubic-bezier(.3,.7,.3,1),background .25s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(18px);background:var(--accent-ink)}
+
+/* agents */
+.seg{display:flex;gap:2px;padding:3px;border-radius:12px;background:var(--bg-2);border:1px solid var(--line)}
+.seg button{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 12px 0 6px;border-radius:9px;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:500;transition:background .2s,color .2s}
+.seg button:hover:not([disabled]){color:var(--fg)}
+.seg button[aria-checked="true"]{background:var(--raise);color:var(--fg);box-shadow:0 0 0 1px var(--line-2)}
+.seg button[disabled]{opacity:.35;cursor:not-allowed}
+.av{width:28px;height:28px;flex:none;border-radius:8px;display:grid;place-items:center;font:700 12px var(--font-mono)}
+.seg .av{width:24px;height:24px;border-radius:7px;font-size:11px}
+.av.claude{background:var(--claude);color:var(--claude-ink)}
+.av.gpt{background:var(--gpt);color:var(--bg)}
+.av.grok{border:1px solid var(--grok);color:var(--grok);background:transparent}
+.av.sys{background:rgba(var(--accent-rgb),.14);color:var(--accent)}
+.feed{display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.msg{display:flex;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg-2);border:1px solid var(--line);max-width:860px;animation:msgIn .45s cubic-bezier(.2,.7,.2,1)}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}}
+.msg.user{align-self:flex-end;background:rgba(var(--accent-rgb),.08);border-color:rgba(var(--accent-rgb),.2);max-width:min(560px,90%)}
+.mb{flex:1;min-width:0}
+.msg .meta2{display:flex;gap:8px;align-items:baseline;font-size:12px}
+.msg .meta2 b{font-weight:600}
+.msg .meta2 span{font-size:10.5px;color:var(--muted)}
+.txt{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--fg-soft);overflow-wrap:anywhere}
+.msg.user .txt{margin:0;color:var(--fg)}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.acts:empty{display:none}
+.dots{display:inline-flex;gap:4px;vertical-align:middle;margin-right:8px}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:dot 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:transparent;color:var(--fg-soft);font-size:12.5px;transition:border-color .2s,background .2s}
+.chip:hover{border-color:rgba(var(--accent-rgb),.45);background:rgba(var(--accent-rgb),.06)}
+.prompt{position:relative;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 16px;border-radius:18px;background:var(--bg-2);border:1px solid var(--line-2);transition:border-color .3s}
+.prompt:focus-within{border-color:rgba(var(--accent-rgb),.55)}
+.prompt input{flex:1;min-width:0;min-height:42px;background:transparent;border:0;outline:none;font-size:14px;color:var(--fg)}
+.prompt input::placeholder{color:var(--muted)}
+.kbd{font-size:10.5px;color:var(--muted);padding:3px 7px;border:1px solid var(--line-2);border-radius:6px}
+.send{width:42px;height:42px;flex:none;border-radius:13px;border:0;background:var(--accent);display:grid;place-items:center;transition:background .2s}
+.send:hover{background:var(--accent-hi)}
+.prompt::before,.prompt::after{content:"";position:absolute;left:10%;right:10%;pointer-events:none;background:linear-gradient(90deg,transparent,var(--accent),var(--iri-1),var(--iri-2),var(--accent-hi),transparent);background-size:220% 100%;animation:sheen 7s linear infinite}
+.prompt::after{bottom:-1px;height:1.5px;opacity:.85}
+.prompt::before{bottom:-16px;height:30px;filter:blur(18px);opacity:.38;transition:opacity .4s}
+.prompt.thinking::before{opacity:.9}
+.prompt.thinking::before,.prompt.thinking::after{animation-duration:1.6s}
+@keyframes sheen{to{background-position:-220% 0}}
+
+/* onboarding */
+.ob{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--ob-bg);padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(56px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto}
+.ob-bg{position:fixed;inset:0;width:100%;height:100%;display:block}
+.ob-card{position:relative;width:min(460px,100%);background:var(--ob-card);border:1px solid var(--ob-line);border-radius:3px;box-shadow:0 50px 140px -30px rgba(0,0,0,.95);animation:obIn .7s cubic-bezier(.2,.7,.2,1)}
+@keyframes obIn{from{opacity:0;transform:translateY(16px) scale(.97)}}
+.ob.closing{animation:obOut .45s ease forwards}
+.ob.closing .ob-card{animation:cardOut .45s ease forwards}
+@keyframes obOut{to{opacity:0}}
+@keyframes cardOut{to{transform:scale(.94) translateY(8px);opacity:0}}
+.ob-visual{position:relative;height:200px;border-bottom:1px solid var(--ob-line)}
+.ob-visual canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ob-num{position:absolute;right:14px;top:12px;font-size:10.5px;letter-spacing:.14em;color:var(--muted)}
+.ob-segs{position:absolute;left:14px;top:16px;display:flex;gap:4px}
+.ob-segs i{width:18px;height:2px;background:var(--ob-line);transition:background .3s}
+.ob-segs i.on{background:var(--white)}
+.ob-content{padding:22px 22px 4px}
+.ob-content.swap > *{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+.ob-content.swap > *:nth-child(2){animation-delay:.05s}
+.ob-content.swap > *:nth-child(3){animation-delay:.1s}
+.ob-content h2{margin:0;font-size:20px;font-weight:500;letter-spacing:-.01em;color:var(--white)}
+.ob-content p{margin:8px 0 0;font-size:13.5px;line-height:1.6;color:var(--muted)}
+.ob-extra{margin-top:16px}
+.ob-kv{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--ob-line);border:1px solid var(--ob-line)}
+.ob-kv div{background:var(--ob-card);padding:9px 11px}
+.ob-kv dt{font:500 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ob-kv dd{margin:2px 0 0;font:500 12.5px var(--font-mono);color:var(--fg-soft)}
+.ob-kv dd.c{color:var(--crit-soft)}
+.ob-doors{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+.ob-doors li{display:flex;align-items:center;gap:8px;font:500 12px var(--font-mono);color:var(--fg-soft)}
+.ob-doors li::before{content:"";width:6px;height:6px;flex:none;background:var(--white)}
+.ob-agents{display:flex;flex-direction:column;gap:6px}
+.ob-ag{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:6px 12px 6px 8px;border:1px solid var(--ob-line);border-radius:3px;background:transparent;text-align:left;transition:border-color .2s,background .2s}
+.ob-ag:hover{border-color:var(--nx-1)}
+.ob-ag .n{flex:1}
+.ob-ag b{display:block;font-size:13px;font-weight:500;color:var(--white)}
+.ob-ag small{font:400 11px var(--font-mono);color:var(--muted)}
+.ob-ag .box{width:18px;height:18px;border:1px solid var(--nx-1);display:grid;place-items:center;flex:none}
+.ob-ag[aria-pressed="true"]{border-color:var(--nx-2);background:rgba(var(--dot-rgb),.05)}
+.ob-ag[aria-pressed="true"] .box{background:var(--white);border-color:var(--white)}
+.ob-ag[aria-pressed="false"] .box svg{opacity:0}
+.ob-actions{display:flex;align-items:center;gap:8px;padding:20px 22px 22px}
+.ob-actions .sp{flex:1}
+.obtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:3px;border:1px solid var(--ob-line);background:transparent;color:var(--white);font-size:13px;font-weight:500;transition:border-color .2s,background .2s}
+.obtn:hover:not([disabled]){border-color:var(--nx-1);background:rgba(var(--dot-rgb),.05)}
+.obtn[disabled]{opacity:.35;cursor:not-allowed}
+.obtn.pri{background:var(--white);color:var(--ob-bg);border-color:var(--white)}
+.obtn.pri:hover{background:var(--white-hi)}
+.ob-foot{position:fixed;left:max(20px,env(safe-area-inset-left,0px));right:max(20px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;gap:12px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+
+/* responsive */
+@media (max-width:1240px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card-wide{grid-column:auto}
+}
+@media (max-width:980px){
+  .app{flex-direction:column}
+  .side{width:auto;flex-direction:row;align-items:center;gap:6px;border-right:0;border-bottom:1px solid var(--line);padding:10px;overflow-x:auto;scrollbar-width:none}
+  .brand{padding:0 8px 0 4px;flex:none}
+  .brand small{display:none}
+  .nav{flex-direction:row}
+  .nav-btn{width:auto;flex:none}
+  .nav-btn[aria-current="page"]{box-shadow:inset 0 -2px 0 var(--accent)}
+  .watch{display:none}
+}
+@media (max-width:900px){
+  .stage{height:430px}
+  .hero-copy{position:relative;left:auto;top:auto;bottom:auto;width:auto;padding:4px 20px 22px}
+  .timer{font-size:52px}
+  .hud-radio{right:12px;top:12px}
+  .hud-wan{right:12px;top:auto;bottom:62px}
+  .hud-lan{left:12px;bottom:14px}
+  .hint{display:none}
+}
+@media (max-width:760px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .main{padding:12px}
+  .card{padding:18px}
+  .res{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .seg{width:100%}
+  .seg button{flex:1;justify-content:center}
+}
+@media (max-width:480px){
+  .hud{font-size:10px;padding:5px 8px}
+  .timer{font-size:44px}
+  .stats{gap:18px}
+  .kbd{display:none}
+  .ob-doors{grid-template-columns:minmax(0,1fr)}
+  .ob-foot span:first-child{display:none}
+  .seg button{padding:0 8px 0 4px;font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  .js .rise{opacity:1;transform:none}
+  .go .rise,.msg,.ob-card,.ob-content.swap > *{animation:none}
+  .pill i,.live i,.prompt::before,.prompt::after,.st .spin,.dots i{animation:none}
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>All concepts</a>
+
+<div class="shell">
+<div class="app">
+  <aside class="side">
+    <div class="brand rise">
+      <div class="logo"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div><b>Bastion</b><small>Orbit Core</small></div>
+    </div>
+    <nav class="nav rise" style="--d:.05s" aria-label="Sections">
+      <button class="nav-btn" type="button" data-go="sec-overview" aria-current="page"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Overview</button>
+      <button class="nav-btn" type="button" data-go="sec-shield"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/></svg>Backdoor Shield<span class="badge crit" id="navBadge">2</span></button>
+      <button class="nav-btn" type="button" data-go="sec-traffic"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Traffic</button>
+      <button class="nav-btn" type="button" data-go="sec-boost"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>Wi-Fi Boost</button>
+      <button class="nav-btn" type="button" data-go="sec-agents"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>AI Agents<span class="badge" id="navAgents">3</span></button>
+      <button class="nav-btn" type="button" data-go="devices"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Devices</button>
+      <button class="nav-btn" type="button" data-go="privacy"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Privacy</button>
+    </nav>
+    <div class="watch rise" style="--d:.1s">
+      <h2>Agents on watch</h2>
+      <p>They read traffic metadata and propose fixes. Nothing changes until you approve it.</p>
+      <div class="wchips"><span class="wchip" id="wc-claude">CLAUDE</span><span class="wchip" id="wc-gpt">CHATGPT</span><span class="wchip" id="wc-grok">GROK</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="top rise" style="--d:.08s">
+      <div><h1 id="pageTitle" tabindex="-1">Overview</h1><p class="mono">Home network · gateway 192.168.1.1</p></div>
+      <div class="top-r">
+        <button class="link" type="button" id="replay"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Replay intro</button>
+        <span class="tag">macOS · Windows</span>
+      </div>
+    </header>
+
+    <section class="hero rise" style="--d:.12s" id="sec-overview" aria-label="Network status">
+      <div class="stage" id="stage">
+        <canvas id="heroCanvas" role="img" aria-label="3D point-cloud view of your Wi-Fi router standing on a dotted globe, with signal waves. Drag to rotate."></canvas>
+        <div class="hud hud-radio" id="hudRadio"><span class="k">5 GHz radio</span>· ch <b id="hudCh">36</b></div>
+        <div class="hud hud-wan crit" id="hudWan"><span class="k">WAN</span>· 7547 TR-069 · <b id="hudWanState">OPEN</b></div>
+        <div class="hud hud-lan" id="hudLan"><span class="k">LAN</span>· <b>29</b> devices</div>
+        <div class="hint mono" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h8M5 9l-3 3 3 3M19 9l3 3-3 3"/></svg>Drag to rotate</div>
+      </div>
+      <div class="hero-copy">
+        <div class="hc-top">
+          <span class="pill warn" id="statusPill" role="status"><i></i><span id="statusText">2 doors need you</span></span>
+          <div class="mono label">Secure session</div>
+          <div class="timer mono" id="sessTime">01:25:49</div>
+          <p class="sub" id="heroSub">Encrypted DNS on · 4 of 6 doors closed</p>
+        </div>
+        <div class="stats">
+          <dl><dt>Download</dt><dd><span id="hDown">298.4</span> <small>Mbps</small></dd></dl>
+          <dl><dt>Upload</dt><dd><span id="hUp">71.2</span> <small>Mbps</small></dd></dl>
+          <dl><dt>Ping</dt><dd><span id="hPing">14</span> <small>ms</small></dd></dl>
+        </div>
+        <div class="hc-actions">
+          <button class="btn btn-primary" type="button" id="heroScan"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Deep scan router</button>
+          <button class="btn btn-ghost" type="button" id="heroBoost"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>Boost Wi-Fi</button>
+        </div>
+        <div class="gw">
+          <div class="ic"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M11 16.5h.01M8 13l-2-5M16 13l2-5"/></svg></div>
+          <div><b>Gateway 192.168.1.1</b><span>Wi-Fi 6 · 5 GHz · ch <span id="gwCh">36</span> · WPA3</span></div>
+          <div class="bars" aria-label="Signal -48 dBm" role="img"><i style="height:5px"></i><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card rise" style="--d:.18s" id="sec-boost" aria-labelledby="hSpeed">
+        <div class="card-h"><h2 id="hSpeed">Speed test</h2><span class="mono meta">nearest edge · 14 km</span></div>
+        <div class="gauge">
+          <svg viewBox="0 0 260 236" role="img" aria-labelledby="gAria">
+            <title id="gAria">Speed gauge</title>
+            <defs>
+              <linearGradient id="gDown" x1="0" y1="1" x2="1" y2="0"><stop offset="0" style="stop-color:var(--px-1)"/><stop offset=".6" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-hi)"/></linearGradient>
+              <linearGradient id="gUp" x1="0" y1="1" x2="1" y2="0"><stop offset="0" style="stop-color:var(--px-1)"/><stop offset=".55" style="stop-color:var(--warn)"/><stop offset="1" style="stop-color:var(--warn-soft)"/></linearGradient>
+            </defs>
+            <g id="gTicks"></g>
+            <path id="gTrack" fill="none" stroke="var(--raise)" stroke-width="14" stroke-linecap="round"/>
+            <path id="gVal" fill="none" stroke="url(#gDown)" stroke-width="14" stroke-linecap="round" pathLength="100" style="filter:drop-shadow(0 0 8px rgba(45,226,190,.45))"/>
+            <g id="needle"><line id="needleLine" x1="130" y1="130" stroke="var(--fg)" stroke-width="3" stroke-linecap="round"/><circle cx="130" cy="130" r="8" fill="var(--surface)" stroke="var(--fg)" stroke-width="3"/></g>
+          </svg>
+          <div class="g-read" aria-live="polite"><div class="g-phase mono" id="gPhase">Last test · download</div><div class="g-num" id="gNum">298.4</div><div class="g-unit mono" id="gUnit">Mbps</div></div>
+        </div>
+        <dl class="res">
+          <div><dt>Ping</dt><dd id="rPing">14 ms</dd></div>
+          <div><dt>Jitter</dt><dd id="rJit">3.6 ms</dd></div>
+          <div><dt>Down</dt><dd id="rDown">298.4</dd></div>
+          <div><dt>Up</dt><dd id="rUp">71.2</dd></div>
+        </dl>
+        <button class="btn btn-primary wide" type="button" id="runTest">Run speed test</button>
+        <div class="tip" id="tip">
+          <svg id="tipIcon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+          <div><p id="tipText">Channel 36 is shared with 7 neighbouring networks. Channel 149 has 1. Moving there should give you about 38% more speed.</p>
+          <button class="btn btn-amber btn-sm" type="button" id="boostBtn">Move to channel 149</button></div>
+        </div>
+      </section>
+
+      <section class="card rise" style="--d:.24s" id="sec-traffic" aria-labelledby="hTraffic">
+        <div class="card-h"><h2 id="hTraffic">Live traffic</h2><span class="live mono"><i></i>29 devices</span></div>
+        <div class="tr-now">
+          <div><span class="k">In</span><b id="inNow">212</b><span class="u">Mbps</span></div>
+          <div><span class="k">Out</span><b id="outNow">64</b><span class="u">Mbps</span></div>
+        </div>
+        <canvas id="trCanvas" role="img" aria-label="Inbound and outbound traffic over the last 13 seconds"></canvas>
+        <div class="legend"><span><i></i>inbound</span><span><i class="o"></i>outbound</span><span class="mono" style="margin-left:auto">Mbps</span></div>
+        <ul class="devs" id="devices" tabindex="-1">
+          <li class="dev"><div class="n"><b>Living-room TV box</b><small class="w" id="tvNote">Sent 1.2 GB while the screen was off</small></div><span class="v">1.2 GB</span><span id="tvAct"><button class="btn btn-amber btn-sm" type="button" id="tvBlock">Block host</button></span></li>
+          <li class="dev"><div class="n"><b>MacBook Pro</b><small>github.com · figma.com</small></div><span class="v">860 MB</span></li>
+          <li class="dev"><div class="n"><b>iPhone 15</b><small>icloud.com · spotify.com</small></div><span class="v">540 MB</span></li>
+          <li class="dev"><div class="n"><b>Unknown device</b><small class="c">Joined 4 min ago · randomised MAC</small></div><button class="btn btn-ghost btn-sm" type="button" id="whoBtn">Who is it?</button></li>
+        </ul>
+      </section>
+
+      <section class="card rise" style="--d:.3s" id="sec-shield" aria-labelledby="hShield">
+        <div class="card-h"><h2 id="hShield">Backdoor Shield</h2><button class="btn btn-ghost btn-sm" type="button" id="scanBtn"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Deep scan</button></div>
+        <div class="sh-meta"><span><b id="shieldCount">4 of 6</b> doors closed</span><span class="mono" id="scanLine" aria-live="polite">Last scan 12:31</span></div>
+        <div class="bar"><i id="shieldBar" style="width:66.6%"></i></div>
+        <ul class="doors" id="doors"></ul>
+        <h3 class="sub-h" id="privacy" tabindex="-1">Privacy</h3>
+        <div class="togs">
+          <div class="tog"><div class="n" id="tl-dns"><b>Encrypted DNS</b><small>Your provider can't read which sites you look up</small></div><button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="tl-dns" data-tog="dns"></button></div>
+          <div class="tog"><div class="n" id="tl-mac"><b>Private Wi-Fi address</b><small>Random MAC on this computer</small></div><button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="tl-mac" data-tog="mac"></button></div>
+          <div class="tog"><div class="n" id="tl-nomap"><b>Hide from location maps</b><small>Adds _nomap to your network name</small></div><button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="tl-nomap" data-tog="nomap"></button></div>
+          <div class="tog"><div class="n" id="tl-trk"><b>Auto-block trackers</b><small>Agents may block known tracker hosts</small></div><button class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="tl-trk" data-tog="trackers"></button></div>
+        </div>
+      </section>
+
+      <section class="card card-wide rise" style="--d:.36s" id="sec-agents" aria-labelledby="hAgents">
+        <div class="card-h">
+          <div><h2 id="hAgents">Agent watch</h2><p class="meta">Runs on your own API keys. Agents suggest, you approve.</p></div>
+          <div class="seg" role="radiogroup" aria-label="Agent">
+            <button type="button" role="radio" aria-checked="true" data-agent="claude"><span class="av claude" aria-hidden="true">C</span>Claude</button>
+            <button type="button" role="radio" aria-checked="false" data-agent="gpt"><span class="av gpt" aria-hidden="true">G</span>ChatGPT</button>
+            <button type="button" role="radio" aria-checked="false" data-agent="grok"><span class="av grok" aria-hidden="true">X</span>Grok</button>
+          </div>
+        </div>
+        <div class="feed" id="feed" role="log" aria-live="polite" aria-label="Agent messages">
+          <div class="msg"><span class="av grok" aria-hidden="true">X</span><div class="mb"><div class="meta2"><b>Grok</b><span class="mono">12:30</span></div><p class="txt">No outbound traffic to known botnet ranges in the last 24 hours. 29 devices, all accounted for except one.</p></div></div>
+          <div class="msg"><span class="av gpt" aria-hidden="true">G</span><div class="mb"><div class="meta2"><b>ChatGPT</b><span class="mono">12:38</span></div><p class="txt">A new device joined with a randomised MAC. Its DHCP fingerprint looks like an Android phone. I moved it to the guest network until you confirm who it is.</p></div></div>
+          <div class="msg"><span class="av claude" aria-hidden="true">C</span><div class="mb"><div class="meta2"><b>Claude</b><span class="mono">12:41</span></div><p class="txt">The living-room TV box contacts an analytics host every 90 seconds, even in standby. That was 1.2 GB in the last 24 hours. Blocking the host won't affect streaming apps.</p><div class="acts"><button class="btn btn-ghost btn-sm" type="button" id="fBlock">Block host</button><button class="btn btn-sm" type="button" id="fExplain" style="color:var(--muted)">Why is it doing that?</button></div></div></div>
+        </div>
+        <div class="chips" id="chips">
+          <button class="chip" type="button" data-q="Why is my Wi-Fi slower in the evening?">Why is Wi-Fi slower at night?</button>
+          <button class="chip" type="button" data-q="What is TR-069 and should I close it?">What is TR-069?</button>
+          <button class="chip" type="button" data-q="Who is the unknown device?">Who is the new device?</button>
+          <button class="chip" type="button" data-q="Is my DNS private now?">Is my DNS private?</button>
+        </div>
+        <form class="prompt" id="askForm" autocomplete="off">
+          <label class="sr" for="ask">Ask an agent about your network</label>
+          <input id="ask" name="ask" type="text" placeholder="Ask Claude about your network…">
+          <span class="kbd mono" aria-hidden="true">Enter</span>
+          <button class="send" type="submit" aria-label="Send"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
+</div>
+
+<div class="ob" id="ob" role="dialog" aria-modal="true" aria-labelledby="obTitle" aria-describedby="obBody">
+  <canvas class="ob-bg" id="obBg" aria-hidden="true"></canvas>
+  <div class="ob-card">
+    <div class="ob-visual">
+      <canvas id="obCanvas" aria-hidden="true"></canvas>
+      <div class="ob-segs" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+      <span class="ob-num mono" aria-hidden="true"><span id="obNum">01</span> / 03</span>
+    </div>
+    <div class="ob-content" id="obContent">
+      <h2 id="obTitle">Router found</h2>
+      <p id="obBody">Bastion found your Wi-Fi router. Nothing changes until you approve it.</p>
+      <div class="ob-extra" id="obExtra"></div>
+    </div>
+    <div class="ob-actions">
+      <button class="obtn" type="button" id="obBack"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+      <span class="sp"></span>
+      <button class="obtn" type="button" id="obSkip">Skip</button>
+      <button class="obtn pri" type="button" id="obNext">Continue</button>
+    </div>
+  </div>
+  <div class="ob-foot mono" aria-hidden="true"><span>Bastion · Orbit Core</span><span>Welcome / onboarding · step <span id="obNum2">1</span> of 3</span></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const doc = document, root = doc.documentElement;
+const $ = (s, c = doc) => c.querySelector(s);
+const $$ = (s, c = doc) => Array.from(c.querySelectorAll(s));
+const cssv = n => getComputedStyle(root).getPropertyValue(n).trim();
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BAYER = [0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v => (v + .5) / 16);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const ease = p => 1 - Math.pow(1 - p, 3);
+const pad = n => String(n).padStart(2, '0');
+const nowS = () => performance.now() / 1000;
+const wait = ms => new Promise(r => setTimeout(r, RM ? Math.min(ms, 120) : ms));
+const clock = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rand = mulberry(7);
+
+/* ---------- tokens for canvas ---------- */
+const ramp = p => [0,1,2,3].map(i => cssv('--' + p + '-' + i));
+const PAL = [ramp('px'), ramp('nx'), Array(4).fill(cssv('--accent')), Array(4).fill(cssv('--crit')), ramp('cl'), ramp('gp'), ramp('gk')];
+const RGB = { accent: cssv('--accent-rgb'), crit: cssv('--crit-rgb'), warn: cssv('--warn-rgb'), fg: cssv('--fg-rgb'), dot: cssv('--dot-rgb') };
+const rgba = (k, a) => 'rgba(' + RGB[k] + ',' + a + ')';
+const MUTED = cssv('--muted');
+
+/* ---------- 3D models (flat arrays: x,y,z,nx,ny,nz,material) ---------- */
+// materials: 0 body, 1 antenna, 2 vent/port (dark), 3 LED teal, 4 LED WAN (coral while TR-069 open), 5 bright mark, 6/7/8 agent spheres
+function nrm(v) { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; }
+function cross(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function sphere(A, cx, cy, cz, r, n, m) {
+  const g = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const y = 1 - 2 * (i + .5) / n, rr = Math.sqrt(1 - y*y), t = g * i, x = Math.cos(t) * rr, z = Math.sin(t) * rr;
+    A.push(cx + x*r, cy + y*r, cz + z*r, x, y, z, m);
+  }
+}
+function antenna(A, base, dir, len, r0, r1, m) {
+  const d = nrm(dir), u = nrm(cross(d, [1,0,0])), w = cross(d, u);
+  const rings = Math.ceil(len / .03), seg = 10;
+  for (let i = 0; i <= rings; i++) {
+    const s = i / rings, r = r0 + (r1 - r0) * s;
+    for (let j = 0; j < seg; j++) {
+      const a = (j + (i & 1) * .5) / seg * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+      const nx = u[0]*c + w[0]*sn, ny = u[1]*c + w[1]*sn, nz = u[2]*c + w[2]*sn;
+      A.push(base[0] + d[0]*s*len + nx*r, base[1] + d[1]*s*len + ny*r, base[2] + d[2]*s*len + nz*r, nx, ny, nz, m);
+    }
+  }
+  const tip = [base[0] + d[0]*len, base[1] + d[1]*len, base[2] + d[2]*len];
+  sphere(A, tip[0], tip[1], tip[2], r1, 26, m);
+  sphere(A, base[0], base[1], base[2], .08, 50, m);
+  return tip;
+}
+function buildRouter() {
+  const A = [], a = 1.2, b = .74, h = .17, s = .028, Y = -.45;
+  for (let x = -a; x <= a + 1e-6; x += s) for (let z = -b; z <= b + 1e-6; z += s) {
+    if ((x/a)**4 + (z/b)**4 > 1) continue;
+    let m = 0;
+    if (Math.abs(x) < .92 && z > -.48 && z < .2 && (Math.floor((x + 3) / .084) & 1)) m = 2;
+    const dl = Math.hypot(x, z - .47); if (dl > .085 && dl < .118) m = 5;
+    A.push(x, h + Y, z, 0, 1, 0, m);
+  }
+  const N = 540;
+  for (let i = 0; i < N; i++) {
+    const t = i / N * Math.PI * 2, c = Math.cos(t), sn = Math.sin(t);
+    const x = a * Math.sign(c) * Math.sqrt(Math.abs(c)), z = b * Math.sign(sn) * Math.sqrt(Math.abs(sn));
+    let nx = (x/a)**3 / a, nz = (z/b)**3 / b; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l;
+    for (let y = -h; y <= h + 1e-6; y += s) {
+      let m = 0;
+      if (nz > .95 && Math.abs(y) < .04) { const k = (x + .66) / .22, ki = Math.round(k); if (ki >= 0 && ki <= 6 && Math.abs(k - ki) < .2) m = ki === 6 ? 4 : 3; }
+      if (nz < -.95 && y > -.1 && y < .06) { const k = (x - .1) / .19, ki = Math.round(k); if (ki >= 0 && ki <= 4 && Math.abs(k - ki) < .34) m = 2; }
+      A.push(x, y + Y, z, nx, 0, nz, m);
+    }
+  }
+  const tips = [[-.95,-.22,-.18],[-.32,-.07,-.22],[.32,.07,-.22],[.95,.22,-.18]].map(([bx, dx, dz]) => antenna(A, [bx, h + Y + .04, -.6], [dx, 1, dz], 1.15, .055, .045, 1));
+  const leds = []; for (let k = 0; k < 7; k++) leds.push([-.66 + k * .22, Y, .74]);
+  return { pts: new Float32Array(A), tips, leds, wan: [.4, Y, -.75], lan: [-.44, Y, .74] };
+}
+function segDist(px, py, ax, ay, bx, by) { const vx = bx-ax, vy = by-ay, t = clamp(((px-ax)*vx + (py-ay)*vy) / (vx*vx + vy*vy), 0, 1); return Math.hypot(px - ax - vx*t, py - ay - vy*t); }
+function buildShield() {
+  const A = [], s = .034, T = .15;
+  const hw = y => y >= .1 ? .82 - .08 * ((y - .1) / .85) ** 2 : .82 * Math.pow(clamp((y + 1.05) / 1.15, 0, 1), .62);
+  const top = x => .9 + .07 * (x / .8) ** 2;
+  for (let x = -.84; x <= .84; x += s) for (let y = -1.05; y <= 1; y += s) {
+    if (Math.abs(x) > hw(y) || y > top(x)) continue;
+    const chk = Math.min(segDist(x, y, -.36, .02, -.08, -.3), segDist(x, y, -.08, -.3, .42, .32)) < .075;
+    const n = nrm([x * .35, y * .15, 1]);
+    A.push(x, y, T + .12 * (1 - (x / .82) ** 2), n[0], n[1], n[2], chk ? 5 : 0);
+    A.push(x, y, -T, 0, 0, -1, 0);
+  }
+  for (let y = -1.05; y <= .97; y += s) {
+    const w = hw(y);
+    for (let z = -T; z <= T + .06; z += s) {
+      const n1 = nrm([1, y < .1 ? -.45 : 0, 0]), n2 = nrm([-1, y < .1 ? -.45 : 0, 0]);
+      A.push(w, y, z, n1[0], n1[1], 0, 0); A.push(-w, y, z, n2[0], n2[1], 0, 0);
+    }
+  }
+  for (let x = -.8; x <= .8; x += s) for (let z = -T; z <= T + .06; z += s) A.push(x, top(x), z, 0, 1, 0, 0);
+  return { pts: new Float32Array(A) };
+}
+function buildAgents() {
+  const A = [];
+  for (let k = 0; k < 3; k++) { const ang = k / 3 * Math.PI * 2; sphere(A, Math.cos(ang) * .78, (k - 1) * .12, Math.sin(ang) * .78, .36, 620, 6 + k); }
+  for (let i = 0; i < 160; i++) { const t = i / 160 * Math.PI * 2; A.push(Math.cos(t) * .78, 0, Math.sin(t) * .78, 0, 1, 0, 2); }
+  return { pts: new Float32Array(A) };
+}
+
+/* ---------- dithered point-cloud renderer ---------- */
+const L = nrm([-.45, .75, .5]), Hh = nrm([L[0], L[1], L[2] + 1]);
+class Cloud {
+  constructor(cv, cell) { this.cv = cv; this.ctx = cv.getContext('2d'); this.cell = cell; this.W = 0; this.H = 0; this.counts = new Int32Array(28); this.pos = new Int32Array(28); }
+  resize() {
+    const r = this.cv.getBoundingClientRect(); if (!r.width || !r.height) return false;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.W = r.width; this.H = r.height;
+    this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.gw = Math.ceil(r.width / this.cell) + 1; this.gh = Math.ceil(r.height / this.cell) + 1;
+    const n = this.gw * this.gh;
+    this.depth = new Float32Array(n); this.val = new Float32Array(n); this.mat = new Uint8Array(n);
+    this.cl = new Int32Array(n); this.bk = new Uint8Array(n); this.ord = new Int32Array(n);
+    return true;
+  }
+  xf(o) { this.cy_ = Math.cos(o.yaw); this.sy_ = Math.sin(o.yaw); this.cp = Math.cos(o.pitch); this.sp = Math.sin(o.pitch); this.o = o; }
+  project(p) {
+    const o = this.o, x1 = p[0]*this.cy_ + p[2]*this.sy_, z1 = -p[0]*this.sy_ + p[2]*this.cy_;
+    const y2 = p[1]*this.cp - z1*this.sp, z2 = p[1]*this.sp + z1*this.cp, f = 7 / (7 - z2);
+    return { x: o.cx + x1 * o.scale * f, y: o.cy - y2 * o.scale * f, z: z2 };
+  }
+  facing(n) { const nz1 = -n[0]*this.sy_ + n[2]*this.cy_; return n[1]*this.sp + nz1*this.cp; }
+  draw(P) {
+    const o = this.o, gw = this.gw, gh = this.gh, cell = this.cell, depth = this.depth, val = this.val, mat = this.mat;
+    if (!gw) return;
+    depth.fill(-1e9);
+    const cy_ = this.cy_, sy_ = this.sy_, cp = this.cp, sp = this.sp, sc = o.scale, cx = o.cx, cyy = o.cy, limx = gw - 1, limy = gh - 1;
+    for (let k = 0, n = P.length; k < n; k += 7) {
+      const nx = P[k+3], ny = P[k+4], nz = P[k+5];
+      const nz1 = -nx*sy_ + nz*cy_, nz2 = ny*sp + nz1*cp;
+      if (nz2 < -.2) continue;
+      const nx1 = nx*cy_ + nz*sy_, ny2 = ny*cp - nz1*sp;
+      const x = P[k], y = P[k+1], z = P[k+2];
+      const x1 = x*cy_ + z*sy_, z1 = -x*sy_ + z*cy_, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp;
+      const f = 7 / (7 - z2), sx = cx + x1*sc*f, syy = cyy - y2*sc*f;
+      if (sx < 0 || syy < 0) continue;
+      const ix = (sx / cell) | 0, iy = (syy / cell) | 0;
+      if (ix >= limx || iy >= limy) continue;
+      let d = nx1*L[0] + ny2*L[1] + nz2*L[2]; if (d < 0) d = 0;
+      let s = nx1*Hh[0] + ny2*Hh[1] + nz2*Hh[2]; if (s < 0) s = 0; s *= s; s *= s; s *= s;
+      let v = .13 + .66*d + .5*s; v *= .74 + .26 * clamp((z2 + 1.6) / 3.2, 0, 1);
+      const m = P[k+6];
+      if (m === 2) v *= .3; else if (m === 5 && v < .95) v = .95;
+      let i = iy*gw + ix;
+      if (z2 > depth[i]) { depth[i] = z2; val[i] = v; mat[i] = m; }
+      i++; if (z2 > depth[i]) { depth[i] = z2; val[i] = v; mat[i] = m; }
+      i += gw; if (z2 > depth[i]) { depth[i] = z2; val[i] = v; mat[i] = m; }
+      i--; if (z2 > depth[i]) { depth[i] = z2; val[i] = v; mat[i] = m; }
+    }
+    const counts = this.counts; counts.fill(0);
+    const dis = o.dissolve, body = o.neutral ? 1 : 0, N = gw * gh;
+    let n = 0;
+    for (let i = 0; i < N; i++) {
+      if (depth[i] < -1e8) continue;
+      const iy = (i / gw) | 0, ix = i - iy*gw, t = BAYER[((iy & 3) << 2) | (ix & 3)];
+      if (dis < 1 && ((((ix * 73856093) ^ (iy * 19349663)) >>> 0) % 997) / 997 > dis) continue;
+      const m = mat[i]; let pal, lv;
+      if (m === 3) { pal = 2; lv = 3; }
+      else if (m === 4) { pal = o.ledCoral ? 3 : 2; lv = 3; }
+      else {
+        pal = m >= 6 ? m - 2 : body;
+        const q = val[i] * 4; lv = q | 0; if (q - lv > t) lv++;
+        if (lv <= 0) continue; if (lv > 4) lv = 4; lv--;
+      }
+      const b = (pal << 2) | lv; this.cl[n] = i; this.bk[n] = b; counts[b]++; n++;
+    }
+    let acc = 0; for (let b = 0; b < 28; b++) { this.pos[b] = acc; acc += counts[b]; }
+    for (let j = 0; j < n; j++) this.ord[this.pos[this.bk[j]]++] = this.cl[j];
+    const ctx = this.ctx, sz = cell - 1; let j = 0;
+    for (let b = 0; b < 28; b++) {
+      const c = counts[b]; if (!c) continue;
+      ctx.fillStyle = PAL[b >> 2][b & 3];
+      for (const e = j + c; j < e; j++) { const i = this.ord[j], iy = (i / gw) | 0, ix = i - iy*gw; ctx.fillRect(ix*cell, iy*cell, sz, sz); }
+    }
+  }
+}
+
+/* ---------- loop registry (pauses when hidden / offscreen) ---------- */
+const loops = [];
+function makeLoop(fn, want) {
+  const Lp = { fn, want, id: 0, last: 0, on: false };
+  Lp.tick = ts => {
+    Lp.id = 0; if (!Lp.on) return;
+    const t = ts / 1000, dt = Math.min(.05, Math.max(0, t - Lp.last) || .016); Lp.last = t;
+    fn(t, dt);
+    if (Lp.on) Lp.id = requestAnimationFrame(Lp.tick);
+  };
+  Lp.once = () => fn(nowS(), 0);
+  loops.push(Lp); return Lp;
+}
+function sync() {
+  for (const Lp of loops) {
+    const go = !RM && !doc.hidden && Lp.want();
+    if (go && !Lp.on) { Lp.on = true; Lp.last = nowS(); Lp.id = requestAnimationFrame(Lp.tick); }
+    else if (!go && Lp.on) { Lp.on = false; if (Lp.id) cancelAnimationFrame(Lp.id); Lp.id = 0; }
+  }
+}
+doc.addEventListener('visibilitychange', sync);
+const vis = { hero: true, traffic: true };
+
+/* ---------- state ---------- */
+const state = {
+  doors: [
+    { id: 'tr069', name: 'ISP remote access (TR-069)', short: 'TR-069', sev: 'crit', open: true, act: 'Isolate', dOpen: 'port 7547 · reachable from WAN', dFixed: 'WAN 7547 filtered · ISP can’t push config', msg: 'Isolated TR-069. Port 7547 no longer answers from the internet, and your connection still works.' },
+    { id: 'upnp', name: 'UPnP auto-opened 3 ports', short: 'UPnP', sev: 'warn', open: true, act: 'Close', dOpen: '1900/udp · 5000 · 49152', dFixed: 'UPnP off · 3 forwards removed', msg: 'Closed 3 UPnP forwards and turned UPnP off. Online games may ask for a manual port later.' },
+    { id: 'wps', name: 'WPS PIN', short: 'WPS', sev: 'warn', open: false, act: 'Disable', dOpen: 'PIN mode can be brute-forced in hours', dFixed: 'PIN mode disabled', msg: 'Disabled WPS PIN mode.' },
+    { id: 'telnet', name: 'Telnet left on by vendor', short: 'Telnet', sev: 'warn', open: false, act: 'Close', dOpen: 'port 23 · LAN', dFixed: 'port 23 closed', msg: 'Closed Telnet on port 23.' },
+    { id: 'dns', name: 'DNS lookups in plain text', short: 'DNS', sev: 'warn', open: false, act: 'Encrypt', dOpen: 'ISP resolver sees every site name', dFixed: 'DNS-over-HTTPS · Quad9', msg: 'DNS now goes over HTTPS. Your provider sees encrypted traffic instead of site names.' },
+    { id: 'pass', name: 'Admin password from the sticker', short: 'Admin login', sev: 'crit', open: false, act: 'Rotate', dOpen: 'default credentials accepted', dFixed: 'rotated · 24 characters', msg: 'Rotated the router admin password. The new one is in your keychain.' }
+  ],
+  scanning: false, testing: false, boosted: false, tvBlocked: false, busy: false,
+  agent: 'claude', watchers: { claude: true, gpt: true, grok: true },
+  privacy: { dns: true, mac: true, nomap: true, trackers: false }
+};
+const door = id => state.doors.find(d => d.id === id);
+
+/* ---------- hero ---------- */
+const hero = { cv: $('#heroCanvas'), stage: $('#stage'), yaw: -.65, pitch: .42, vel: 0, drag: null, introAt: null };
+hero.cloud = new Cloud(hero.cv, 3);
+hero.model = buildRouter();
+hero.huds = [
+  { el: $('#hudRadio'), p: hero.model.tips[3] },
+  { el: $('#hudWan'), p: hero.model.wan, crit: true },
+  { el: $('#hudLan'), p: hero.model.lan }
+];
+hero.stars = Array.from({ length: 70 }, () => ({ x: rand(), y: rand() * .62, p: rand() * 6.28, s: rand() < .15 ? 2 : 1 }));
+const wideQ = matchMedia('(min-width: 901px)');
+const gB = Array.from({ length: 6 }, () => []);
+
+function cacheHuds() {
+  const s = hero.stage.getBoundingClientRect();
+  hero.huds.forEach(h => { const r = h.el.getBoundingClientRect(); h.rect = { l: r.left - s.left, t: r.top - s.top, w: r.width, h: r.height }; });
+}
+function heroLayout() {
+  if (!hero.cloud.resize()) return;
+  const W = hero.cloud.W, H = hero.cloud.H, wide = wideQ.matches;
+  const avail = W - 440; // right of the 400px copy column
+  hero.cx = wide ? 440 + avail / 2 : W * .5;
+  hero.cy = wide ? H * .47 : H * .5;
+  hero.scale = wide ? Math.min(avail / 3.2, H * .3, 175) : Math.min(W * .3, H * .3, 150);
+  const R = Math.max(H * .85, W * (wide ? .45 : .6));
+  hero.globe = { gx: hero.cx, gy: H + R * .55, R };
+  cacheHuds();
+}
+function landN(x, y, z) { return Math.sin(x*2.7 + y*1.1 + .3) + Math.sin(y*3.3 - z*2.1 + 1.7) + Math.sin(z*2.9 + x*1.9 + 4.1) * .9 + Math.sin((x - z)*5.3 + y*2.2) * .45; }
+function drawGlobe(ctx, t, W, H, k) {
+  const { gx, gy, R } = hero.globe, ang = t * .035 + 1.2, tilt = .42;
+  const c = Math.cos(ang), s = Math.sin(ang), ct = Math.cos(tilt), st = Math.sin(tilt), top = gy - R;
+  const grd = ctx.createRadialGradient(gx, top + R*.04, 0, gx, top + R*.04, R * .85);
+  grd.addColorStop(0, rgba('accent', .16 * k)); grd.addColorStop(1, rgba('accent', 0));
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+  const gs = W < 600 ? 6 : 7;
+  for (const b of gB) b.length = 0;
+  for (let sy = Math.max(0, Math.ceil(top / gs) * gs); sy < H; sy += gs) {
+    const ny = (gy - sy) / R; if (ny >= 1 || ny <= -1) continue;
+    const hc = Math.sqrt(1 - ny*ny) * R, xe = Math.min(W, gx + hc);
+    for (let sx = Math.max(0, Math.ceil((gx - hc) / gs) * gs); sx <= xe; sx += gs) {
+      const nx = (sx - gx) / R, q = 1 - nx*nx - ny*ny; if (q <= 0) continue;
+      const nz = Math.sqrt(q);
+      const y1 = ny*ct + nz*st, z1 = -ny*st + nz*ct, x = nx*c - z1*s, z = nx*s + z1*c;
+      const a = landN(x, y1, z) > .55 ? .18 + .62 * Math.pow(nz, .8) : .05 + .1 * nz;
+      gB[Math.min(5, (a * 6) | 0)].push(sx, sy);
+    }
+  }
+  for (let b = 0; b < 6; b++) {
+    const arr = gB[b]; if (!arr.length) continue;
+    ctx.fillStyle = rgba('accent', ((b + .5) / 6) * k);
+    for (let i = 0; i < arr.length; i += 2) ctx.fillRect(arr[i] - 1, arr[i+1] - 1, 2, 2);
+  }
+  ctx.beginPath(); ctx.arc(gx, gy, R, Math.PI, Math.PI * 2);
+  ctx.lineWidth = 9; ctx.strokeStyle = rgba('accent', .06 * k); ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = rgba('accent', .55 * k); ctx.stroke();
+}
+function heroFrame(t, dt) {
+  const cl = hero.cloud, ctx = cl.ctx, W = cl.W, H = cl.H;
+  if (!W) return;
+  if (!hero.drag) { hero.yaw += (RM ? 0 : dt * .22) + hero.vel; hero.vel *= .93; }
+  const k = hero.introAt == null ? 1 : clamp((t - hero.introAt) / 1.6, 0, 1);
+  const ek = ease(k);
+  ctx.clearRect(0, 0, W, H);
+  // stars
+  ctx.fillStyle = rgba('fg', 1);
+  for (const s of hero.stars) { ctx.globalAlpha = (.18 + .3 * (.5 + .5 * Math.sin(t * 1.3 + s.p))) * ek; ctx.fillRect(s.x * W, s.y * H, s.s, s.s); }
+  ctx.globalAlpha = 1;
+  drawGlobe(ctx, t, W, H, ek);
+  const o = { cx: hero.cx, cy: hero.cy, scale: hero.scale, yaw: hero.yaw, pitch: hero.pitch, dissolve: ease(clamp(k * 1.25 - .15, 0, 1)), ledCoral: door('tr069').open, neutral: false };
+  cl.xf(o);
+  // orbit rings
+  ctx.save(); ctx.translate(o.cx, o.cy + o.scale * .15); ctx.setLineDash([2, 7]); ctx.lineWidth = 1;
+  [[-.18, 2.35, .6, .22, .5], [.28, 2.9, .82, .12, -.32]].forEach(([rot, rx, ry, al, sp]) => {
+    ctx.save(); ctx.rotate(rot); ctx.strokeStyle = rgba('accent', al * ek);
+    ctx.beginPath(); ctx.ellipse(0, 0, o.scale * rx, o.scale * ry, 0, 0, Math.PI * 2); ctx.stroke();
+    const a = t * sp; ctx.fillStyle = rgba('accent', .9 * ek); ctx.fillRect(Math.cos(a) * o.scale * rx - 2, Math.sin(a) * o.scale * ry - 2, 4, 4);
+    ctx.restore();
+  });
+  ctx.restore(); ctx.setLineDash([]);
+  // ground shadow
+  const base = cl.project([0, -.62, 0]);
+  ctx.save(); ctx.translate(base.x, base.y + 6); ctx.scale(1, .22);
+  let g = ctx.createRadialGradient(0, 0, 0, 0, 0, o.scale * 1.5);
+  g.addColorStop(0, 'rgba(0,0,0,.6)'); g.addColorStop(.5, rgba('accent', .08 * ek)); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.scale * 1.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  // signal waves from antenna tips
+  const tips = hero.model.tips.map(p => cl.project(p));
+  const ox = tips.reduce((s, p) => s + p.x, 0) / 4, oy = tips.reduce((s, p) => s + p.y, 0) / 4 - 4;
+  const period = state.scanning ? 1.4 : 3.4, maxR = Math.min(W, H) * .62;
+  ctx.fillStyle = rgba(state.scanning ? 'warn' : 'accent', 1);
+  for (let w = 0; w < 4; w++) {
+    const p = ((t / period) + w / 4) % 1, r = 22 + p * maxR;
+    ctx.globalAlpha = Math.pow(1 - p, 1.7) * .9 * Math.min(1, p / .06) * ek;
+    const step = 9 / r;
+    for (let a = -Math.PI * .93; a <= -Math.PI * .07; a += step) {
+      ctx.fillRect(Math.round((ox + Math.cos(a) * r) / 3) * 3, Math.round((oy + Math.sin(a) * r) / 3) * 3, 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+  // router
+  cl.draw(hero.model.pts);
+  // LED glows
+  if (cl.facing([0, 0, 1]) > .1) {
+    ctx.globalCompositeOperation = 'lighter';
+    hero.model.leds.forEach((p, i) => {
+      const q = cl.project(p), coral = i === 6 && o.ledCoral, al = (.28 + .12 * Math.sin(t * 3 + i * 1.7)) * ek;
+      const gg = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 11);
+      gg.addColorStop(0, rgba(coral ? 'crit' : 'accent', al)); gg.addColorStop(1, rgba(coral ? 'crit' : 'accent', 0));
+      ctx.fillStyle = gg; ctx.fillRect(q.x - 11, q.y - 11, 22, 22);
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // HUD leader lines
+  ctx.lineWidth = 1;
+  for (const h of hero.huds) {
+    if (!h.rect) continue;
+    const A = cl.project(h.p), r = h.rect, right = r.l + r.w / 2 > A.x;
+    const Tx = right ? r.l : r.l + r.w, Ty = r.t + r.h / 2, Ex = Tx + (right ? -22 : 22);
+    const hot = h.crit && door('tr069').open;
+    ctx.globalAlpha = ek;
+    ctx.strokeStyle = hot ? rgba('crit', .8) : rgba('accent', .5);
+    ctx.fillStyle = hot ? rgba('crit', 1) : rgba('accent', 1);
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(Ex, Ty); ctx.lineTo(Tx, Ty); ctx.stroke();
+    ctx.strokeRect(A.x - 3.5, A.y - 3.5, 7, 7); ctx.fillRect(A.x - 1, A.y - 1, 2, 2); ctx.fillRect(Ex - 1.5, Ty - 1.5, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+}
+const heroLoop = makeLoop(heroFrame, () => vis.hero && !ob.open);
+const heroRender = () => { if (RM || !heroLoop.on) heroLoop.once(); };
+
+hero.cv.addEventListener('pointerdown', e => {
+  hero.drag = { x: e.clientX, y: e.clientY }; hero.vel = 0;
+  hero.cv.setPointerCapture(e.pointerId); hero.cv.classList.add('grabbing');
+});
+hero.cv.addEventListener('pointermove', e => {
+  if (!hero.drag) return;
+  const dx = e.clientX - hero.drag.x, dy = e.clientY - hero.drag.y;
+  hero.drag.x = e.clientX; hero.drag.y = e.clientY;
+  hero.yaw += dx * .009; hero.vel = dx * .0045;
+  hero.pitch = clamp(hero.pitch + dy * .004, .12, .8);
+  if (RM) heroLoop.once();
+});
+const endDrag = () => { hero.drag = null; hero.cv.classList.remove('grabbing'); };
+hero.cv.addEventListener('pointerup', endDrag);
+hero.cv.addEventListener('pointercancel', endDrag);
+
+/* ---------- onboarding ---------- */
+const ob = { el: $('#ob'), open: true, step: 0, at: 0 };
+ob.cloud = new Cloud($('#obCanvas'), 3);
+ob.models = [buildRouter(), buildShield(), buildAgents()];
+const obBg = { cv: $('#obBg'), frame: 0 };
+obBg.ctx = obBg.cv.getContext('2d');
+obBg.sparse = Array.from({ length: 160 }, () => ({ x: rand(), y: rand(), p: rand() * 6.28 }));
+function fitCanvas(cv) {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { W: r.width, H: r.height };
+}
+function obBgFrame(t) {
+  if (!RM && (obBg.frame++ & 1)) return;
+  const { W, H } = obBg, ctx = obBg.ctx; if (!W) return;
+  ctx.clearRect(0, 0, W, H);
+  const g = 10, off = t * 14, cols = Math.ceil(W / g), rows = Math.ceil(H / g);
+  ctx.fillStyle = rgba('dot', .26);
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const x = i * g, y = j * g;
+    let d = ((x * .8 - y * .6 + H - off) % 760 + 760) % 760; d = Math.min(d, 760 - d);
+    let dens = 1 - clamp((d - 40) / 110, 0, 1);
+    let d2 = ((x * .55 + y * .83 + off * .6) % 1100 + 1100) % 1100; d2 = Math.min(d2, 1100 - d2);
+    dens = Math.max(dens * .9, (1 - clamp((d2 - 20) / 90, 0, 1)) * .55);
+    if (dens > BAYER[((j & 3) << 2) | (i & 3)]) ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.fillStyle = rgba('dot', 1);
+  for (const s of obBg.sparse) { ctx.globalAlpha = .25 + .35 * (.5 + .5 * Math.sin(t * 1.4 + s.p)); ctx.fillRect(Math.round(s.x * W / g) * g, Math.round(s.y * H / g) * g, 2, 2); }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = rgba('dot', .1);
+  ctx.fillRect(Math.round(W * .06), 0, 1, H); ctx.fillRect(Math.round(W * .94), 0, 1, H);
+}
+function obFrame(t) {
+  const c = ob.cloud; if (!c.W) return;
+  c.ctx.clearRect(0, 0, c.W, c.H);
+  const k = RM ? 1 : clamp((t - ob.at) / .9, 0, 1);
+  let yaw, pitch = .42, scale;
+  if (ob.step === 0) { yaw = t * .45; scale = Math.min(c.W * .15, c.H * .36); }
+  else if (ob.step === 1) { yaw = Math.sin(t * .7) * .6; pitch = .12; scale = c.H * .36; }
+  else { yaw = t * .6; pitch = .38; scale = c.H * .34; }
+  c.xf({ cx: c.W / 2, cy: c.H * .52, scale, yaw, pitch, dissolve: ease(k), ledCoral: true, neutral: true });
+  c.draw(ob.models[ob.step].pts);
+}
+const obBgLoop = makeLoop(obBgFrame, () => ob.open);
+const obLoop = makeLoop(obFrame, () => ob.open);
+
+const AGENT_META = {
+  claude: { name: 'Claude', cls: 'claude', m: 'C', key: 'Anthropic API key', pre: '' },
+  gpt: { name: 'ChatGPT', cls: 'gpt', m: 'G', key: 'OpenAI API key', pre: 'Short answer: ' },
+  grok: { name: 'Grok', cls: 'grok', m: 'X', key: 'xAI API key', pre: 'Straight up: ' },
+  sys: { name: 'Bastion', cls: 'sys', m: 'B' }
+};
+const CHECK = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ob-bg)"><path d="M5 12l5 5L20 7"/></svg>';
+const STEPS = [
+  { title: 'Router found', body: 'Bastion found your Wi-Fi router and mapped what is connected to it. Nothing changes until you approve it.',
+    extra: () => '<dl class="ob-kv"><div><dt>Gateway</dt><dd>192.168.1.1</dd></div><div><dt>Radios</dt><dd>2.4 + 5 GHz · Wi-Fi 6</dd></div><div><dt>Devices</dt><dd>29 known · 1 new</dd></div><div><dt>WAN</dt><dd class="c">port 7547 answers</dd></div></dl>' },
+  { title: 'We’ll check 6 doors', body: 'These are the ways in that home routers leave open most often. A deep scan takes about 40 seconds and changes nothing on its own.',
+    extra: () => '<ul class="ob-doors"><li>TR-069 remote access</li><li>UPnP port forwards</li><li>WPS PIN</li><li>Telnet on port 23</li><li>Plain-text DNS</li><li>Sticker admin password</li></ul>' },
+  { title: 'Pick your AI watchers', body: 'Agents read traffic metadata and suggest fixes. Every change waits for your OK. Keys stay in your system keychain.',
+    extra: () => '<div class="ob-agents">' + ['claude', 'gpt', 'grok'].map(a => { const m = AGENT_META[a]; return '<button class="ob-ag" type="button" data-w="' + a + '" aria-pressed="' + state.watchers[a] + '"><span class="av ' + m.cls + '" aria-hidden="true">' + m.m + '</span><span class="n"><b>' + m.name + '</b><small>' + m.key + '</small></span><span class="box">' + CHECK + '</span></button>'; }).join('') + '</div>' }
+];
+function setStep(i) {
+  ob.step = i; ob.at = nowS();
+  const s = STEPS[i], content = $('#obContent');
+  $('#obTitle').textContent = s.title; $('#obBody').textContent = s.body; $('#obExtra').innerHTML = s.extra();
+  content.classList.remove('swap'); void content.offsetWidth; content.classList.add('swap');
+  $('#obNum').textContent = pad(i + 1); $('#obNum2').textContent = String(i + 1);
+  $$('.ob-segs i').forEach((el, j) => el.classList.toggle('on', j <= i));
+  $('#obBack').disabled = i === 0;
+  $('#obNext').textContent = i === 2 ? 'Start watching' : 'Continue';
+  if (RM) obLoop.once();
+}
+function sizeOb() {
+  ob.cloud.resize();
+  Object.assign(obBg, fitCanvas(obBg.cv));
+  if (RM) { obLoop.once(); obBgLoop.once(); }
+}
+let lastFocus = null;
+function openOb() {
+  ob.open = true; ob.el.hidden = false; ob.el.classList.remove('closing');
+  root.classList.add('ob-open'); lastFocus = doc.activeElement;
+  setStep(0);
+  requestAnimationFrame(() => { sizeOb(); $('#obNext').focus(); });
+  sync();
+}
+function closeOb() {
+  if (!ob.open || ob.el.classList.contains('closing')) return;
+  ob.el.classList.add('closing');
+  const done = () => {
+    ob.el.hidden = true; ob.open = false; root.classList.remove('ob-open');
+    root.classList.add('go');
+    hero.introAt = RM ? null : nowS();
+    heroLayout(); sync(); heroRender();
+    const target = lastFocus && lastFocus.id === 'replay' ? lastFocus : $('#pageTitle');
+    target.focus({ preventScroll: true });
+  };
+  if (RM) done(); else setTimeout(done, 430);
+}
+$('#obNext').addEventListener('click', () => ob.step < 2 ? setStep(ob.step + 1) : closeOb());
+$('#obBack').addEventListener('click', () => { if (ob.step > 0) setStep(ob.step - 1); });
+$('#obSkip').addEventListener('click', closeOb);
+$('#replay').addEventListener('click', openOb);
+$('#obExtra').addEventListener('click', e => {
+  const b = e.target.closest('[data-w]'); if (!b) return;
+  const a = b.dataset.w, on = !state.watchers[a];
+  if (!on && Object.values(state.watchers).filter(Boolean).length === 1) return;
+  state.watchers[a] = on; b.setAttribute('aria-pressed', String(on)); applyWatchers();
+});
+ob.el.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); closeOb(); return; }
+  if (e.key !== 'Tab') return;
+  const f = $$('button:not([disabled]), [href], input', ob.el).filter(x => x.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+/* ---------- status ---------- */
+function updateStatus() {
+  const open = state.doors.filter(d => d.open), closed = 6 - open.length, crit = open.some(d => d.sev === 'crit');
+  const pill = $('#statusPill');
+  pill.className = 'pill ' + (open.length ? (crit ? 'crit' : 'warn') : 'ok');
+  $('#statusText').textContent = open.length ? open.length + (open.length > 1 ? ' doors need you' : ' door needs you') : 'Network protected';
+  $('#heroSub').textContent = 'Encrypted DNS ' + (state.privacy.dns ? 'on' : 'off') + ' · ' + closed + ' of 6 doors closed';
+  $('#shieldCount').textContent = closed + ' of 6';
+  $('#shieldBar').style.width = (closed / 6 * 100) + '%';
+  const nb = $('#navBadge'); nb.hidden = !open.length; nb.textContent = open.length;
+  const tr = door('tr069').open;
+  $('#hudWan').classList.toggle('crit', tr);
+  $('#hudWanState').textContent = tr ? 'OPEN' : 'FILTERED';
+  cacheHuds(); heroRender();
+}
+const SPIN = '<span class="spin" aria-hidden="true"></span>';
+function renderDoors() {
+  $('#doors').innerHTML = state.doors.map(d => {
+    let ic, detail = d.open ? d.dOpen : d.dFixed, act = '';
+    if (d.status === 'pending') { ic = '<span class="ring"></span>'; detail = 'queued'; }
+    else if (d.status === 'scanning') { ic = SPIN; detail = 'checking…'; }
+    else if (d.status === 'fixing') { ic = SPIN; detail = 'applying fix…'; }
+    else if (d.open) { ic = '<span class="dot ' + d.sev + '"></span>'; act = '<button class="btn btn-sm ' + (d.sev === 'crit' ? 'btn-crit' : 'btn-amber') + '" type="button" data-fix="' + d.id + '">' + d.act + '</button>'; }
+    else ic = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+    const label = d.status ? '' : (d.open ? (d.sev === 'crit' ? 'Critical: ' : 'Warning: ') : 'Fixed: ');
+    return '<li class="door' + (d.open || d.status ? '' : ' fixed') + '"><span class="st">' + ic + '</span><div><b><span class="sr">' + label + '</span>' + d.name + '</b><small>' + detail + '</small></div>' + act + '</li>';
+  }).join('');
+}
+$('#doors').addEventListener('click', e => { const b = e.target.closest('[data-fix]'); if (b) fixDoor(b.dataset.fix); });
+async function fixDoor(id) {
+  const d = door(id); if (!d.open || d.status) return;
+  d.status = 'fixing'; renderDoors();
+  await wait(900);
+  d.open = false; d.status = null;
+  if (id === 'dns') setToggle('dns', true, true);
+  renderDoors(); updateStatus();
+  addMsg('sys', d.msg);
+}
+async function deepScan() {
+  if (state.scanning) return;
+  state.scanning = true;
+  const btn = $('#scanBtn'), line = $('#scanLine'); btn.disabled = true;
+  $('#heroScan').disabled = true;
+  state.doors.forEach(d => d.status = 'pending'); renderDoors();
+  for (let i = 0; i < state.doors.length; i++) {
+    const d = state.doors[i];
+    d.status = 'scanning'; line.textContent = 'Checking ' + d.short + '… ' + (i + 1) + '/6'; renderDoors();
+    await wait(650);
+    d.status = null; renderDoors();
+  }
+  state.scanning = false; btn.disabled = false; $('#heroScan').disabled = false;
+  const open = state.doors.filter(d => d.open);
+  line.textContent = 'Last scan ' + clock() + ' · ' + open.length + ' open';
+  updateStatus();
+  addMsg(state.agent, AGENT_META[state.agent].pre + (open.length ? 'Scan finished. ' + open.length + ' door' + (open.length > 1 ? 's are' : ' is') + ' still open: ' + open.map(d => d.short).join(' and ') + '. Each one has a one-click fix next to it.' : 'Scan finished. All six doors are closed. I’ll keep watching for changes.'));
+}
+$('#scanBtn').addEventListener('click', deepScan);
+
+/* privacy toggles */
+function setToggle(key, on, silent) {
+  state.privacy[key] = on;
+  const sw = $('[data-tog="' + key + '"]'); sw.setAttribute('aria-checked', String(on));
+  if (key === 'dns') { door('dns').open = !on; if (!silent) { renderDoors(); updateStatus(); } }
+  if (!silent) {
+    const msgs = {
+      dns: on ? 'DNS-over-HTTPS is back on.' : 'Encrypted DNS is off. Your provider can read every site name you look up again.',
+      mac: on ? 'Private Wi-Fi address on. This computer shows a random MAC to the router.' : 'This computer now shows its real MAC address to every network.',
+      nomap: on ? 'Added _nomap to your network name. Google and Apple location services skip networks with that suffix.' : 'Removed _nomap. Your access point may be collected into location databases again.',
+      trackers: on ? 'Auto-block on. Agents can block known tracker hosts without asking. Everything else still waits for you.' : 'Auto-block off. Agents will ask before blocking anything.'
+    };
+    addMsg('sys', msgs[key]);
+  }
+}
+$$('[data-tog]').forEach(sw => sw.addEventListener('click', () => setToggle(sw.dataset.tog, sw.getAttribute('aria-checked') !== 'true')));
+
+/* ---------- speed gauge ---------- */
+const TICKS = [0, 10, 50, 100, 250, 500, 1000], GC = 130, GR = 92, NS = 'http://www.w3.org/2000/svg';
+const pol = (r, deg) => { const a = deg * Math.PI / 180; return [GC + r * Math.cos(a), GC + r * Math.sin(a)]; };
+(() => {
+  const [sx, sy] = pol(GR, 135), [ex, ey] = pol(GR, 45), arc = 'M' + sx + ' ' + sy + ' A' + GR + ' ' + GR + ' 0 1 1 ' + ex + ' ' + ey;
+  $('#gTrack').setAttribute('d', arc); $('#gVal').setAttribute('d', arc);
+  const [nx, ny] = pol(70, 135); const nl = $('#needleLine'); nl.setAttribute('x2', nx); nl.setAttribute('y2', ny);
+  const g = $('#gTicks');
+  for (let i = 0; i <= 54; i++) {
+    const deg = 135 + i / 54 * 270, [x, y] = pol(GR + 13, deg), c = doc.createElementNS(NS, 'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', i % 9 === 0 ? 1.6 : .8); c.setAttribute('fill', i % 9 === 0 ? 'var(--accent)' : 'var(--line-2)'); g.appendChild(c);
+  }
+  TICKS.forEach((v, i) => {
+    const deg = 135 + i / (TICKS.length - 1) * 270, [x, y] = pol(GR + 28, deg), t = doc.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('fill', 'var(--muted)'); t.setAttribute('font-size', '10'); t.setAttribute('font-family', 'Geist Mono, ui-monospace, monospace');
+    t.textContent = v === 1000 ? '1G' : v; g.appendChild(t);
+  });
+})();
+function gaugeFrac(v) {
+  if (v <= 0) return 0;
+  for (let i = 1; i < TICKS.length; i++) if (v <= TICKS[i]) return (i - 1 + (v - TICKS[i-1]) / (TICKS[i] - TICKS[i-1])) / (TICKS.length - 1);
+  return 1;
+}
+function setGauge(v) {
+  const f = gaugeFrac(v);
+  $('#gVal').style.strokeDashoffset = String(100 - f * 100);
+  $('#needle').setAttribute('transform', 'rotate(' + (f * 270) + ' ' + GC + ' ' + GC + ')');
+}
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (RM) { fn(1); res(); return; }
+    const t0 = performance.now();
+    const step = n => { const p = Math.min(1, (n - t0) / ms); fn(p); if (p < 1) requestAnimationFrame(step); else res(); };
+    requestAnimationFrame(step);
+  });
+}
+const last = { down: 298.4, up: 71.2, ping: 14, jit: 3.6 };
+setGauge(last.down);
+async function runTest() {
+  if (state.testing) return;
+  state.testing = true;
+  const btn = $('#runTest'), num = $('#gNum'), unit = $('#gUnit'), ph = $('#gPhase'), val = $('#gVal');
+  btn.disabled = true; btn.textContent = 'Testing…';
+  const b = state.boosted, down = (b ? 412.6 : 298.4) + (Math.random() * 10 - 5), up = (b ? 98.4 : 71.2) + (Math.random() * 5 - 2.5);
+  const ping = b ? 9 : 14, jit = b ? 1.8 : 3.6, before = last.down;
+  ph.textContent = 'Ping'; unit.textContent = 'ms';
+  await tween(500, p => setGauge(before * (1 - ease(p))));
+  await tween(700, p => { num.textContent = String(Math.round(ping * ease(p))); });
+  $('#rPing').textContent = ping + ' ms'; $('#rJit').textContent = jit.toFixed(1) + ' ms';
+  ph.textContent = 'Download'; unit.textContent = 'Mbps'; val.setAttribute('stroke', 'url(#gDown)');
+  await tween(3600, p => { const v = down * ease(p) * (1 + .05 * Math.sin(p * 38) * (1 - p)); setGauge(v); num.textContent = v.toFixed(1); });
+  $('#rDown').textContent = down.toFixed(1);
+  await tween(500, p => setGauge(down * (1 - ease(p))));
+  ph.textContent = 'Upload'; val.setAttribute('stroke', 'url(#gUp)');
+  await tween(2800, p => { const v = up * ease(p) * (1 + .06 * Math.sin(p * 30) * (1 - p)); setGauge(v); num.textContent = v.toFixed(1); });
+  $('#rUp').textContent = up.toFixed(1);
+  ph.textContent = 'Result · download'; val.setAttribute('stroke', 'url(#gDown)');
+  await tween(700, p => { const v = up + (down - up) * ease(p); setGauge(v); num.textContent = v.toFixed(1); });
+  const gain = Math.round((down / 298.4 - 1) * 100);
+  Object.assign(last, { down, up, ping, jit });
+  $('#hDown').textContent = down.toFixed(1); $('#hUp').textContent = up.toFixed(1); $('#hPing').textContent = ping;
+  btn.disabled = false; btn.textContent = 'Run again'; state.testing = false;
+  addMsg('sys', 'Speed test: ' + down.toFixed(1) + ' Mbps down, ' + up.toFixed(1) + ' up, ' + ping + ' ms ping' + (b ? ' (+' + gain + '% since the channel move).' : '. Channel 36 is still crowded.'));
+}
+$('#runTest').addEventListener('click', runTest);
+async function boost() {
+  if (state.boosted) return;
+  const btn = $('#boostBtn'); btn.disabled = true; btn.textContent = 'Switching channel…';
+  await wait(1300);
+  state.boosted = true;
+  $('#tip').classList.add('done');
+  $('#tipIcon').innerHTML = '<path d="M5 12l5 5L20 7"/>'; $('#tipIcon').setAttribute('stroke', 'var(--accent)');
+  $('#tipText').textContent = 'Now on channel 149 with 1 neighbour instead of 7. Run a speed test to see the gain.';
+  btn.remove();
+  $('#hudCh').textContent = '149'; $('#gwCh').textContent = '149'; cacheHuds(); heroRender();
+  addMsg('sys', 'Moved the 5 GHz radio from channel 36 to 149 and pinned it there. Devices reconnected in under 2 seconds.');
+}
+$('#boostBtn').addEventListener('click', boost);
+
+/* ---------- traffic ---------- */
+const tr = { cv: $('#trCanvas'), N: 72, inb: [], out: [], acc: 0, k: 0, STEP: .18 };
+tr.ctx = tr.cv.getContext('2d');
+(() => { let vi = 200, vo = 70; for (let i = 0; i < tr.N; i++) { vi = clamp(vi + (Math.random() - .5) * 60, 60, 400); vo = clamp(vo + (Math.random() - .5) * 24, 20, 140); tr.inb.push(vi); tr.out.push(vo); tr.k++; } })();
+function trPush() {
+  const li = tr.inb[tr.inb.length - 1], lo = tr.out[tr.out.length - 1];
+  const ti = 210 + 110 * Math.sin(tr.k * .11) + 50 * Math.sin(tr.k * .037 + 1) + (Math.random() - .5) * 70;
+  const to = (state.tvBlocked ? 30 : 76) + 20 * Math.sin(tr.k * .19) + (Math.random() - .5) * 26;
+  tr.inb.push(clamp(li + (ti - li) * .35, 30, 430)); tr.out.push(clamp(lo + (to - lo) * .35, 6, 160));
+  if (tr.inb.length > tr.N) { tr.inb.shift(); tr.out.shift(); }
+  tr.k++;
+  $('#inNow').textContent = Math.round(tr.inb[tr.inb.length - 1]);
+  $('#outNow').textContent = Math.round(tr.out[tr.out.length - 1]);
+}
+function trFrame(t, dt) {
+  tr.acc += dt;
+  while (tr.acc >= tr.STEP) { tr.acc -= tr.STEP; trPush(); }
+  const { W, H } = tr, ctx = tr.ctx; if (!W) return;
+  ctx.clearRect(0, 0, W, H);
+  const PW = W - 30, dx = PW / (tr.N - 2), f = tr.acc / tr.STEP, y = v => H - 6 - v / 450 * (H - 14);
+  ctx.font = '10px Geist Mono, ui-monospace, monospace'; ctx.textBaseline = 'middle';
+  for (const gv of [100, 200, 300, 400]) { ctx.fillStyle = rgba('accent', .07); ctx.fillRect(0, Math.round(y(gv)), PW, 1); ctx.fillStyle = MUTED; ctx.fillText(String(gv), PW + 6, y(gv)); }
+  const X = i => PW - (tr.N - 1 - i + f) * dx;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, PW, H); ctx.clip();
+  ctx.beginPath(); tr.inb.forEach((v, i) => i ? ctx.lineTo(X(i), y(v)) : ctx.moveTo(X(i), y(v)));
+  const lx = X(tr.N - 1), ly = y(tr.inb[tr.N - 1]);
+  ctx.lineWidth = 1.8; ctx.strokeStyle = rgba('accent', 1); ctx.stroke();
+  ctx.lineTo(lx, H); ctx.lineTo(X(0), H); ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, rgba('accent', .28)); g.addColorStop(1, rgba('accent', 0));
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); tr.out.forEach((v, i) => i ? ctx.lineTo(X(i), y(v)) : ctx.moveTo(X(i), y(v)));
+  ctx.setLineDash([4, 4]); ctx.lineWidth = 1.3; ctx.strokeStyle = rgba('warn', .9); ctx.stroke(); ctx.setLineDash([]);
+  ctx.restore();
+  ctx.fillStyle = rgba('accent', .25); ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = rgba('accent', 1); ctx.beginPath(); ctx.arc(lx, ly, 2.6, 0, Math.PI * 2); ctx.fill();
+}
+const trLoop = makeLoop(trFrame, () => vis.traffic);
+function blockTV() {
+  if (state.tvBlocked) return;
+  state.tvBlocked = true;
+  $('#tvNote').textContent = 'Analytics host blocked · streaming unaffected';
+  $('#tvNote').className = '';
+  $('#tvAct').innerHTML = '<span class="done-chip">Blocked</span>';
+  const fb = $('#fBlock'); if (fb) { fb.disabled = true; fb.textContent = 'Blocked'; }
+  addMsg('sys', 'Blocked the analytics host for the living-room TV box. Outbound traffic should drop within a minute.');
+}
+$('#tvBlock').addEventListener('click', blockTV);
+$('#fBlock').addEventListener('click', blockTV);
+$('#fExplain').addEventListener('click', () => ask('Why is the TV box sending data while it is off?'));
+$('#whoBtn').addEventListener('click', () => ask('Who is the unknown device?'));
+
+/* ---------- agents ---------- */
+const feed = $('#feed');
+const REPLIES = [
+  { k: /tr-?069|7547|isp|provider|remote/i, t: () => door('tr069').open
+    ? 'TR-069 lets your provider’s server log in to the router, change settings and push firmware without asking. Port 7547 answers from the internet right now. Isolating it blocks inbound access to 7547; your internet keeps working.'
+    : 'TR-069 is isolated. Port 7547 no longer answers from the internet, so your provider can’t change router settings remotely. If they ever need to, you can open it for a session from Backdoor Shield.' },
+  { k: /tv|box|analytics|standby/i, t: () => state.tvBlocked
+    ? 'The TV box analytics host is blocked. Outbound traffic from it fell to almost nothing, and streaming still works.'
+    : 'The TV box calls an analytics host every 90 seconds, even in standby. That added up to 1.2 GB in 24 hours. Blocking that one host on the router does not affect streaming apps.' },
+  { k: /slow|night|evening|speed|lag|channel|wi-?fi/i, t: () => state.boosted
+    ? 'You’re on channel 149 now, shared with one neighbour instead of seven. Evening slowdowns should be gone. Run a speed test to compare.'
+    : 'After 19:00 seven neighbouring networks share channel 36 with you. Channel 149 has one. Moving the 5 GHz radio there should give roughly 38% more throughput.' },
+  { k: /unknown|device|who|new|mac/i, t: () => 'The new device uses a randomised MAC and a DHCP fingerprint typical of an Android phone. So far it has only talked to Google services. It stays on the guest network until someone in your household claims it.' },
+  { k: /dns|https|doh|lookup|private/i, t: () => state.privacy.dns
+    ? 'Yes. Lookups go over DNS-over-HTTPS to Quad9, so your provider sees encrypted traffic instead of site names.'
+    : 'Not right now. Encrypted DNS is switched off, so your provider can read every site name you look up.' },
+  { k: /nomap|location|map|ssid/i, t: () => 'Adding _nomap to the network name tells Google and Apple location services to leave your access point out of their databases. Bastion added it already.' }
+];
+function defaultReply() {
+  const open = state.doors.filter(d => d.open);
+  return 'I’ve watched 24 hours of flows from 29 devices. Nothing matches known threat lists. ' + (open.length ? open.length + ' door' + (open.length > 1 ? 's are' : ' is') + ' still open: ' + open.map(d => d.short).join(' and ') + '. Want me to walk you through closing ' + (open.length > 1 ? 'them' : 'it') + '?' : 'All six doors are closed.');
+}
+const replyFor = q => { for (const r of REPLIES) if (r.k.test(q)) return r.t(); return defaultReply(); };
+function addMsg(who, text, opts) {
+  const el = doc.createElement('div');
+  if (who === 'user') { el.className = 'msg user'; el.innerHTML = '<p class="txt"></p>'; }
+  else {
+    const m = AGENT_META[who];
+    el.className = 'msg';
+    el.innerHTML = '<span class="av ' + m.cls + '" aria-hidden="true">' + m.m + '</span><div class="mb"><div class="meta2"><b>' + m.name + '</b><span class="mono">' + clock() + '</span></div><p class="txt"></p></div>';
+  }
+  const txt = $('.txt', el);
+  if (opts && opts.thinking) txt.innerHTML = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Reading 24 h of flows…';
+  else txt.textContent = text;
+  feed.appendChild(el); feed.scrollTop = feed.scrollHeight;
+  return txt;
+}
+async function typeInto(el, text) {
+  if (RM) { el.textContent = text; return; }
+  el.textContent = '';
+  for (let i = 0; i <= text.length; i += 3) { el.textContent = text.slice(0, i); feed.scrollTop = feed.scrollHeight; await new Promise(r => setTimeout(r, 16)); }
+  el.textContent = text;
+}
+async function ask(q) {
+  q = (q || '').trim(); if (!q || state.busy) return;
+  state.busy = true;
+  const form = $('#askForm'); form.classList.add('thinking'); feed.setAttribute('aria-busy', 'true');
+  addMsg('user', q);
+  const a = state.agent, txt = addMsg(a, '', { thinking: true });
+  await wait(900 + Math.random() * 500);
+  await typeInto(txt, AGENT_META[a].pre + replyFor(q));
+  form.classList.remove('thinking'); feed.setAttribute('aria-busy', 'false');
+  state.busy = false;
+}
+$('#askForm').addEventListener('submit', e => { e.preventDefault(); const i = $('#ask'); const q = i.value; i.value = ''; ask(q); });
+$('#chips').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) ask(b.dataset.q); });
+function setAgent(a) {
+  state.agent = a;
+  $$('.seg [data-agent]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.agent === a)));
+  $('#ask').placeholder = 'Ask ' + AGENT_META[a].name + ' about your network…';
+}
+$$('.seg [data-agent]').forEach(b => b.addEventListener('click', () => setAgent(b.dataset.agent)));
+function applyWatchers() {
+  let count = 0;
+  ['claude', 'gpt', 'grok'].forEach(a => {
+    const on = state.watchers[a]; if (on) count++;
+    $('#wc-' + a).classList.toggle('off', !on);
+    $('.seg [data-agent="' + a + '"]').disabled = !on;
+  });
+  $('#navAgents').textContent = count;
+  if (!state.watchers[state.agent]) setAgent(['claude', 'gpt', 'grok'].find(a => state.watchers[a]));
+}
+
+/* ---------- nav + hero buttons ---------- */
+$$('.nav-btn').forEach(b => b.addEventListener('click', () => {
+  $$('.nav-btn').forEach(x => x.removeAttribute('aria-current')); b.setAttribute('aria-current', 'page');
+  const el = doc.getElementById(b.dataset.go); if (!el) return;
+  el.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
+  if (el.classList.contains('card')) flash(el);
+}));
+function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+$('#heroScan').addEventListener('click', () => {
+  const s = $('#sec-shield'); s.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' }); flash(s); deepScan();
+});
+$('#heroBoost').addEventListener('click', () => {
+  const s = $('#sec-boost'); s.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' }); flash(s);
+  const b = $('#boostBtn'); setTimeout(() => (b && b.isConnected ? b : $('#runTest')).focus({ preventScroll: true }), RM ? 0 : 500);
+});
+
+/* ---------- session timer ---------- */
+let sess = 3600 + 25 * 60 + 49;
+setInterval(() => { sess++; $('#sessTime').textContent = pad((sess / 3600) | 0) + ':' + pad(((sess / 60) | 0) % 60) + ':' + pad(sess % 60); }, 1000);
+
+/* ---------- sizing + visibility ---------- */
+function sizeTraffic() { Object.assign(tr, fitCanvas(tr.cv)); if (RM || !trLoop.on) trLoop.once(); }
+new ResizeObserver(() => { heroLayout(); heroRender(); }).observe(hero.stage);
+new ResizeObserver(sizeTraffic).observe(tr.cv);
+new ResizeObserver(() => { if (ob.open) sizeOb(); }).observe(ob.el);
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => { es.forEach(e => { if (e.target === hero.stage) vis.hero = e.isIntersecting; else vis.traffic = e.isIntersecting; }); sync(); });
+  io.observe(hero.stage); io.observe(tr.cv);
+}
+if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(() => { cacheHuds(); heroRender(); });
+if (RM) setInterval(() => { trPush(); trLoop.once(); }, 1000);
+
+renderDoors(); updateStatus(); applyWatchers();
+openOb();
+heroLayout();
+})();
+</script>
+</body>
+</html>

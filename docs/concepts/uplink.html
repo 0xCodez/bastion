@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bastion Uplink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500;600&family=Barlow+Semi+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: full-bleed orbital hero -> mission-control console on black -> three launch panels with spec sheets -> footer. Thin 1px rules, sharp corners, one electric-blue signal colour. */
+:root{
+  --bg:#000000; --panel:#05070b; --panel2:#0a0d13;
+  --fg:#ffffff; --muted:#a3abb8; --dim:#808898;
+  --line:rgba(255,255,255,.14); --line2:rgba(255,255,255,.32);
+  --accent:#3d8bff; --hi:#8ec1ff; --danger:#ff4d3d; --danger-text:#ff8a7e; --warn:#ffb224; --ok:#46e0a0;
+  --sun:#ffffff; --atmo:#4f9bff; --city:#ffc58a; --earth:#02050c; --earth-lit:#2c63c9;
+  --f-disp:"Barlow Semi Condensed","Barlow","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --gutter:max(clamp(16px,4vw,48px),env(safe-area-inset-left,0px));
+  --gutter-r:max(clamp(16px,4vw,48px),env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,canvas,svg{max-width:100%}
+button,input{font:inherit;color:inherit}
+a{color:var(--hi)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{width:100%;max-width:1320px;margin:0 auto;padding-left:var(--gutter);padding-right:var(--gutter-r)}
+.eyebrow{font:600 12px/1.2 var(--f-disp);letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin:0}
+.mono{font-family:var(--f-mono);font-size:12px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 28px;border:1px solid var(--fg);border-radius:0;background:transparent;color:var(--fg);font:600 13px/1 var(--f-disp);letter-spacing:.24em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.btn:hover{background:var(--fg);color:var(--bg)}
+.btn.primary{background:var(--fg);color:var(--bg)}
+.btn.primary:hover{background:transparent;color:var(--fg)}
+.btn.sm{min-height:40px;padding:0 14px;font-size:11px;letter-spacing:.2em}
+.btn.danger{border-color:var(--danger);color:var(--danger-text)}
+.btn.danger:hover{background:var(--danger);color:var(--bg)}
+.btn.signal{border-color:var(--accent);color:var(--hi)}
+.btn.signal:hover{background:var(--accent);color:var(--bg)}
+.btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+
+/* back pill + nav */
+.back{position:fixed;z-index:50;top:calc(12px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:1px solid var(--line2);border-radius:999px;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--fg);text-decoration:none;font:600 11px/1 var(--f-disp);letter-spacing:.2em;text-transform:uppercase}
+.back:hover{border-color:var(--fg)}
+.nav{position:absolute;z-index:20;left:0;right:0;top:calc(60px + env(safe-area-inset-top,0px))}
+.nav .wrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:12px;font:600 18px/1 var(--f-disp);letter-spacing:.5em;text-decoration:none;color:var(--fg)}
+.nav ul{display:flex;gap:26px;list-style:none;margin:0 auto;padding:0;flex-wrap:wrap}
+.nav ul a{color:var(--fg);text-decoration:none;font:600 12px/1 var(--f-disp);letter-spacing:.26em;padding:8px 0;border-bottom:1px solid transparent}
+.nav ul a:hover{border-color:var(--fg)}
+@media (max-width:820px){.nav ul{display:none}.nav .btn{margin-left:auto}}
+
+/* hero */
+.hero{position:relative;overflow:hidden;isolation:isolate;padding-top:calc(170px + env(safe-area-inset-top,0px));padding-bottom:clamp(320px,40vw,540px)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;display:block}
+.hero h1{margin:18px 0 0;font:600 clamp(48px,8.6vw,132px)/.9 var(--f-disp);letter-spacing:.005em;text-transform:uppercase;text-wrap:balance;max-width:11ch}
+.hero .lede{margin:26px 0 0;max-width:52ch;font-size:clamp(16px,1.4vw,19px);color:#d7dce4;font-weight:400}
+.cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+.hero-specs{position:absolute;left:0;right:0;bottom:0;z-index:1}
+.hero-specs .wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line2)}
+.hero-specs .wrap>div{padding:18px 18px 26px 0;display:flex;flex-direction:column;gap:6px}
+.hero-specs b{font:300 clamp(28px,3.4vw,48px)/1 var(--f-body);font-variant-numeric:tabular-nums}
+.hero-specs span{font:600 11px/1.35 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:700px){.hero-specs .wrap{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-specs .wrap>div{padding:12px 10px 14px 0}}
+.rise{animation:rise 1.1s cubic-bezier(.2,.7,.15,1) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}}
+
+/* section heads */
+.sec{padding-block:clamp(80px,10vw,140px) 0}
+.sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:40px}
+.sec-head h2{margin:14px 0 0;font:600 clamp(36px,5vw,72px)/.95 var(--f-disp);text-transform:uppercase;text-wrap:balance;max-width:16ch}
+.sec-head p{margin:0;max-width:44ch;color:var(--muted)}
+
+/* console */
+.console{border:1px solid var(--line2);background:var(--panel)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;padding:14px 20px;border-bottom:1px solid var(--line);font:600 11px/1.3 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.bar .live{display:inline-flex;align-items:center;gap:10px;color:var(--fg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok)}
+.blink{animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+.bar .right{margin-left:auto}
+.cells{display:grid;gap:1px;background:var(--line)}
+.cells>*{background:var(--panel);min-width:0}
+.numerals{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.numerals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.numerals{grid-template-columns:minmax(0,1fr)}}
+.num{padding:26px 24px 22px;display:flex;flex-direction:column;gap:6px}
+.k{font:600 11px/1 var(--f-disp);letter-spacing:.26em;text-transform:uppercase;color:var(--muted)}
+.num .v{font:200 clamp(52px,6vw,92px)/.95 var(--f-body);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.num .u{font:500 12px/1 var(--f-disp);letter-spacing:.2em;color:var(--dim)}
+.speed{display:flex;flex-wrap:wrap;align-items:center;gap:20px 36px;padding:20px 24px;border-top:1px solid var(--line)}
+.gauge{width:240px;max-width:100%;height:auto;flex:none}
+.speed .status{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.phase{font:600 13px/1 var(--f-disp);letter-spacing:.3em;color:var(--hi)}
+.result{font-size:15px;color:#d7dce4}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))}
+.card{padding:24px;display:flex;flex-direction:column;gap:18px}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.card-h h3{margin:0;font:600 13px/1 var(--f-disp);letter-spacing:.3em;text-transform:uppercase}
+.meta{font:600 11px/1 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#expCanvas{display:block;width:100%;max-width:520px;aspect-ratio:1/1;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font:600 10px/1 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+.progress{height:2px;background:var(--line);position:relative;overflow:hidden}
+.progress span{position:absolute;inset:0 auto 0 0;width:100%;background:var(--accent);transition:width .35s}
+
+/* scan list */
+.scan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:20px minmax(0,1fr) auto;grid-template-areas:"st what tag" "st what act";align-items:center;gap:4px 14px;padding:14px 0;border-top:1px solid var(--line);transition:opacity .3s}
+.row .st{grid-area:st;width:10px;height:10px;border-radius:50%;background:var(--dim);justify-self:center}
+.row .what{grid-area:what;display:flex;flex-direction:column;gap:3px;min-width:0}
+.row .what b{font:600 15px/1.25 var(--f-body)}
+.row .what span{font-size:13px;line-height:1.45;color:var(--muted)}
+.row .tag{grid-area:tag;justify-self:end;font:700 10px/1 var(--f-disp);letter-spacing:.22em;padding:5px 8px;border:1px solid var(--line2);color:var(--muted)}
+.row .act{grid-area:act;justify-self:end}
+.row[data-state="pending"]{opacity:.32}
+.row[data-state="pending"] .tag,.row[data-state="pending"] .act,.row[data-state="checking"] .act{visibility:hidden}
+.row[data-state="checking"] .st{background:transparent;border:2px solid var(--accent);border-right-color:transparent;width:12px;height:12px;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row[data-sev="crit"][data-state="open"] .st{background:var(--danger);box-shadow:0 0 12px var(--danger)}
+.row[data-sev="crit"][data-state="open"] .tag{background:var(--danger);border-color:var(--danger);color:var(--bg)}
+.row[data-sev="high"][data-state="open"] .st,.row[data-sev="med"][data-state="open"] .st{background:var(--warn)}
+.row[data-sev="high"][data-state="open"] .tag,.row[data-sev="med"][data-state="open"] .tag{border-color:var(--warn);color:var(--warn)}
+.row[data-state="fixed"] .st{background:var(--accent)}
+.row[data-state="fixed"] .tag{border-color:var(--accent);color:var(--hi)}
+.row[data-state="fixed"] .act{visibility:hidden}
+.row[data-state="info"] .st{background:var(--fg)}
+
+/* stats + channel */
+#chartCanvas{display:block;width:100%;height:260px}
+.chan{display:flex;flex-wrap:wrap;align-items:center;gap:24px}
+.ring{position:relative;flex:0 1 320px;margin:0 auto;aspect-ratio:1/1;max-width:100%}
+.ring svg{width:100%;height:100%;display:block;overflow:visible}
+.ring .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.ring .center b{font:200 clamp(40px,5vw,60px)/1 var(--f-body);font-variant-numeric:tabular-nums}
+.ring .center span{font:600 10px/1.4 var(--f-disp);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);max-width:16ch}
+#chMarker{transform-origin:160px 160px;transition:transform 1.8s cubic-bezier(.65,0,.2,1)}
+#chArc{transition:stroke-dashoffset 1.8s cubic-bezier(.65,0,.2,1)}
+.chan-side{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.kv span:first-child{font:600 11px/1.6 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.gain{color:var(--hi)}
+
+/* AI */
+.ai{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media (max-width:900px){.ai{grid-template-columns:minmax(0,1fr)}}
+.tabs{display:flex;border:1px solid var(--line2)}
+.tab{min-height:40px;padding:0 16px;border:0;border-right:1px solid var(--line2);background:transparent;cursor:pointer;font:600 11px/1 var(--f-disp);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.tab:last-child{border-right:0}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+.tab i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.log{display:flex;flex-direction:column;gap:16px;min-height:280px;max-height:380px;overflow-y:auto;padding-right:6px}
+.msg{display:flex;flex-direction:column;gap:6px;max-width:62ch}
+.msg .who{font:600 10px/1 var(--f-disp);letter-spacing:.24em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.msg .who i{width:7px;height:7px;border-radius:50%}
+.msg .txt{font-size:15px;line-height:1.6;color:#e6e9ee;white-space:pre-wrap}
+.msg.me{align-self:flex-end;text-align:right}
+.msg.me .who{justify-content:flex-end}
+.msg.me .txt{color:var(--hi)}
+.msg.sys .txt{font-family:var(--f-mono);font-size:12px;color:var(--hi)}
+.ask{display:flex;gap:0;border:1px solid var(--line2)}
+.ask input{flex:1;min-width:0;min-height:48px;padding:0 16px;border:0;background:transparent;outline:none;font-size:15px;text-overflow:ellipsis}
+.ask:focus-within{border-color:var(--accent)}
+.ask .btn{min-height:48px;border-width:0 0 0 1px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:0 12px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:13px;color:var(--muted)}
+.chip:hover{border-color:var(--fg);color:var(--fg)}
+.pending{border:1px solid var(--accent);padding:18px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,rgba(61,139,255,.10),rgba(61,139,255,0))}
+.pending p{margin:0}
+.pending .row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pending.done{border-color:var(--line2);background:transparent}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer;font-size:14px}
+.switch input{appearance:none;-webkit-appearance:none;width:44px;height:24px;border:1px solid var(--line2);border-radius:999px;position:relative;cursor:pointer;flex:none;background:transparent;transition:background .2s,border-color .2s;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.switch input:checked{background:var(--accent);border-color:var(--accent)}
+.switch input:checked::after{transform:translateX(20px);background:var(--fg)}
+.fine{font-size:13px;color:var(--muted);margin:0;line-height:1.55}
+.warnline{font-size:13px;color:var(--warn);margin:0}
+
+/* launch panels */
+.panel{border-top:1px solid var(--line);padding-block:clamp(80px,10vw,150px);position:relative;overflow:hidden}
+.panel .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:clamp(40px,6vw,96px);align-items:center}
+.panel h2{margin:16px 0 0;font:600 clamp(48px,7.6vw,118px)/.88 var(--f-disp);text-transform:uppercase;text-wrap:balance}
+.panel .copy p{max-width:48ch;color:#cfd5de;font-size:17px;margin:26px 0 0}
+.spec{margin:36px 0 0;display:flex;flex-direction:column}
+.spec>div{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.spec>div:last-child{border-bottom:1px solid var(--line)}
+.spec dt{font:600 11px/1.7 var(--f-disp);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.spec dd{margin:0;font-size:15px}
+.visual{position:relative;min-width:0}
+.visual canvas{display:block;width:100%;height:auto;aspect-ratio:4/3}
+.visual .cap{display:flex;justify-content:space-between;gap:12px;margin-top:14px}
+#routerSvg{width:100%;height:auto;display:block}
+.led{animation:led 2.4s ease-in-out infinite}
+@keyframes led{50%{opacity:.25}}
+.port-open .pulse{animation:pulse 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{from{transform:scale(.6);opacity:.9}to{transform:scale(2.4);opacity:0}}
+.port-sealed .pulse{display:none}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding-block:clamp(80px,10vw,140px) calc(36px + env(safe-area-inset-bottom,0px))}
+.big{font:600 clamp(64px,17vw,260px)/.82 var(--f-disp);letter-spacing:.06em;margin:0;color:transparent;-webkit-text-stroke:1px var(--line2)}
+.dl{display:flex;flex-wrap:wrap;gap:14px;margin-top:40px}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:70px;padding-top:20px;border-top:1px solid var(--line);font:600 11px/1.4 var(--f-disp);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .rise,.blink,.led,.port-open .pulse,.row[data-state="checking"] .st{animation:none}
+  #chMarker,#chArc{transition:none}
+}
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html"><span aria-hidden="true">&larr;</span> All concepts</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Bastion home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l8 3.2v5.6c0 5-3.4 9.1-8 10.7-4.6-1.6-8-5.7-8-10.7V5.7z"/><path d="M12 7v10M7.5 12h9"/></svg>BASTION</a>
+    <ul>
+      <li><a href="#app">App</a></li>
+      <li><a href="#how">Shield</a></li>
+      <li><a href="#speed">Speed</a></li>
+      <li><a href="#agents">Agents</a></li>
+    </ul>
+    <a class="btn sm" href="#download">Download</a>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="top">
+  <canvas id="heroCanvas" aria-hidden="true"></canvas>
+  <div class="wrap" id="heroCopy">
+    <p class="eyebrow rise" style="--d:.15s">Bastion &middot; for macOS and Windows</p>
+    <h1 class="rise" style="--d:.3s">Your network, under watch.</h1>
+    <p class="lede rise" style="--d:.5s">Bastion finds the backdoors your router ships with, closes them in one click, tunes your Wi-Fi to the quietest channel and lets Claude, ChatGPT or Grok watch the traffic while you sleep.</p>
+    <div class="cta rise" style="--d:.7s">
+      <button class="btn primary" id="heroScan" type="button">Scan my network</button>
+      <a class="btn" href="#how">Watch how it works</a>
+    </div>
+  </div>
+  <div class="hero-specs rise" style="--d:1s">
+    <div class="wrap">
+      <div><b>7547</b><span>ISP remote port found and sealed</span></div>
+      <div><b>29</b><span>Devices under watch</span></div>
+      <div><b>+39%</b><span>Wi-Fi after channel tuning</span></div>
+      <div><b>3</b><span>AI agents on duty</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="app" aria-labelledby="appTitle">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <p class="eyebrow">The app</p>
+        <h2 id="appTitle">Mission control for one router.</h2>
+      </div>
+      <p>Everything below works. Run a speed test, re-scan the router, move to a quieter channel, ask an agent.</p>
+    </div>
+
+    <div class="console">
+      <div class="bar">
+        <span class="live"><span class="dot blink"></span><span id="liveTxt">Online &middot; protected</span></span>
+        <span>Gateway 192.168.1.1 &middot; Wi-Fi 6 &middot; WPA3</span>
+        <span class="right tnum" id="uptime">Uptime 14d 06:12:44</span>
+      </div>
+
+      <div class="cells numerals">
+        <div class="num"><span class="k">Download</span><span class="v" id="vDown">296.0</span><span class="u">MBPS</span></div>
+        <div class="num"><span class="k">Upload</span><span class="v" id="vUp">84.1</span><span class="u">MBPS</span></div>
+        <div class="num"><span class="k">Latency</span><span class="v" id="vPing">14</span><span class="u">MS</span></div>
+        <div class="num"><span class="k">Devices</span><span class="v" id="vDev">29</span><span class="u">1 NEW TODAY</span></div>
+      </div>
+
+      <div class="speed">
+        <svg class="gauge" id="gauge" viewBox="0 0 240 140" role="img" aria-label="Speed gauge">
+          <path d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="var(--line)" stroke-width="6"/>
+          <path id="gArc" d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="var(--accent)" stroke-width="6" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          <g id="gTicks"></g>
+          <line id="needle" x1="120" y1="120" x2="120" y2="34" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" transform="rotate(-90 120 120)"/>
+          <circle cx="120" cy="120" r="5" fill="var(--fg)"/>
+        </svg>
+        <div class="status">
+          <span class="phase" id="phase">READY</span>
+          <span class="result" id="result">Last test 21:02 on channel 36. Seven neighbours share it after 19:00.</span>
+        </div>
+        <button class="btn primary" id="speedBtn" type="button">Run speed test</button>
+      </div>
+
+      <div class="cells two" style="border-top:1px solid var(--line)">
+        <div class="card">
+          <div class="card-h"><h3>Exposure map</h3><span class="meta tnum" id="openCount">4 open</span></div>
+          <canvas id="expCanvas" role="img" aria-label="Polar map of devices and open ports around your router"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--fg)"></i>Device</span>
+            <span><i style="background:var(--warn)"></i>Needs a look</span>
+            <span><i style="background:var(--danger)"></i>Open backdoor</span>
+            <span><i style="background:var(--accent)"></i>Sealed</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Deep scan</h3><button class="btn sm" id="scanBtn" type="button">Run deep scan</button></div>
+          <div class="progress" aria-hidden="true"><span id="scanBar"></span></div>
+          <ul class="scan" id="scanList"></ul>
+        </div>
+      </div>
+
+      <div class="cells two" style="border-top:1px solid var(--line)">
+        <div class="card">
+          <div class="card-h"><h3>Statistics</h3>
+            <div class="legend"><span><i style="background:var(--accent)"></i>Download</span><span><i style="background:var(--muted)"></i>Upload</span><span>Last 30 s</span></div>
+          </div>
+          <canvas id="chartCanvas" role="img" aria-label="Live throughput chart"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Channel alignment</h3><span class="meta">5 GHz &middot; 80 MHz</span></div>
+          <div class="chan">
+            <div class="ring">
+              <svg id="chSvg" viewBox="0 0 320 320" role="img" aria-label="Wi-Fi channel ring"></svg>
+              <div class="center"><b id="chNum">36</b><span id="chSub">7 neighbours &middot; congested</span></div>
+            </div>
+            <div class="chan-side">
+              <div class="kv"><span>Current</span><span id="kvCur">Channel 36</span></div>
+              <div class="kv"><span>Neighbours</span><span id="kvNb">7 networks</span></div>
+              <div class="kv"><span>Best</span><span>Channel 149</span></div>
+              <div class="kv"><span>Expected</span><span class="gain" id="kvGain">+39% throughput</span></div>
+              <button class="btn signal" id="optBtn" type="button">Optimise channel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cells ai" style="border-top:1px solid var(--line)">
+        <div class="card">
+          <div class="card-h">
+            <h3>AI watch</h3>
+            <div class="tabs" role="tablist" aria-label="Agent">
+              <button class="tab" role="tab" id="tab-claude" data-agent="claude" aria-selected="true"><i style="background:#d97757"></i>Claude</button>
+              <button class="tab" role="tab" id="tab-gpt" data-agent="gpt" aria-selected="false"><i style="background:var(--ok)"></i>ChatGPT</button>
+              <button class="tab" role="tab" id="tab-grok" data-agent="grok" aria-selected="false"><i style="background:var(--muted)"></i>Grok</button>
+            </div>
+          </div>
+          <div class="log" id="aiLog" role="log" aria-live="polite"></div>
+          <form class="ask" id="aiForm">
+            <label class="sr" for="aiInput">Ask the agent about your network</label>
+            <input id="aiInput" autocomplete="off" placeholder="Ask about speed, TV box, 7547">
+            <button class="btn primary sm" type="submit">Send</button>
+          </form>
+          <div class="chips">
+            <button class="chip" type="button" data-q="Why is my Wi-Fi slow in the evening?">Why is Wi-Fi slow at night?</button>
+            <button class="chip" type="button" data-q="What is port 7547 and should I close it?">What is port 7547?</button>
+            <button class="chip" type="button" data-q="Who is the new device?">Who is the new device?</button>
+          </div>
+        </div>
+        <aside class="card" aria-label="Approvals and agent rules">
+          <div class="pending" id="pending">
+            <p class="eyebrow" style="color:var(--hi)">Awaiting your approval</p>
+            <p><b>Block the analytics host for tv-box.lan</b></p>
+            <p class="fine">Proposed by Claude, checked by ChatGPT. Streaming apps keep working.</p>
+            <div class="row-btns"><button class="btn primary sm" id="approveBtn" type="button">Approve</button><button class="btn sm" id="explainBtn" type="button">Explain</button></div>
+          </div>
+          <div>
+            <label class="switch" for="r1"><span>Watch traffic 24/7</span><input type="checkbox" id="r1" role="switch" checked></label>
+            <label class="switch" for="r2"><span>Auto-block known trackers</span><input type="checkbox" id="r2" role="switch" checked></label>
+            <label class="switch" for="r3"><span>Change the router without asking</span><input type="checkbox" id="r3" role="switch"></label>
+            <p class="warnline" id="r3note" hidden>Agents will apply fixes on their own. Every change can be undone for 24 hours.</p>
+          </div>
+          <p class="fine">Only flow metadata leaves this computer: host, port, bytes and timing. Your API keys stay in macOS Keychain or Windows Credential Manager.</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="how" aria-labelledby="p1">
+  <div class="wrap">
+    <div class="copy">
+      <p class="eyebrow">01 &middot; Shield</p>
+      <h2 id="p1">Close every backdoor.</h2>
+      <p>Most home routers arrive with a remote-management channel for your provider, a legacy shell and a guessable setup PIN. Bastion lists each one in plain words and closes it from your desk.</p>
+      <dl class="spec">
+        <div><dt>Remote channels</dt><dd>TR-069 / CWMP, TR-369 / USP, UPnP IGD</dd></div>
+        <div><dt>Legacy services</dt><dd>Telnet, SSH on default port, WPS PIN</dd></div>
+        <div><dt>DNS</dt><dd>DNS-over-HTTPS or DNS-over-TLS, your resolver</dd></div>
+        <div><dt>Privacy</dt><dd><span class="mono">_nomap</span> network names, private Wi-Fi address check</dd></div>
+        <div><dt>Router access</dt><dd>Local only. Bastion talks to the router inside your network.</dd></div>
+      </dl>
+    </div>
+    <div class="visual">
+      <svg id="routerSvg" viewBox="0 0 520 340" role="img" aria-label="Router with port 7547 highlighted">
+        <defs>
+          <linearGradient id="rgTop" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a2130"/><stop offset="1" stop-color="#0a0e15"/></linearGradient>
+          <linearGradient id="rgFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121822"/><stop offset="1" stop-color="#05070b"/></linearGradient>
+          <radialGradient id="rgGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="var(--accent)" stop-opacity=".45"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></radialGradient>
+        </defs>
+        <ellipse cx="190" cy="268" rx="190" ry="34" fill="url(#rgGlow)"/>
+        <g stroke="var(--fg)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".85">
+          <path d="M70 162 L58 40"/><path d="M130 150 L124 24"/><path d="M190 138 L196 30"/><path d="M285 152 L300 46"/>
+        </g>
+        <g fill="var(--fg)"><circle cx="58" cy="40" r="3"/><circle cx="124" cy="24" r="3"/><circle cx="196" cy="30" r="3"/><circle cx="300" cy="46" r="3"/></g>
+        <polygon points="30,170 230,130 340,175 140,215" fill="url(#rgTop)" stroke="var(--line2)"/>
+        <polygon points="30,170 140,215 140,252 30,207" fill="#070a10" stroke="var(--line2)"/>
+        <polygon points="140,215 340,175 340,212 140,252" fill="url(#rgFront)" stroke="var(--line2)"/>
+        <path d="M60 172 L230 138 M90 176 L260 142 M120 180 L290 146" stroke="var(--line)" />
+        <g>
+          <circle class="led" cx="162" cy="227" r="2.4" fill="var(--hi)"/>
+          <circle class="led" cx="178" cy="224" r="2.4" fill="var(--hi)" style="animation-delay:.4s"/>
+          <circle class="led" cx="194" cy="221" r="2.4" fill="var(--fg)" style="animation-delay:.9s"/>
+          <circle class="led" cx="210" cy="218" r="2.4" fill="var(--fg)" style="animation-delay:1.3s"/>
+        </g>
+        <g fill="#000" stroke="var(--line2)">
+          <rect x="262" y="204" width="13" height="8"/><rect x="282" y="200" width="13" height="8"/><rect x="302" y="196" width="13" height="8"/><rect x="322" y="192" width="11" height="8"/>
+        </g>
+        <g id="p7547" class="port-open">
+          <circle class="pulse" cx="327" cy="196" r="8" fill="none" stroke="var(--danger)" stroke-width="1.5"/>
+          <circle id="p7547dot" cx="327" cy="196" r="4" fill="var(--danger)"/>
+          <polyline points="327,196 360,96 372,96" fill="none" stroke="var(--line2)"/>
+          <text x="378" y="92" fill="var(--fg)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="15" letter-spacing="2">7547/TCP</text>
+          <text id="p7547txt" x="378" y="110" fill="var(--danger-text)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="11" letter-spacing="2.4">TR-069 &#183; OPEN TO ISP</text>
+        </g>
+        <g>
+          <polyline points="308,200 352,150 372,150" fill="none" stroke="var(--line2)"/>
+          <circle cx="308" cy="200" r="3" fill="var(--accent)"/>
+          <text x="378" y="146" fill="var(--fg)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="15" letter-spacing="2">23/TCP</text>
+          <text x="378" y="164" fill="var(--hi)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="11" letter-spacing="2.4">TELNET &#183; WATCHED</text>
+        </g>
+        <g>
+          <polyline points="288,204 352,284 372,284" fill="none" stroke="var(--line2)"/>
+          <circle cx="288" cy="204" r="3" fill="var(--accent)"/>
+          <text x="378" y="280" fill="var(--fg)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="15" letter-spacing="2">1900/UDP</text>
+          <text x="378" y="298" fill="var(--hi)" font-family="Barlow Semi Condensed, sans-serif" font-weight="600" font-size="11" letter-spacing="2.4">UPNP &#183; REVIEWED</text>
+        </g>
+      </svg>
+      <div class="cap"><span class="meta">Gateway 192.168.1.1</span><button class="btn sm danger" id="sealBtn" type="button">Seal port 7547</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="speed" aria-labelledby="p2">
+  <div class="wrap">
+    <div class="copy">
+      <p class="eyebrow">02 &middot; Boost</p>
+      <h2 id="p2">Faster Wi-Fi. Same router.</h2>
+      <p>In an apartment building your router fights a dozen neighbours for the same slice of air. Bastion surveys the spectrum, picks the quietest channel and moves your network there.</p>
+      <dl class="spec">
+        <div><dt>Bands</dt><dd>2.4 GHz &middot; 5 GHz &middot; 6 GHz</dd></div>
+        <div><dt>Channel survey</dt><dd>Every 10 minutes, in the background</dd></div>
+        <div><dt>Example result</dt><dd class="tnum">296 &rarr; 412 Mbps on channel 149 (+39%)</dd></div>
+        <div><dt>Dead zones</dt><dd>Signal map from a two-minute walk around your home</dd></div>
+        <div><dt>Hardware</dt><dd>None. Works with the router you have.</dd></div>
+      </dl>
+    </div>
+    <div class="visual">
+      <canvas id="specCanvas" role="img" aria-label="5 GHz spectrum: your network moves from crowded channel 36 to clear channel 149"></canvas>
+      <div class="cap"><span class="meta">5 GHz spectrum &middot; live survey</span><span class="meta" style="color:var(--hi)">CH 36 &rarr; 149</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="agents" aria-labelledby="p3">
+  <div class="wrap">
+    <div class="copy">
+      <p class="eyebrow">03 &middot; Agents</p>
+      <h2 id="p3">AI on watch, 24/7.</h2>
+      <p>Connect the models you already pay for. They read the shape of your traffic, flag what looks wrong and propose a fix. Nothing changes on the router until you approve it.</p>
+      <dl class="spec">
+        <div><dt>Models</dt><dd>Claude &middot; ChatGPT &middot; Grok</dd></div>
+        <div><dt>Keys</dt><dd>Your own, stored in the system keychain</dd></div>
+        <div><dt>What is sent</dt><dd>Flow metadata only. Never page content.</dd></div>
+        <div><dt>Actions</dt><dd>Proposed by agents. Approved by you.</dd></div>
+        <div><dt>Second opinion</dt><dd>One agent can check another before you decide</dd></div>
+      </dl>
+    </div>
+    <div class="visual">
+      <canvas id="agentCanvas" role="img" aria-label="Three agents orbit the router and stop suspicious connections"></canvas>
+      <div class="cap"><span class="meta tnum" id="agentStat">Inspected 0 &middot; held 0</span><span class="meta">Simulation</span></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer id="download">
+  <div class="wrap">
+    <p class="eyebrow">Free and open source &middot; bring your own AI keys</p>
+    <p class="big" aria-label="Bastion">BASTION</p>
+    <div class="dl">
+      <button class="btn primary" type="button" data-dl>Download for macOS</button>
+      <button class="btn" type="button" data-dl>Download for Windows</button>
+      <button class="btn signal" type="button" data-dl>View on GitHub</button>
+    </div>
+    <p class="fine" id="dlNote" style="margin-top:18px" hidden>Builds arrive with the first release. The repository link goes here once it is public.</p>
+    <div class="foot"><span>Bastion &middot; concept C &middot; Uplink</span><span>macOS 13+ &middot; Windows 10 / 11</span></div>
+  </div>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const TAU = Math.PI * 2, DEG = Math.PI / 180;
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const root = getComputedStyle(document.documentElement);
+const tok = n => root.getPropertyValue(n).trim();
+const C = {
+  bg: tok('--bg'), fg: tok('--fg'), muted: tok('--muted'), dim: tok('--dim'),
+  accent: tok('--accent'), hi: tok('--hi'), danger: tok('--danger'), warn: tok('--warn'), ok: tok('--ok'),
+  sun: tok('--sun'), atmo: tok('--atmo'), city: tok('--city'), earth: tok('--earth'), earthLit: tok('--earth-lit')
+};
+function rgba(hex, a) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+function mulberry(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const FONT_D = '"Barlow Semi Condensed", "Barlow", Arial, sans-serif';
+
+/* shared app state */
+const S = {
+  optimised: false, testing: false, scanning: false, moving: false, tvBlocked: false, watch: true,
+  liveDown: 0, liveUp: 0,
+  found: { tr069: true, telnet: true, wps: true, upnp: true },
+  fixed: {}
+};
+
+/* ---------- one animation loop for every canvas ---------- */
+const scenes = [];
+let T = 0, last = performance.now(), raf = 0;
+function sizeScene(s) {
+  const r = s.c.getBoundingClientRect();
+  const d = Math.min(2, window.devicePixelRatio || 1);
+  s.w = r.width; s.h = r.height;
+  s.c.width = Math.max(1, Math.round(r.width * d));
+  s.c.height = Math.max(1, Math.round(r.height * d));
+  s.ctx.setTransform(d, 0, 0, d, 0, 0);
+  if (s.init) s.init(s);
+  if (RM) s.draw(s, 8, 0);
+}
+function addScene(canvas, init, draw) {
+  if (!canvas) return null;
+  const s = { c: canvas, ctx: canvas.getContext('2d'), w: 0, h: 0, init, draw, vis: true };
+  scenes.push(s);
+  new ResizeObserver(() => sizeScene(s)).observe(canvas);
+  new IntersectionObserver(es => { s.vis = es[es.length - 1].isIntersecting; }, { rootMargin: '120px' }).observe(canvas);
+  return s;
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now; T += dt;
+  for (const s of scenes) if (s.vis && s.w > 0) s.draw(s, T, dt);
+  raf = requestAnimationFrame(frame);
+}
+function start() { if (!RM && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
+document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+function redraw() { if (RM) for (const s of scenes) if (s.w > 0) s.draw(s, 8, 0); }
+
+/* ---------- HERO: earth, sunrise limb, constellation, beam to router ---------- */
+function satPos(s, sat, t) {
+  const u = sat.u0 + sat.w * t, r = s.R * sat.k;
+  const x = r * Math.cos(u), z = r * Math.sin(u);
+  const y1 = -z * Math.sin(sat.i), z1 = z * Math.cos(sat.i);
+  const cO = Math.cos(sat.O), sO = Math.sin(sat.O);
+  const x2 = x * cO + z1 * sO, z2 = -x * sO + z1 * cO;
+  return { X: s.cx + x2, Y: s.cy - y1, Z: z2 };
+}
+function satVisible(s, p) {
+  if (p.X < -30 || p.X > s.w + 30 || p.Y < -30 || p.Y > s.h + 30) return false;
+  if (p.Z < 0) { const dx = p.X - s.cx, dy = p.Y - s.cy; if (dx * dx + dy * dy < s.R * s.R) return false; }
+  return true;
+}
+function heroInit(s) {
+  const copy = $('#heroCopy');
+  const top = copy.offsetTop + copy.offsetHeight + 70;
+  const w = s.w, h = s.h, mob = w < 700;
+  s.R = mob ? w * 1.9 : Math.max(w * 1.05, 1000);
+  s.cx = mob ? w * 0.5 : w * 0.56;
+  s.cy = top + s.R;
+  s.th = -Math.PI / 2 + (mob ? 0.2 : 0.34);
+  s.sx = s.cx + s.R * Math.cos(s.th); s.sy = s.cy + s.R * Math.sin(s.th);
+  const ra = -Math.PI / 2 - (mob ? 0.13 : 0.2), rr = s.R * 0.985;
+  s.rx = s.cx + rr * Math.cos(ra); s.ry = s.cy + rr * Math.sin(ra);
+  const rng = mulberry(11);
+  s.stars = [];
+  const nStars = Math.round(w * h / 4200);
+  for (let i = 0; i < nStars; i++) {
+    const x = rng() * w, y = rng() * h, dx = x - s.cx, dy = y - s.cy;
+    if (dx * dx + dy * dy < s.R * s.R * 1.01) continue;
+    s.stars.push({ x, y, r: rng() * 1.2 + 0.3, a: rng() * 0.7 + 0.2, f: rng() * 2 + 0.4, p: rng() * TAU });
+  }
+  s.cities = [];
+  const capH = h - top, half = Math.acos(Math.max(-1, Math.min(1, (s.R - capH) / s.R)));
+  for (let c = 0; c < 70; c++) {
+    const a = -Math.PI / 2 + (rng() * 2 - 1) * half, rho = 0.55 + rng() * 0.44;
+    const n = 3 + Math.floor(rng() * 16);
+    for (let j = 0; j < n; j++) {
+      const aa = a + (rng() - 0.5) * 0.035, r2 = Math.min(0.997, rho + (rng() - 0.5) * 0.02);
+      const x = s.cx + r2 * s.R * Math.cos(aa), y = s.cy + r2 * s.R * Math.sin(aa);
+      if (y > h || x < 0 || x > w) continue;
+      if (Math.hypot(x - s.sx, y - s.sy) < s.R * 0.35) continue;
+      s.cities.push({ x, y, r: rng() < 0.15 ? 1.8 : 1.1, a: 0.25 + rng() * 0.6, p: rng() * TAU });
+    }
+  }
+  s.sats = [];
+  const planes = 9;
+  for (let p = 0; p < planes; p++) {
+    const i = 0.95 + rng() * 0.5, O = (p / (planes - 1) - 0.5) * 1.7 + (rng() - 0.5) * 0.1;
+    const k = [1.035, 1.06, 1.09][p % 3], n = 18, sp = 0.055 * (1.06 / k);
+    for (let j = 0; j < n; j++) s.sats.push({ i, O, k, u0: j / n * TAU + p * 0.37, w: sp });
+  }
+  s.links = []; s.lastLink = 0; s.serv = null; s.visList = [];
+}
+function heroDraw(s, t) {
+  const { ctx, w, h, cx, cy, R } = s;
+  if (!s.sats) return;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
+  for (const st of s.stars) {
+    ctx.globalAlpha = st.a * (0.6 + 0.4 * Math.sin(t * st.f + st.p));
+    ctx.fillStyle = C.fg; ctx.fillRect(st.x, st.y, st.r, st.r);
+  }
+  ctx.globalAlpha = 1;
+
+  // earth body
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fillStyle = C.earth; ctx.fill(); ctx.clip();
+  let g = ctx.createRadialGradient(s.sx, s.sy, 0, s.sx, s.sy, R * 0.95);
+  g.addColorStop(0, rgba(C.earthLit, 0.95)); g.addColorStop(0.1, rgba(C.earthLit, 0.5));
+  g.addColorStop(0.4, rgba(C.earthLit, 0.09)); g.addColorStop(1, rgba(C.earthLit, 0));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  g = ctx.createRadialGradient(cx, cy, R * 0.93, cx, cy, R);
+  g.addColorStop(0, rgba(C.atmo, 0)); g.addColorStop(1, rgba(C.atmo, 0.28));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const c of s.cities) {
+    ctx.fillStyle = rgba(C.city, c.a * (0.82 + 0.18 * Math.sin(t * 1.7 + c.p)));
+    ctx.fillRect(c.x, c.y, c.r, c.r);
+  }
+  ctx.restore();
+
+  // atmosphere band + sunrise
+  ctx.globalCompositeOperation = 'lighter';
+  g = ctx.createRadialGradient(cx, cy, R * 0.997, cx, cy, R * 1.05);
+  g.addColorStop(0, rgba(C.atmo, 0.6)); g.addColorStop(0.25, rgba(C.atmo, 0.24)); g.addColorStop(1, rgba(C.atmo, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, TAU); ctx.fill();
+  const pulse = 0.93 + 0.07 * Math.sin(t * 0.6);
+  for (let a = s.th - 1.25; a < s.th + 1.25; a += 0.014) {
+    const d = (a - s.th) / 0.34, I = Math.exp(-d * d) * pulse;
+    if (I < 0.02) continue;
+    ctx.strokeStyle = rgba(C.atmo, I * 0.4); ctx.lineWidth = 3 + 18 * I;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.008, a, a + 0.016); ctx.stroke();
+    ctx.strokeStyle = rgba(C.sun, Math.min(1, I * 1.05)); ctx.lineWidth = 1 + 3 * I;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.001, a, a + 0.016); ctx.stroke();
+  }
+  const gr = R * 0.5;
+  g = ctx.createRadialGradient(s.sx, s.sy, 0, s.sx, s.sy, gr);
+  g.addColorStop(0, rgba(C.sun, pulse)); g.addColorStop(0.035, rgba(C.sun, 0.9));
+  g.addColorStop(0.1, rgba(C.hi, 0.5)); g.addColorStop(0.32, rgba(C.atmo, 0.14)); g.addColorStop(1, rgba(C.atmo, 0));
+  ctx.fillStyle = g; ctx.fillRect(s.sx - gr, s.sy - gr, gr * 2, gr * 2);
+  ctx.save();
+  ctx.translate(s.sx, s.sy); ctx.rotate(s.th + Math.PI / 2); ctx.scale(1, 0.022);
+  const sr = Math.max(w, 600) * 0.75;
+  g = ctx.createRadialGradient(0, 0, 0, 0, 0, sr);
+  g.addColorStop(0, rgba(C.sun, 0.95)); g.addColorStop(0.18, rgba(C.hi, 0.4)); g.addColorStop(1, rgba(C.atmo, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, sr, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  // satellites + trails
+  s.visList.length = 0;
+  ctx.lineWidth = 1;
+  for (const sat of s.sats) {
+    const p = satPos(s, sat, t);
+    if (!satVisible(s, p)) continue;
+    let prev = p;
+    for (let k = 1; k <= 7; k++) {
+      const q = satPos(s, sat, t - k * 0.55);
+      if (!satVisible(s, q)) break;
+      ctx.strokeStyle = rgba(C.fg, 0.2 * (1 - k / 8));
+      ctx.beginPath(); ctx.moveTo(prev.X, prev.Y); ctx.lineTo(q.X, q.Y); ctx.stroke();
+      prev = q;
+    }
+    ctx.fillStyle = rgba(C.fg, 0.95); ctx.fillRect(p.X - 1, p.Y - 1, 2, 2);
+    ctx.fillStyle = rgba(C.fg, 0.45); ctx.fillRect(p.X - 4, p.Y - 0.4, 8, 0.8);
+    s.visList.push({ sat, p });
+  }
+
+  // laser links between neighbours
+  if (t - s.lastLink > 0.4 && s.visList.length > 3) {
+    s.lastLink = t;
+    const a = s.visList[Math.floor(Math.random() * s.visList.length)];
+    let best = null, bd = 1e9;
+    for (const b of s.visList) {
+      if (b === a) continue;
+      const d = Math.hypot(a.p.X - b.p.X, a.p.Y - b.p.Y);
+      if (d > 40 && d < bd) { bd = d; best = b; }
+    }
+    if (best && bd < 320 && s.links.length < 8) s.links.push({ a: a.sat, b: best.sat, t0: t });
+  }
+  for (let i = s.links.length - 1; i >= 0; i--) {
+    const L = s.links[i], age = (t - L.t0) / 1.8;
+    const pa = satPos(s, L.a, t), pb = satPos(s, L.b, t);
+    if (age >= 1 || !satVisible(s, pa) || !satVisible(s, pb)) { s.links.splice(i, 1); continue; }
+    const al = Math.sin(Math.PI * age);
+    ctx.strokeStyle = rgba(C.accent, al * 0.85); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pa.X, pa.Y); ctx.lineTo(pb.X, pb.Y); ctx.stroke();
+    const k = (age * 2) % 1;
+    ctx.fillStyle = rgba(C.hi, al);
+    ctx.beginPath(); ctx.arc(pa.X + (pb.X - pa.X) * k, pa.Y + (pb.Y - pa.Y) * k, 1.6, 0, TAU); ctx.fill();
+  }
+
+  // serving satellite -> router beam
+  let best = null, bd = 1e9, cur = null;
+  for (const v of s.visList) {
+    if (v.p.Y > s.ry - 50) continue;
+    const d = Math.hypot(v.p.X - s.rx, v.p.Y - s.ry);
+    if (d < bd) { bd = d; best = v; }
+    if (v.sat === s.serv) cur = v;
+  }
+  if (!cur || (best && Math.hypot(cur.p.X - s.rx, cur.p.Y - s.ry) > bd * 1.5)) { cur = best; s.serv = best ? best.sat : null; }
+  if (cur) {
+    const p = cur.p;
+    ctx.strokeStyle = rgba(C.accent, 0.16); ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(p.X, p.Y); ctx.lineTo(s.rx, s.ry); ctx.stroke();
+    const lg = ctx.createLinearGradient(p.X, p.Y, s.rx, s.ry);
+    lg.addColorStop(0, rgba(C.hi, 0.95)); lg.addColorStop(1, rgba(C.accent, 0.95));
+    ctx.strokeStyle = lg; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(p.X, p.Y); ctx.lineTo(s.rx, s.ry); ctx.stroke();
+    for (let k = 0; k < 3; k++) {
+      const f = (t * 0.7 + k / 3) % 1;
+      ctx.fillStyle = rgba(C.fg, 0.9);
+      ctx.beginPath(); ctx.arc(p.X + (s.rx - p.X) * f, p.Y + (s.ry - p.Y) * f, 1.8, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = rgba(C.hi, 0.9); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(p.X, p.Y, 6, 0, TAU); ctx.stroke();
+  }
+
+  // router on the surface
+  for (let k = 0; k < 3; k++) {
+    const ph = (t * 0.55 + k / 3) % 1;
+    ctx.strokeStyle = rgba(C.accent, (1 - ph) * 0.8); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(s.rx, s.ry, 4 + ph * 46, (4 + ph * 46) * 0.3, 0, 0, TAU); ctx.stroke();
+  }
+  g = ctx.createRadialGradient(s.rx, s.ry, 0, s.rx, s.ry, 40);
+  g.addColorStop(0, rgba(C.accent, 0.8)); g.addColorStop(1, rgba(C.accent, 0));
+  ctx.fillStyle = g; ctx.fillRect(s.rx - 40, s.ry - 40, 80, 80);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = C.fg; ctx.beginPath(); ctx.arc(s.rx, s.ry, 2.8, 0, TAU); ctx.fill();
+  const lx = s.rx + 56, ly = s.ry - 54;
+  ctx.strokeStyle = rgba(C.fg, 0.7); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(s.rx + 6, s.ry - 6); ctx.lineTo(lx, ly); ctx.lineTo(lx + 150, ly); ctx.stroke();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillStyle = C.fg; ctx.font = '600 13px ' + FONT_D; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('YOUR ROUTER', lx, ly - 8);
+  ctx.fillStyle = C.hi; ctx.font = '600 10px ' + FONT_D;
+  ctx.fillText('192.168.1.1 · LINK SECURED', lx, ly + 16);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+}
+addScene($('#heroCanvas'), heroInit, heroDraw);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { const s = scenes[0]; if (s) sizeScene(s); });
+
+/* ---------- speed test ---------- */
+const gArc = $('#gArc'), needle = $('#needle');
+(function buildTicks() {
+  const g = $('#gTicks'), NS = 'http://www.w3.org/2000/svg';
+  [0, 50, 100, 250, 500, 1000].forEach(v => {
+    const f = Math.sqrt(v / 1000), a = Math.PI + f * Math.PI;
+    const x1 = 120 + 92 * Math.cos(a), y1 = 120 + 92 * Math.sin(a);
+    const x2 = 120 + 86 * Math.cos(a), y2 = 120 + 86 * Math.sin(a);
+    const ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('x1', x1); ln.setAttribute('y1', y1); ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
+    ln.setAttribute('stroke', 'var(--muted)'); g.appendChild(ln);
+    const tx = document.createElementNS(NS, 'text');
+    tx.setAttribute('x', 120 + 74 * Math.cos(a)); tx.setAttribute('y', 120 + 74 * Math.sin(a) + 3);
+    tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('fill', 'var(--muted)');
+    tx.setAttribute('font-size', '9'); tx.setAttribute('font-family', 'Barlow Semi Condensed, sans-serif');
+    tx.textContent = v === 1000 ? '1G' : String(v); g.appendChild(tx);
+  });
+})();
+function setNeedle(v) {
+  const f = Math.sqrt(Math.max(0, Math.min(1000, v)) / 1000);
+  needle.setAttribute('transform', 'rotate(' + (-90 + 180 * f).toFixed(2) + ' 120 120)');
+  gArc.setAttribute('stroke-dashoffset', (314.16 * (1 - f)).toFixed(1));
+}
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (RM) { fn(1); res(); return; }
+    const t0 = performance.now();
+    const step = now => { const p = Math.min(1, (now - t0) / ms); fn(p); p < 1 ? requestAnimationFrame(step) : res(); };
+    requestAnimationFrame(step);
+  });
+}
+const vDown = $('#vDown'), vUp = $('#vUp'), vPing = $('#vPing'), phase = $('#phase'), result = $('#result'), speedBtn = $('#speedBtn');
+async function speedTest() {
+  if (S.testing || S.moving) return;
+  S.testing = true; speedBtn.disabled = true; speedBtn.textContent = 'Testing';
+  optBtn.disabled = true;
+  const opt = S.optimised;
+  const tDown = opt ? 412.6 : 296.0, tUp = opt ? 98.4 : 84.1, tPing = opt ? 9 : 14;
+  phase.textContent = 'LATENCY';
+  result.textContent = 'Measuring round trip to the nearest test server.';
+  await tween(900, p => { vPing.textContent = Math.round(48 - (48 - tPing) * p + (1 - p) * Math.random() * 10); });
+  phase.textContent = 'DOWNLOAD';
+  result.textContent = 'Pulling data through channel ' + (opt ? '149' : '36') + '.';
+  await tween(3200, p => {
+    const e = 1 - Math.pow(1 - p, 3), v = tDown * e * (1 + (1 - p) * 0.09 * Math.sin(p * 48));
+    S.liveDown = v; setNeedle(v); vDown.textContent = v.toFixed(1);
+  });
+  await tween(450, p => setNeedle(tDown * (1 - p)));
+  phase.textContent = 'UPLOAD';
+  await tween(2400, p => {
+    const e = 1 - Math.pow(1 - p, 3), v = tUp * e * (1 + (1 - p) * 0.12 * Math.sin(p * 40));
+    S.liveUp = v; setNeedle(v); vUp.textContent = v.toFixed(1);
+  });
+  vDown.textContent = tDown.toFixed(1); vUp.textContent = tUp.toFixed(1); vPing.textContent = tPing;
+  setNeedle(tDown);
+  phase.textContent = 'COMPLETE';
+  const gain = Math.round((tDown / 296 - 1) * 100);
+  result.textContent = opt
+    ? tDown.toFixed(1) + ' down, ' + tUp.toFixed(1) + ' up on channel 149. That is ' + gain + '% faster than on channel 36.'
+    : tDown.toFixed(1) + ' down, ' + tUp.toFixed(1) + ' up. Channel 36 is crowded. Optimise the channel below and test again.';
+  if (opt) $('#kvGain').textContent = '+' + gain + '% measured';
+  S.testing = false; S.liveDown = 0; S.liveUp = 0;
+  speedBtn.disabled = false; speedBtn.textContent = 'Run again';
+  optBtn.disabled = S.optimised;
+  refreshChart();
+}
+speedBtn.addEventListener('click', speedTest);
+setNeedle(296);
+
+/* ---------- uptime ---------- */
+let up = 14 * 86400 + 6 * 3600 + 12 * 60 + 44;
+const upEl = $('#uptime');
+setInterval(() => {
+  up++;
+  const d = Math.floor(up / 86400), hh = Math.floor(up % 86400 / 3600), mm = Math.floor(up % 3600 / 60), ss = up % 60;
+  upEl.textContent = 'Uptime ' + d + 'd ' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}, 1000);
+
+/* ---------- exposure map ---------- */
+const expRng = mulberry(5);
+const devices = [];
+for (let i = 0; i < 26; i++) devices.push({ ang: expRng() * TAU, r: 0.18 + expRng() * 0.6 });
+const special = [
+  { ang: 2.35, r: 0.5, col: 'warn', label: 'TV-BOX · 1.2 GB WHILE OFF' },
+  { ang: 5.45, r: 0.7, col: 'warn', hollow: true, label: 'NEW · RANDOM MAC' }
+];
+const threats = [
+  { id: 'tr069', ang: 0.62, label: 'TR-069 · 7547/TCP', crit: true },
+  { id: 'telnet', ang: 1.45, label: 'TELNET · 23' },
+  { id: 'upnp', ang: 3.5, label: 'UPNP · 3 PORTS' },
+  { id: 'wps', ang: 4.45, label: 'WPS PIN' }
+];
+function expInit(s) { s.cx = s.w / 2; s.cy = s.h / 2; s.R = Math.min(s.w, s.h) * 0.36; }
+function expDraw(s, t) {
+  const { ctx, w, h, cx, cy, R } = s;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 1;
+  [0.25, 0.5, 0.75, 1].forEach(k => {
+    ctx.strokeStyle = rgba(C.fg, k === 1 ? 0.4 : k === 0.75 ? 0.2 : 0.11);
+    ctx.setLineDash(k === 1 || k === 0.75 ? [] : [2, 5]);
+    ctx.beginPath(); ctx.arc(cx, cy, R * k, 0, TAU); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  for (let i = 0; i < 72; i++) {
+    const a = i * 5 * DEG, long = i % 6 === 0, r0 = R + 6, r1 = R + (long ? 16 : 10);
+    ctx.strokeStyle = rgba(C.fg, long ? 0.6 : 0.22);
+    ctx.beginPath(); ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a)); ctx.lineTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a)); ctx.stroke();
+  }
+  ctx.strokeStyle = rgba(C.fg, 0.07);
+  ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.font = '600 11px ' + FONT_D; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [['N', -90], ['E', 0], ['S', 90], ['W', 180]].forEach(([l, d]) => { const a = d * DEG; ctx.fillText(l, cx + (R + 30) * Math.cos(a), cy + (R + 30) * Math.sin(a)); });
+  ctx.font = '600 9px ' + FONT_D; ctx.textAlign = 'left'; ctx.fillStyle = C.dim;
+  ctx.fillText('LAN', cx + R * 0.5 + 4, cy - 8); ctx.fillText('WAN', cx + R + 4 - 30, cy - 8);
+  // sweep
+  const a = RM ? -0.6 : (t * 0.9) % TAU;
+  for (let k = 0; k < 28; k++) {
+    const a0 = a - (k + 1) * 0.035;
+    ctx.fillStyle = rgba(C.accent, 0.2 * (1 - k / 28));
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + 0.037); ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = rgba(C.hi, 0.9); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a)); ctx.stroke();
+  const glow = ang => { let d = (a - ang) % TAU; if (d < 0) d += TAU; return Math.exp(-d * 1.4); };
+  for (const d of devices) {
+    const gl = glow(d.ang), x = cx + d.r * R * Math.cos(d.ang), y = cy + d.r * R * Math.sin(d.ang);
+    ctx.fillStyle = rgba(C.fg, 0.3 + 0.7 * gl);
+    ctx.beginPath(); ctx.arc(x, y, 1.8 + gl * 1.2, 0, TAU); ctx.fill();
+  }
+  const label = (x, y, txt, col) => {
+    const right = x >= cx, tw = ctx.measureText(txt).width;
+    const tx = right ? Math.min(x + 10, w - 4 - tw) : Math.max(x - 10, 4 + tw);
+    ctx.textAlign = right ? 'left' : 'right'; ctx.fillStyle = col;
+    ctx.fillText(txt, tx, y - 10);
+  };
+  const showLabels = w > 360;
+  ctx.font = '600 9.5px ' + FONT_D; ctx.textBaseline = 'middle';
+  for (const p of special) {
+    const gl = glow(p.ang), x = cx + p.r * R * Math.cos(p.ang), y = cy + p.r * R * Math.sin(p.ang);
+    ctx.fillStyle = rgba(C.warn, 0.55 + 0.45 * gl); ctx.strokeStyle = C.warn; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 3.6, 0, TAU); p.hollow ? ctx.stroke() : ctx.fill();
+    if (showLabels) label(x, y, p.label, C.warn);
+  }
+  for (const p of threats) {
+    if (!S.found[p.id]) continue;
+    const x = cx + R * Math.cos(p.ang), y = cy + R * Math.sin(p.ang), fixed = !!S.fixed[p.id];
+    if (fixed) {
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.stroke();
+      if (showLabels) label(x, y, p.label.split(' ·')[0] + ' · SEALED', C.hi);
+      continue;
+    }
+    const col = p.crit ? C.danger : C.warn;
+    if (p.crit) {
+      for (let k = 0; k < 2; k++) {
+        const ph = RM ? 0.4 : (t * 0.8 + k / 2) % 1;
+        ctx.strokeStyle = rgba(col, (1 - ph) * 0.9); ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(x, y, 5 + ph * 22, 0, TAU); ctx.stroke();
+      }
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 26);
+      g.addColorStop(0, rgba(col, 0.55)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.fillRect(x - 26, y - 26, 52, 52);
+    }
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, p.crit ? 5 : 3.6, 0, TAU); ctx.fill();
+    if (showLabels) label(x, y, p.label, col);
+  }
+  ctx.fillStyle = C.bg; ctx.strokeStyle = C.fg; ctx.lineWidth = 1.5;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-6, -6, 12, 12); ctx.strokeRect(-6, -6, 12, 12); ctx.restore();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+addScene($('#expCanvas'), expInit, expDraw);
+
+/* ---------- deep scan ---------- */
+const checks = [
+  { id: 'tr069', sev: 'crit', tag: 'CRITICAL', act: 'Isolate', title: 'Remote management (TR-069 / CWMP)', text: 'Port 7547 is reachable from the internet. Your provider can change settings and firmware without asking.' },
+  { id: 'telnet', sev: 'high', tag: 'HIGH', act: 'Close', title: 'Telnet shell', text: 'Port 23 was left open on the LAN by the vendor.' },
+  { id: 'wps', sev: 'high', tag: 'HIGH', act: 'Disable', title: 'WPS PIN', text: 'Enabled. The 8-digit PIN can be brute-forced in hours.' },
+  { id: 'upnp', sev: 'med', tag: 'MEDIUM', act: 'Close', title: 'UPnP port forwarding', text: 'UPnP IGD is on (SSDP 1900/udp). A game console added 3 port forwards on its own: 3074/udp, 3478/udp, 3479/udp.' },
+  { id: 'dns', sev: 'ok', tag: 'FIXED', fixedFrom: true, title: 'DNS lookups', text: 'Were sent in plain text to the ISP resolver. Now DNS-over-HTTPS.' },
+  { id: 'admin', sev: 'ok', tag: 'FIXED', fixedFrom: true, title: 'Router admin password', text: 'Was the default from the sticker. Rotated to 24 characters.' },
+  { id: 'nomap', sev: 'ok', tag: 'FIXED', fixedFrom: true, title: 'Public location maps', text: 'Network name ends in _nomap, so Wi-Fi location databases leave it out.' },
+  { id: 'devices', sev: 'info', tag: 'INFO', act: 'Who is it?', title: 'Device inventory', text: '28 known devices. 1 new with a randomised MAC, joined 4 minutes ago.' }
+];
+const list = $('#scanList');
+checks.forEach(c => {
+  if (c.fixedFrom) S.fixed[c.id] = true;
+  const li = document.createElement('li');
+  li.className = 'row'; li.dataset.sev = c.sev;
+  li.innerHTML = '<span class="st" aria-hidden="true"></span><div class="what"><b></b><span></span></div><span class="tag"></span>' +
+    (c.act ? '<button class="btn sm act" type="button"></button>' : '');
+  li.querySelector('b').textContent = c.title;
+  li.querySelector('.what span').textContent = c.text;
+  const btn = li.querySelector('.act');
+  if (btn) {
+    btn.textContent = c.act;
+    if (c.sev === 'crit') btn.classList.add('danger');
+    btn.addEventListener('click', () => fix(c.id));
+  }
+  c.el = li; list.appendChild(li); paintRow(c);
+});
+function paintRow(c, state) {
+  const st = state || (S.fixed[c.id] ? 'fixed' : c.sev === 'info' ? 'info' : 'open');
+  c.el.dataset.state = st;
+  const tag = c.el.querySelector('.tag');
+  tag.textContent = st === 'checking' ? 'CHECKING' : st === 'fixed' ? (c.fixedFrom ? 'FIXED' : 'SEALED') : c.tag;
+}
+function updateOpen() {
+  const n = checks.filter(c => c.act && c.sev !== 'info' && !S.fixed[c.id]).length;
+  $('#openCount').textContent = n === 0 ? 'All sealed' : n + ' open';
+}
+function fix(id) {
+  if (id === 'devices') {
+    document.getElementById('tab-grok').click();
+    ask('Who is the new device?');
+    $('#aiLog').scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' });
+    return;
+  }
+  S.fixed[id] = true;
+  const c = checks.find(x => x.id === id);
+  if (c) paintRow(c);
+  if (id === 'tr069') {
+    const g = $('#p7547'); g.classList.remove('port-open'); g.classList.add('port-sealed');
+    $('#p7547dot').setAttribute('fill', 'var(--accent)');
+    $('#p7547txt').textContent = 'TR-069 · SEALED';
+    $('#p7547txt').setAttribute('fill', 'var(--hi)');
+    const sb = $('#sealBtn'); sb.textContent = 'Port 7547 sealed'; sb.disabled = true;
+    pushSys('claude', 'Rule added: drop WAN traffic to 7547/tcp. Provider support can be re-enabled from Settings.');
+  }
+  updateOpen(); redraw();
+}
+$('#sealBtn').addEventListener('click', () => fix('tr069'));
+const scanBtn = $('#scanBtn'), scanBar = $('#scanBar');
+async function deepScan() {
+  if (S.scanning) return;
+  S.scanning = true; scanBtn.disabled = true;
+  checks.forEach(c => paintRow(c, 'pending'));
+  threats.forEach(p => { S.found[p.id] = false; });
+  scanBar.style.width = '0%'; redraw();
+  for (let i = 0; i < checks.length; i++) {
+    const c = checks[i];
+    scanBtn.textContent = 'Scanning ' + (i + 1) + '/' + checks.length;
+    paintRow(c, 'checking');
+    await sleep(520 + Math.random() * 480);
+    if (c.id in S.found) S.found[c.id] = true;
+    paintRow(c);
+    scanBar.style.width = ((i + 1) / checks.length * 100) + '%';
+    redraw();
+  }
+  S.scanning = false; scanBtn.disabled = false; scanBtn.textContent = 'Run again';
+  updateOpen();
+}
+scanBtn.addEventListener('click', deepScan);
+$('#heroScan').addEventListener('click', () => {
+  $('#app').scrollIntoView({ behavior: RM ? 'auto' : 'smooth' });
+  setTimeout(deepScan, RM ? 0 : 700);
+});
+updateOpen();
+
+/* ---------- statistics chart ---------- */
+function chartInit(s) {
+  if (s.down) return;
+  s.N = 120; s.down = []; s.upv = []; s.acc = 0;
+  for (let i = 0; i < s.N; i++) { s.down.push(sample(true, i)); s.upv.push(sample(false, i)); }
+}
+function sample(isDown, i) {
+  if (S.testing) {
+    const v = isDown ? S.liveDown : S.liveUp;
+    if (v > 0) return v;
+  }
+  const base = isDown ? (S.optimised ? 408 : 292) : (S.optimised ? 96 : 82);
+  const k = (i !== undefined ? i : performance.now() / 250);
+  return base + Math.sin(k * 0.21) * base * 0.05 + (Math.random() - 0.5) * base * 0.07;
+}
+function chartDraw(s, t, dt) {
+  const { ctx, w, h } = s;
+  if (!s.down) return;
+  s.acc += dt;
+  while (s.acc > 0.25) { s.acc -= 0.25; s.down.shift(); s.down.push(sample(true)); s.upv.shift(); s.upv.push(sample(false)); }
+  const frac = RM ? 0 : s.acc / 0.25;
+  const L = 44, Rr = 62, Tp = 14, B = 26, pw = w - L - Rr, ph = h - Tp - B, max = 600;
+  ctx.clearRect(0, 0, w, h);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+  ctx.font = '600 10px ' + FONT_D; ctx.textBaseline = 'middle';
+  [0, 200, 400, 600].forEach(v => {
+    const y = Tp + ph * (1 - v / max);
+    ctx.strokeStyle = rgba(C.fg, v === 0 ? 0.3 : 0.08); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'right'; ctx.fillText(String(v), L - 10, y);
+  });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('-30 S', L, h - 6); ctx.textAlign = 'right'; ctx.fillText('NOW', L + pw, h - 6);
+  const X = i => L + ((i - frac) / (s.N - 2)) * pw;
+  const Y = v => Tp + ph * (1 - Math.min(max, v) / max);
+  ctx.save(); ctx.beginPath(); ctx.rect(L, 0, pw, h); ctx.clip();
+  const path = arr => { ctx.beginPath(); arr.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))); };
+  path(s.down); ctx.lineTo(X(s.N - 1), Tp + ph); ctx.lineTo(X(0), Tp + ph); ctx.closePath();
+  const g = ctx.createLinearGradient(0, Tp, 0, Tp + ph);
+  g.addColorStop(0, rgba(C.accent, 0.35)); g.addColorStop(1, rgba(C.accent, 0));
+  ctx.fillStyle = g; ctx.fill();
+  path(s.down); ctx.strokeStyle = C.accent; ctx.lineWidth = 1.6; ctx.stroke();
+  path(s.upv); ctx.strokeStyle = rgba(C.fg, 0.55); ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.restore();
+  const lv = s.down[s.N - 1], ex = X(s.N - 1), ey = Y(lv);
+  ctx.fillStyle = C.fg; ctx.beginPath(); ctx.arc(ex, ey, 3.5, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(C.accent, 0.6); ctx.beginPath(); ctx.arc(ex, ey, 7, 0, TAU); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.fillStyle = C.fg; ctx.font = '600 12px ' + FONT_D; ctx.textBaseline = 'middle';
+  ctx.fillText(lv.toFixed(0), ex + 10, ey);
+  const uv = s.upv[s.N - 1]; ctx.fillStyle = C.muted; ctx.fillText(uv.toFixed(0), ex + 10, Y(uv));
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textBaseline = 'alphabetic';
+}
+const chartScene = addScene($('#chartCanvas'), chartInit, chartDraw);
+function refreshChart() {
+  if (!RM || !chartScene) return;
+  chartScene.down = null; chartInit(chartScene); redraw();
+}
+
+/* ---------- channel ring ---------- */
+const CH = [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165];
+const NB = { 36: 7, 40: 4, 44: 3, 48: 2, 52: 1, 56: 1, 60: 2, 100: 2, 108: 1, 116: 1, 132: 2, 149: 1, 157: 1 };
+(function buildRing() {
+  const svg = $('#chSvg'), NS = 'http://www.w3.org/2000/svg', cx = 160, cy = 160, r = 108;
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+  el('circle', { cx, cy, r, fill: 'none', stroke: 'var(--line2)' });
+  el('circle', { cx, cy, r: r - 18, fill: 'none', stroke: 'var(--line)', 'stroke-dasharray': '2 5' });
+  const ang = i => (-90 + i * (360 / CH.length)) * DEG;
+  CH.forEach((ch, i) => {
+    const a = ang(i), c = Math.cos(a), s = Math.sin(a);
+    el('line', { x1: cx + (r - 6) * c, y1: cy + (r - 6) * s, x2: cx + (r + 4) * c, y2: cy + (r + 4) * s, stroke: 'var(--muted)', 'stroke-width': 1 });
+    const n = NB[ch] || 0;
+    if (n) el('line', { x1: cx + (r + 8) * c, y1: cy + (r + 8) * s, x2: cx + (r + 8 + n * 4.5) * c, y2: cy + (r + 8 + n * 4.5) * s, stroke: n >= 4 ? 'var(--danger)' : n >= 2 ? 'var(--warn)' : 'var(--fg)', 'stroke-width': 3, 'stroke-linecap': 'butt' });
+    if ([36, 64, 100, 132, 149].includes(ch)) {
+      const t = el('text', { x: cx + (r + 52) * c, y: cy + (r + 52) * s + 3, 'text-anchor': 'middle', fill: ch === 149 ? 'var(--hi)' : 'var(--muted)', 'font-size': 11, 'font-family': 'Barlow Semi Condensed, sans-serif', 'font-weight': 600, 'letter-spacing': 1.5 });
+      t.textContent = ch;
+    }
+  });
+  const a0 = ang(0), a1 = ang(CH.indexOf(149));
+  const p0 = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], p1 = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)];
+  const delta = CH.indexOf(149) * 360 / CH.length - 360;
+  const arcLen = r * Math.abs(delta) * DEG;
+  el('path', { id: 'chArc', d: 'M' + p0[0] + ' ' + p0[1] + ' A' + r + ' ' + r + ' 0 0 0 ' + p1[0] + ' ' + p1[1], fill: 'none', stroke: 'var(--accent)', 'stroke-width': 3, 'stroke-dasharray': arcLen.toFixed(1), 'stroke-dashoffset': arcLen.toFixed(1) });
+  const target = el('circle', { cx: p1[0], cy: p1[1], r: 9, fill: 'none', stroke: 'var(--hi)', 'stroke-dasharray': '2 3' });
+  target.setAttribute('id', 'chTarget');
+  const g = el('g', { id: 'chMarker' });
+  const m1 = document.createElementNS(NS, 'circle'); m1.setAttribute('cx', cx); m1.setAttribute('cy', cy - r); m1.setAttribute('r', 11); m1.setAttribute('fill', 'none'); m1.setAttribute('stroke', 'var(--fg)'); m1.setAttribute('id', 'chRing');
+  const m2 = document.createElementNS(NS, 'circle'); m2.setAttribute('cx', cx); m2.setAttribute('cy', cy - r); m2.setAttribute('r', 6); m2.setAttribute('fill', 'var(--danger)'); m2.setAttribute('id', 'chDot');
+  g.appendChild(m1); g.appendChild(m2);
+  g.dataset.rot = delta.toFixed(2);
+})();
+const optBtn = $('#optBtn');
+optBtn.addEventListener('click', () => {
+  if (S.optimised || S.testing || S.moving) return;
+  S.moving = true; speedBtn.disabled = true;
+  optBtn.disabled = true; optBtn.textContent = 'Moving to 149';
+  const m = $('#chMarker');
+  m.style.transform = 'rotate(' + m.dataset.rot + 'deg)';
+  $('#chArc').setAttribute('stroke-dashoffset', '0');
+  $('#chDot').setAttribute('fill', 'var(--accent)');
+  let n = 36;
+  const t0 = performance.now();
+  const step = now => {
+    const p = RM ? 1 : Math.min(1, (now - t0) / 1800);
+    const seq = [0, 24, 23, 22, 21, 20];
+    n = CH[seq[Math.round(p * 5)]]; $('#chNum').textContent = n;
+    if (p < 1) requestAnimationFrame(step); else done();
+  };
+  requestAnimationFrame(step);
+  function done() {
+    S.optimised = true; S.moving = false; speedBtn.disabled = false;
+    $('#chNum').textContent = '149';
+    $('#chSub').textContent = '1 neighbour · clear';
+    $('#kvCur').textContent = 'Channel 149';
+    $('#kvNb').textContent = '1 network';
+    $('#kvGain').textContent = 'Locked. Run a speed test';
+    optBtn.textContent = 'Locked on 149';
+    result.textContent = 'Channel 149 locked. Run a speed test to measure the gain.';
+    pushSys('gpt', 'Channel changed 36 → 149 at 80 MHz. Clients reconnected in 1.8 s. No drops.');
+    refreshChart();
+  }
+});
+
+/* ---------- AI watch ---------- */
+const AG = {
+  claude: { name: 'Claude', dot: '#d97757', log: [], q: Promise.resolve(), opened: false,
+    intro: 'I watched your traffic for the last 24 hours. Nothing malicious. One thing worth knowing: tv-box.lan contacts an analytics host every 90 seconds, even with the screen off. That adds up to about 1.2 GB a day. Blocking it does not affect streaming.' },
+  gpt: { name: 'ChatGPT', dot: tok('--ok'), log: [], q: Promise.resolve(), opened: false,
+    intro: 'Short answer: your network is in good shape. The open item that matters is port 7547. It lets your provider manage the router remotely. I recommend isolating it unless your provider needs it for support calls.' },
+  grok: { name: 'Grok', dot: tok('--muted'), log: [], q: Promise.resolve(), opened: false,
+    intro: 'Blunt version: 29 devices, one I do not recognise. It joined 4 minutes ago with a randomised MAC and an Android-style DHCP fingerprint. Probably a guest’s phone. Probably.' }
+};
+let active = 'claude';
+const logEl = $('#aiLog');
+const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function msgEl(m) {
+  const div = document.createElement('div');
+  div.className = 'msg' + (m.me ? ' me' : '') + (m.sys ? ' sys' : '');
+  const who = document.createElement('span'); who.className = 'who';
+  if (!m.me) { const i = document.createElement('i'); i.style.background = AG[m.agent].dot; who.appendChild(i); }
+  who.appendChild(document.createTextNode((m.me ? 'You' : m.sys ? AG[m.agent].name + ' · action' : AG[m.agent].name) + ' · ' + m.time));
+  const txt = document.createElement('span'); txt.className = 'txt';
+  txt.textContent = m.shown + (m.shown.length < m.text.length ? '▍' : '');
+  div.appendChild(who); div.appendChild(txt);
+  m.el = txt;
+  return div;
+}
+function render() {
+  logEl.innerHTML = '';
+  for (const m of AG[active].log) logEl.appendChild(msgEl(m));
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function push(agent, m) {
+  m.agent = agent; m.time = m.time || now();
+  AG[agent].log.push(m);
+  if (agent === active) { logEl.appendChild(msgEl(m)); logEl.scrollTop = logEl.scrollHeight; }
+  return m;
+}
+function say(agent, text, extra) {
+  const a = AG[agent];
+  a.q = a.q.then(async () => {
+    const m = push(agent, Object.assign({ text, shown: '' }, extra || {}));
+    if (RM) { m.shown = text; if (m.el) m.el.textContent = text; return; }
+    await sleep(380);
+    for (let i = 1; i <= text.length; i += 2) {
+      m.shown = text.slice(0, i);
+      if (m.el && m.el.isConnected) { m.el.textContent = m.shown + '▍'; logEl.scrollTop = logEl.scrollHeight; }
+      await new Promise(r => setTimeout(r, 14));
+    }
+    m.shown = text;
+    if (m.el && m.el.isConnected) m.el.textContent = text;
+  });
+  return a.q;
+}
+function introFor(id) {
+  if (id === 'gpt' && (S.fixed.tr069 || S.optimised)) {
+    return 'Short answer: your network is in good shape. ' +
+      (S.fixed.tr069 ? 'Port 7547 is sealed, so your provider can no longer manage the router from outside. ' : 'The open item that matters is port 7547. I recommend isolating it unless your provider needs it for support calls. ') +
+      (S.optimised ? 'You are on channel 149 now, the quietest one nearby.' : 'The next easy win is moving off crowded channel 36.');
+  }
+  return AG[id].intro;
+}
+function ensureIntro(id) {
+  if (!AG[id].opened) { AG[id].opened = true; say(id, introFor(id)); }
+}
+function pushSys(agent, text) { ensureIntro(agent); say(agent, text, { sys: true }); }
+function reply(agent, q) {
+  const s = q.toLowerCase();
+  let body;
+  if (/\b(slow\w*|speed\w*|fast\w*|evenings?|nights?|wi-?fi|channels?)\b/.test(s)) {
+    body = S.optimised
+      ? 'You are on channel 149 now. Only one other network shares it, so evening congestion should be gone. Run a speed test to confirm.'
+      : 'After 19:00 seven neighbouring networks pile onto channel 36. Channel 149 has one. Press Optimise channel and I will move you there, then run a speed test.';
+  } else if (/\b(7547|tr-?069|cwmp|isp|providers?|remote)\b/.test(s)) {
+    body = S.fixed.tr069
+      ? 'Port 7547 is sealed. Your provider can no longer push settings or firmware from outside. If they need it for a support call, re-enable it in Settings for one hour.'
+      : 'Port 7547 is TR-069, a remote-management channel your provider uses to push settings and firmware. It is reachable from the internet. Unless your provider needs it for support, isolate it. You can do that from Deep scan.';
+  } else if (/\b(tv|box|stream\w*|netflix)\b/.test(s)) {
+    body = S.tvBlocked
+      ? 'The TV box analytics host is already blocked. Streaming is unaffected, and I will report if the box tries a fallback host.'
+      : 'The TV box sends about 1.2 GB a day to an analytics host, mostly while the screen is off. Streaming uses different hosts, so blocking the analytics one is safe. It is waiting for your approval in the approval card.';
+  } else if (/\b(devices?|unknown|new|mac|who)\b/.test(s)) {
+    body = 'The new device joined 4 minutes ago. Its MAC is randomised and its DHCP fingerprint matches a recent Android phone. It has only made DNS and HTTPS requests so far. ' +
+      ($('#r3').checked
+        ? 'I parked it on the guest network until someone in the house claims it.'
+        : 'I can move it to the guest network until someone in the house claims it. That needs your approval first.');
+  } else {
+    body = 'I see flow metadata only: which device talks to which host, on which port, how much and when. Ask me about speed, the TV box, port 7547 or the new device.';
+  }
+  const pre = agent === 'gpt' ? 'Short answer: ' : agent === 'grok' ? 'Blunt version: ' : '';
+  return pre + body;
+}
+const asking = new Set();
+function ask(q) {
+  q = q.trim(); if (!q) return;
+  const id = active, key = id + '|' + q;
+  if (asking.has(key)) return;
+  asking.add(key);
+  AG[id].q = AG[id].q.then(() => { push(id, { me: true, text: q, shown: q }); });
+  say(id, reply(id, q)).then(() => asking.delete(key));
+}
+function openAgent(id) {
+  active = id;
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.agent === id)));
+  render();
+  ensureIntro(id);
+}
+$$('.tab').forEach(b => b.addEventListener('click', () => openAgent(b.dataset.agent)));
+$('#aiForm').addEventListener('submit', e => { e.preventDefault(); const i = $('#aiInput'); ask(i.value); i.value = ''; });
+$$('.chip').forEach(b => b.addEventListener('click', () => ask(b.dataset.q)));
+AG.claude.log.push({ agent: 'claude', text: AG.claude.intro, shown: AG.claude.intro, time: '21:04' });
+AG.claude.opened = true;
+render();
+$('#approveBtn').addEventListener('click', () => {
+  const p = $('#pending');
+  p.classList.add('done');
+  p.innerHTML = '<p class="eyebrow">Approved · rule active</p><p><b>Analytics host blocked for tv-box.lan</b></p><p class="fine">Undo from Settings within 24 hours.</p>';
+  S.tvBlocked = true;
+  if (active !== 'claude') openAgent('claude');
+  pushSys('claude', 'Blocked the analytics host for tv-box.lan on the router. Streaming hosts untouched. I will report if the box tries a fallback host.');
+});
+$('#explainBtn').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (b.disabled) return;
+  b.disabled = true;
+  if (active !== 'claude') openAgent('claude');
+  say('claude', 'Here is what I saw. Every 90 seconds, day and night, tv-box.lan resolves the same analytics domain and uploads about 1.25 MB. The uploads continue when the TV reports standby. Your streaming apps use separate content hosts, so cutting this one changes nothing you watch. ChatGPT reviewed seven days of flows and agrees.')
+    .then(() => { b.disabled = false; });
+});
+$('#r1').addEventListener('change', e => {
+  S.watch = e.target.checked;
+  $('#liveTxt').textContent = S.watch ? 'Online · protected' : 'Online · watch paused';
+  pushSys('claude', S.watch ? 'Traffic watch resumed. I am reading flow metadata again.' : 'Traffic watch paused. I will not read new flows until you turn it back on.');
+});
+$('#r2').addEventListener('change', e => {
+  pushSys('claude', e.target.checked ? 'Tracker auto-block on. Known tracker hosts are dropped at the router.' : 'Tracker auto-block off. I will only flag trackers now.');
+});
+$('#r3').addEventListener('change', e => { $('#r3note').hidden = !e.target.checked; });
+
+/* ---------- panel 2: spectrum ---------- */
+const neighbours = [[0, .95], [0.3, .7], [1, .62], [0.6, .8], [2, .5], [3, .42], [1.6, .55], [4, .3], [6, .26], [8, .38], [10, .22], [13, .3], [16, .2], [21, .24]];
+function specInit() {}
+function specDraw(s, t) {
+  const { ctx, w, h } = s;
+  ctx.clearRect(0, 0, w, h);
+  const L = 16, Rr = 16, Tp = 40, B = 40, pw = w - L - Rr, base = h - B, H = h - Tp - B;
+  const X = i => L + (i / (CH.length - 1)) * pw;
+  ctx.strokeStyle = rgba(C.fg, 0.08); ctx.lineWidth = 1;
+  for (let k = 1; k <= 4; k++) { const y = base - H * k / 4; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke(); }
+  const bump = (i, a, sig, fill, stroke, lw) => {
+    ctx.beginPath(); ctx.moveTo(X(i - 3 * sig), base);
+    for (let k = -3; k <= 3.001; k += 0.15) ctx.lineTo(X(i + k * sig), base - a * H * Math.exp(-k * k / 2));
+    ctx.lineTo(X(i + 3 * sig), base);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke();
+  };
+  neighbours.forEach(([i, a], n) => {
+    const br = RM ? 1 : 0.92 + 0.08 * Math.sin(t * 1.3 + n);
+    bump(i, a * 0.8 * br, 0.75, rgba(C.fg, 0.05), rgba(C.fg, 0.32), 1);
+  });
+  const cyc = RM ? 7 : t % 8;
+  const e = cyc < 2 ? 0 : cyc < 4.5 ? (1 - Math.cos(Math.PI * (cyc - 2) / 2.5)) / 2 : 1;
+  const target = CH.indexOf(149), pos = e * target;
+  ctx.setLineDash([4, 4]);
+  bump(0, 0.88, 0.75, null, rgba(C.danger, e > 0 ? 0.6 : 0), 1);
+  ctx.setLineDash([]);
+  const g = ctx.createLinearGradient(0, Tp, 0, base);
+  g.addColorStop(0, rgba(e === 0 ? C.danger : C.accent, 0.5)); g.addColorStop(1, rgba(C.accent, 0));
+  bump(pos, 0.92, 0.75, g, e === 0 ? C.danger : C.accent, 2);
+  ctx.strokeStyle = rgba(C.fg, 0.5); ctx.beginPath(); ctx.moveTo(L, base); ctx.lineTo(L + pw, base); ctx.stroke();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.font = '600 10px ' + FONT_D; ctx.textAlign = 'center'; ctx.fillStyle = C.muted;
+  [36, 52, 100, 120, 149, 165].forEach(ch => { const i = CH.indexOf(ch); ctx.fillStyle = ch === 149 ? C.hi : C.muted; ctx.fillText(String(ch), X(i), base + 20); });
+  ctx.fillStyle = e === 0 ? C.danger : C.hi; ctx.font = '600 11px ' + FONT_D;
+  const lbl = e === 0 ? 'YOU · CH 36 · 7 NEIGHBOURS' : e < 1 ? 'MOVING' : 'YOU · CH 149 · CLEAR';
+  const hw = ctx.measureText(lbl).width / 2 + 4;
+  const px = Math.max(hw, Math.min(w - hw, X(pos)));
+  ctx.fillText(lbl, px, Tp - 14);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left';
+}
+addScene($('#specCanvas'), specInit, specDraw);
+
+/* ---------- panel 3: agents in orbit ---------- */
+const agentDefs = [
+  { name: 'CLAUDE', col: '#d97757', r: 0.34, sp: 0.35, ph: 0 },
+  { name: 'CHATGPT', col: tok('--ok'), r: 0.52, sp: -0.25, ph: 2.1 },
+  { name: 'GROK', col: tok('--muted'), r: 0.7, sp: 0.18, ph: 4.2 }
+];
+let inspected = 1180, held = 37;
+const agentStat = $('#agentStat');
+function agInit(s) { s.cx = s.w / 2; s.cy = s.h / 2; s.U = Math.min(s.w, s.h) / 2 * 0.92; if (!s.pk) { s.pk = []; s.spawn = 0; s.beams = []; } }
+function agDraw(s, t, dt) {
+  const { ctx, w, h, cx, cy, U } = s;
+  ctx.clearRect(0, 0, w, h);
+  agentDefs.forEach(a => {
+    ctx.strokeStyle = rgba(C.fg, 0.12); ctx.lineWidth = 1; ctx.setLineDash([2, 6]);
+    ctx.beginPath(); ctx.arc(cx, cy, a.r * U, 0, TAU); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.strokeStyle = rgba(C.fg, 0.35); ctx.beginPath(); ctx.arc(cx, cy, U, 0, TAU); ctx.stroke();
+  if (!RM && S.watch) {
+    s.spawn -= dt;
+    while (s.spawn < 0) {
+      s.spawn += 0.09;
+      const bad = Math.random() < 0.16;
+      s.pk.push({ a: Math.random() * TAU, r: 1, v: 0.22 + Math.random() * 0.12, bad, caught: 0 });
+    }
+  } else if (RM && s.pk.length === 0) {
+    for (let i = 0; i < 60; i++) s.pk.push({ a: Math.random() * TAU, r: 0.15 + Math.random() * 0.85, v: 0, bad: i % 7 === 0, caught: 0 });
+  }
+  const pos = agentDefs.map(a => { const ang = a.ph + t * a.sp; return { a, x: cx + a.r * U * Math.cos(ang), y: cy + a.r * U * Math.sin(ang) }; });
+  for (let i = s.pk.length - 1; i >= 0; i--) {
+    const p = s.pk[i];
+    if (p.caught) {
+      p.caught += dt;
+      if (p.caught > 0.7) { s.pk.splice(i, 1); continue; }
+    } else {
+      p.r -= p.v * dt;
+      if (p.bad && p.r < 0.62 && !RM) {
+        const x = cx + p.r * U * Math.cos(p.a), y = cy + p.r * U * Math.sin(p.a);
+        let best = pos[0], bd = 1e9;
+        pos.forEach(q => { const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = q; } });
+        p.caught = 0.0001; p.by = best; held++;
+      }
+      if (p.r < 0.06) { s.pk.splice(i, 1); inspected++; continue; }
+    }
+    const x = cx + p.r * U * Math.cos(p.a), y = cy + p.r * U * Math.sin(p.a);
+    if (p.caught) {
+      const al = 1 - p.caught / 0.7;
+      ctx.strokeStyle = rgba(C.accent, al); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(p.by.x, p.by.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.strokeStyle = rgba(C.danger, al); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y + 4); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x - 4, y + 4); ctx.stroke();
+    } else {
+      ctx.fillStyle = p.bad ? C.danger : rgba(C.fg, 0.75);
+      ctx.beginPath(); ctx.arc(x, y, p.bad ? 2.4 : 1.4, 0, TAU); ctx.fill();
+    }
+  }
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, U * 0.2);
+  g.addColorStop(0, rgba(C.accent, 0.5)); g.addColorStop(1, rgba(C.accent, 0));
+  ctx.fillStyle = g; ctx.fillRect(cx - U * 0.2, cy - U * 0.2, U * 0.4, U * 0.4);
+  ctx.fillStyle = C.bg; ctx.strokeStyle = C.fg; ctx.lineWidth = 1.5;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4); ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16); ctx.restore();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.font = '600 10px ' + FONT_D; ctx.textBaseline = 'middle';
+  pos.forEach(q => {
+    ctx.fillStyle = q.a.col; ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, TAU); ctx.fill();
+    ctx.strokeStyle = rgba(C.fg, 0.6); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(q.x, q.y, 10, 0, TAU); ctx.stroke();
+    ctx.fillStyle = C.fg; ctx.textAlign = q.x > cx ? 'left' : 'right';
+    ctx.fillText(q.a.name, q.x + (q.x > cx ? 16 : -16), q.y);
+  });
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if (!s.lastStat || t - s.lastStat > 0.25) { s.lastStat = t; agentStat.textContent = 'Inspected ' + inspected.toLocaleString('en-US') + ' · held ' + held; }
+}
+addScene($('#agentCanvas'), agInit, agDraw);
+
+/* ---------- footer ---------- */
+$$('[data-dl]').forEach(b => b.addEventListener('click', () => { $('#dlNote').hidden = false; }));
+
+start();
+})();
+</script>
+</body>
+</html>

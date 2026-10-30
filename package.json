@@ -1,0 +1,92 @@
+{
+  "name": "bastion",
+  "productName": "Bastion",
+  "version": "0.1.0",
+  "description": "Close your router's backdoors, see where your traffic goes, speed up your Wi-Fi, and let AI agents watch your network.",
+  "main": "electron/main.js",
+  "author": "Bastion contributors",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "preview": "node scripts/preview-server.js",
+    "check": "node scripts/check.js",
+    "engine:smoke": "node scripts/engine-smoke.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "icon": "electron scripts/make-icon.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
+    "openai": "^7.45.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "app.bastion.desktop",
+    "productName": "Bastion",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**",
+      "engine/**",
+      "agents/**",
+      "renderer/**",
+      "package.json",
+      {
+        "from": "node_modules/three/examples/jsm",
+        "to": "node_modules/three/examples/jsm",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "artifactName": "Bastion-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "buildUniversalInstaller": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.png",
+      "identity": "-",
+      "extendInfo": {
+        "NSLocationUsageDescription": "Bastion reads your Wi-Fi network name and channel, which macOS treats as location data.",
+        "NSLocationWhenInUseUsageDescription": "Bastion reads your Wi-Fi network name and channel, which macOS treats as location data."
+      }
+    }
+  }
+}

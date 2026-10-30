@@ -1,0 +1,94 @@
+/* Bastion design tokens. Names and values follow the approved "Nebula Voice" concept
+   (docs/design-reference-nebula.html). Add new tokens here, never hard-code them in views. */
+
+:root {
+  /* ---- Nebula palette (canonical) ---- */
+  --ground: #07060E;
+  --ground-2: #0D0B1A;
+  --panel: rgba(28, 24, 54, .66);
+  --panel-2: rgba(14, 12, 28, .78);
+  --line: rgba(183, 169, 255, .13);
+  --line-2: rgba(183, 169, 255, .26);
+  --text: #F3F0FF;
+  --muted: #ABA6CB;
+  --dim: #857FA9;
+  --violet: #7C6CFF;
+  --lavender: #B7A9FF;
+  --sky: #8FD3FF;
+  --mint: #9EF0C4;      /* safe / ok */
+  --coral: #FF8E7A;     /* risk */
+  --amber: #FFC772;     /* warn */
+  --magenta: #FF5FD2;
+  --teal: #3FE3C9;
+  --clay: #E8A07F;      /* Claude accent */
+  --ink: #120C2E;
+
+  /* Provider accents (keys indicator, agent orbs) */
+  --prov-claude: var(--clay);
+  --prov-openai: var(--mint);
+  --prov-grok: var(--sky);
+
+  /* Glass */
+  --glass: linear-gradient(180deg, rgba(30, 26, 60, .72), rgba(14, 12, 28, .78));
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .05);
+  --glass-shadow: 0 30px 60px -40px rgba(0, 0, 0, .9);
+  --radius: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --grad-primary: linear-gradient(135deg, #C2B6FF, #7C6CFF);
+  --grad-iris: linear-gradient(90deg, var(--magenta), var(--violet), var(--teal), var(--amber));
+
+  /* Type */
+  --f-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif;
+  --f-ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* ---- Legacy aliases (Uplink names still used by views, glow kit and JS) ----
+     They now resolve to Nebula values; prefer the names above in new code. */
+  --bg: var(--ground);
+  --fg: var(--text);
+  --panel2: var(--panel-2);
+  --line2: var(--line-2);
+  --accent: var(--violet);
+  --hi: var(--lavender);
+  --danger: var(--coral);
+  --danger-text: #FFB4A7;
+  --warn: var(--amber);
+  --ok: var(--mint);
+  --sun: #FFFFFF;
+  --atmo: var(--sky);
+  --city: var(--amber);
+  --earth: var(--ground-2);
+  --earth-lit: #2A2266;
+  --f-disp: var(--f-display);
+  --f-body: var(--f-ui);
+  --text-soft: #DCD6FF;
+  --text-body: #E6E2FF;
+  --risk-white: #FFD9D1;           /* coral-tinted white for risk headlines */
+
+  --gutter: clamp(16px, 3vw, 40px);
+  --gutter-r: clamp(16px, 3vw, 40px);
+
+  /* App shell */
+  --titlebar-h: 64px;
+  --mac-inset: 80px;               /* macOS traffic lights */
+  --win-inset: 140px;              /* Windows caption-button overlay */
+  --rail-w: 0px;                   /* the left rail is gone; kept for old references */
+  --rail-w-collapsed: 0px;
+  --overlay: rgba(7, 6, 14, .66);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-io: cubic-bezier(.65, 0, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.36, .5, 1);
+  --t-fast: .2s;
+  --t-med: .35s;
+  --t-slow: .9s;
+
+  /* Z-index bands (docs/UI-NOTES.md) */
+  --z-chrome: 30;
+  --z-popover: 40;
+  --z-sheet: 50;
+  --z-modal: 60;
+  --z-toast: 100;
+
+  color-scheme: dark;
+}

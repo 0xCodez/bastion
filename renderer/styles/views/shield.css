@@ -1,0 +1,188 @@
+/* Shield view (scoped under .v-shield), plus the Nebula primitives shared by the
+   shield, speed, devices, agents and settings views. index.html loads every view
+   stylesheet, so the other four views rely on the shared block below.
+   Visual source of truth: docs/design-reference-nebula.html. Colours come from tokens.css. */
+
+/* ------------------------------------------------------------------ shared primitives */
+
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings){
+  --nf-d:"Bricolage Grotesque Variable","Bricolage Grotesque","Plus Jakarta Sans",system-ui,sans-serif;
+  --nf-u:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --nf-m:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --nv-ease:cubic-bezier(.2,.8,.2,1);
+  --nv-card:linear-gradient(180deg,rgba(30,26,60,.72),rgba(14,12,28,.78));
+  /* glow kit label font inside these views (the kit reads --gk-ui / --gk-mono) */
+  --gk-ui:var(--nf-u);
+  --gk-mono:var(--nf-m);
+  font-family:var(--nf-u);
+  color:var(--text);
+}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .eyebrow{margin:0;font:500 12px/1.2 var(--nf-m);letter-spacing:.16em;text-transform:uppercase;color:var(--lavender)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .h-display{font:700 clamp(34px,4.2vw,56px)/1.02 var(--nf-d);letter-spacing:-.035em;text-transform:none;text-wrap:balance;color:var(--text)}
+
+/* glass card */
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-glass{position:relative;isolation:isolate;min-width:0;border-radius:28px;background:var(--nv-card);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 30px 60px -40px rgba(0,0,0,.9);-webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-glass::before{content:"";position:absolute;inset:0 0 auto;height:160px;border-radius:inherit;background:radial-gradient(60% 100% at 30% 0%,rgba(124,108,255,.18),transparent 70%);pointer-events:none;z-index:-1}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-glass h2{margin:0;font:700 21px/1.15 var(--nf-d);letter-spacing:-.025em;text-transform:none;color:var(--text)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-tag{flex:none;min-height:28px;padding:0 11px;border-radius:999px;display:inline-flex;align-items:center;font:500 11.5px/1.2 var(--nf-m);letter-spacing:0;text-transform:none;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-tag:empty{display:none}
+
+/* stat tiles */
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-stat{padding:20px 22px 18px;border-radius:24px;display:flex;flex-direction:column;gap:4px}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-stat-k{font:600 13px/1.3 var(--nf-u);color:var(--muted)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-stat-v{font:700 clamp(40px,4.4vw,64px)/1.02 var(--nf-d);letter-spacing:-.045em;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-stat-u{font:500 11.5px/1.3 var(--nf-m);color:var(--dim)}
+
+/* buttons */
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn{min-height:44px;padding:0 20px;gap:8px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text);font:700 14px/1 var(--nf-u);letter-spacing:0;text-transform:none;transition:transform .2s var(--nv-ease),background .2s,box-shadow .2s,border-color .2s,color .2s}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn:hover{background:rgba(255,255,255,.09);border-color:var(--lavender);color:var(--text)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn:active{transform:scale(.97)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--primary{background:linear-gradient(135deg,#C2B6FF,var(--violet));border-color:transparent;color:var(--ink);box-shadow:0 14px 36px -14px rgba(124,108,255,.9)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--primary:hover{background:linear-gradient(135deg,#CEC4FF,#8A7BFF);border-color:transparent;color:var(--ink);box-shadow:0 18px 44px -12px rgba(124,108,255,1)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--signal{background:rgba(124,108,255,.22);border-color:rgba(124,108,255,.6);color:#E4DEFF}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--signal:hover{background:rgba(124,108,255,.34)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--danger{background:rgba(255,142,122,.1);border-color:rgba(255,142,122,.4);color:var(--coral)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--danger:hover{background:rgba(255,142,122,.2);border-color:rgba(255,142,122,.6);color:var(--coral)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--ghost{background:transparent;border-color:transparent;color:var(--muted)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--ghost:hover{background:rgba(183,169,255,.08);border-color:transparent;color:var(--text)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn--sm{min-height:36px;padding:0 14px;font-size:12.5px;font-weight:600}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .btn:disabled{opacity:.5}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text);font:600 12.5px/1 var(--nf-u);cursor:pointer;transition:background .2s,border-color .2s,transform .2s var(--nv-ease)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini:hover{background:rgba(255,255,255,.1)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini:active{transform:scale(.97)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini--go{background:rgba(124,108,255,.25);border-color:rgba(124,108,255,.6)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini--go:hover{background:rgba(124,108,255,.38)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .nv-mini:disabled{opacity:.5;cursor:default}
+
+/* severity and status pills */
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill{display:inline-flex;align-items:center;gap:6px;min-height:22px;padding:3px 8px;border-radius:7px;border:0;background:rgba(255,255,255,.06);color:var(--muted);font:500 10.5px/1.2 var(--nf-m);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill--risk{background:rgba(255,142,122,.16);color:var(--coral)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill--warn{background:rgba(255,199,114,.14);color:var(--amber)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill--ok{background:rgba(158,240,196,.12);color:var(--mint)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) :is(.pill--info,.pill--accent){background:rgba(183,169,255,.14);color:var(--lavender)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill--sky{background:rgba(143,211,255,.13);color:var(--sky)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .pill--unknown{background:transparent;box-shadow:inset 0 0 0 1px var(--line-2);color:var(--dim)}
+
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .empty-state{display:block;margin:0;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.025);border:1px dashed var(--line-2);color:var(--muted);font:400 14px/1.55 var(--nf-u)}
+
+/* glow kit touches inside these views: sentence-case labels, violet switches (slider fill stays the kit's) */
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .gk-slider__label{font:600 13.5px/1.3 var(--nf-u);letter-spacing:0;text-transform:none;color:var(--text)}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .gk-slider__tick-label{font-family:var(--nf-u);letter-spacing:0;text-transform:none}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .gk-toggle{font:600 13.5px/1.3 var(--nf-u);letter-spacing:0;text-transform:none}
+:is(.v-shield,.v-speed,.v-devices,.v-agents,.v-settings) .gk-toggle[aria-checked="true"] .gk-toggle__track{background:linear-gradient(180deg,#9F90FF 0%,var(--violet) 48%,#4B39D0 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -3px 7px rgba(18,12,46,.5),0 0 18px -2px rgba(124,108,255,.8)}
+
+/* ------------------------------------------------------------------ shield */
+
+.v-shield{display:flex;flex-direction:column;gap:24px;padding-bottom:48px;min-width:0}
+.v-shield [hidden]{display:none!important}
+.v-shield .sh-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px}
+.v-shield .sh-head .h-display{margin:10px 0 0}
+.v-shield .sh-head-side{display:flex;flex-direction:column;align-items:flex-start;gap:16px;max-width:52ch}
+.v-shield .sh-lede{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
+
+/* status strip */
+.v-shield .sh-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:14px 16px;border-radius:24px}
+.v-shield .sh-live{display:inline-flex;align-items:center;gap:9px;min-height:34px;padding:0 14px 0 12px;border-radius:999px;background:rgba(183,169,255,.08);border:1px solid var(--line-2);color:var(--lavender);font:600 13px/1 var(--nf-u);transition:background .4s,border-color .4s,color .4s}
+.v-shield .sh-led{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
+.v-shield .sh-live:has([data-state="idle"]){color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--line)}
+.v-shield .sh-live:has([data-state="ok"]){color:var(--mint);background:rgba(158,240,196,.08);border-color:rgba(158,240,196,.25)}
+.v-shield .sh-live:has([data-state="risk"]){color:var(--coral);background:rgba(255,142,122,.08);border-color:rgba(255,142,122,.3)}
+.v-shield .sh-live:has([data-state="scan"]){color:var(--sky);background:rgba(143,211,255,.08);border-color:rgba(143,211,255,.28)}
+.v-shield .sh-led[data-state="scan"]{animation:sh-blink 1.2s ease-in-out infinite}
+.v-shield .sh-bar-right{margin-left:auto}
+.v-shield .sh-progress{flex:1 1 100%;height:8px;border-radius:99px;background:#1E1A3A;overflow:hidden;position:relative}
+.v-shield .sh-progress span{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--lavender) 60%,var(--mint));box-shadow:0 0 14px rgba(124,108,255,.6);transition:width .7s var(--nv-ease)}
+
+.v-shield .sh-console{display:flex;flex-direction:column;gap:18px}
+.v-shield .sh-cells{display:grid;gap:18px;align-items:start}
+.v-shield .sh-cells--main{grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+.v-shield .sh-cells--lower{grid-template-columns:minmax(0,300px) minmax(0,1.4fr) minmax(0,1fr)}
+@media (max-width:1100px){.v-shield .sh-cells--lower{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}}
+
+.v-shield .sh-card{padding:24px;display:flex;flex-direction:column;gap:16px}
+.v-shield .sh-card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.v-shield .sh-fine{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+
+/* map */
+.v-shield .sh-map{background:radial-gradient(70% 60% at 50% 52%,rgba(124,108,255,.16),transparent 70%),var(--nv-card)}
+.v-shield .sh-canvas{display:block;width:100%;max-width:560px;aspect-ratio:1/1;margin:0 auto}
+.v-shield .sh-legend{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px/1 var(--nf-u);color:var(--muted)}
+.v-shield .sh-legend span{display:inline-flex;align-items:center;gap:8px}
+.v-shield .sh-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.v-shield .sh-legend .lg-dev{background:var(--lavender);color:var(--lavender)}
+.v-shield .sh-legend .lg-risk{background:var(--coral);color:var(--coral)}
+.v-shield .sh-legend .lg-warn{background:var(--amber);color:var(--amber)}
+.v-shield .sh-legend .lg-ok{background:var(--mint);color:var(--mint)}
+.v-shield .sh-legend .lg-unk{background:transparent;box-shadow:inset 0 0 0 1.5px var(--dim)}
+
+/* checks */
+.v-shield .sh-step{margin:0;min-height:18px;font:500 12px/1.5 var(--nf-m);color:var(--lavender)}
+.v-shield .sh-step--err{color:var(--coral)}
+.v-shield .sh-list{list-style:none;margin:0;padding:2px;display:flex;flex-direction:column;gap:8px;max-height:660px;overflow-y:auto}
+.v-shield .sh-empty{list-style:none}
+.v-shield .sh-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;grid-template-areas:"st what tag" ". act act" ". steps steps";align-items:center;gap:0 12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid var(--line);transition:background .4s,border-color .4s,opacity .3s}
+.v-shield .sh-dot{grid-area:st;align-self:start;margin-top:5px;width:10px;height:10px;border-radius:50%;background:var(--dim);justify-self:center}
+.v-shield .sh-what{grid-area:what;display:flex;flex-direction:column;gap:3px;min-width:0}
+.v-shield .sh-what b{font:600 14.5px/1.35 var(--nf-u)}
+.v-shield .sh-ev{font:400 12px/1.5 var(--nf-m);color:var(--muted);word-break:break-word}
+.v-shield .sh-ev--clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.v-shield .sh-tag{grid-area:tag;justify-self:end;align-self:start}
+.v-shield .sh-act{grid-area:act;justify-self:start;display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.v-shield .sh-steps{grid-area:steps;margin-top:10px}
+.v-shield .sh-steps summary{cursor:pointer;width:max-content;max-width:100%;font:600 12.5px/1.6 var(--nf-u);color:var(--lavender);list-style-position:inside;border-radius:8px}
+.v-shield .sh-steps ol{margin:8px 0 2px;padding:12px 14px 12px 34px;border-radius:14px;background:rgba(7,6,14,.45);display:flex;flex-direction:column;gap:6px;font-size:13.5px;line-height:1.5;color:#E6E2FF}
+.v-shield .sh-steps li::marker{font-family:var(--nf-m);color:var(--lavender)}
+.v-shield .sh-row[data-state="risk"]{background:rgba(255,142,122,.06);border-color:rgba(255,142,122,.22)}
+.v-shield .sh-row[data-state="risk"] .sh-dot{background:var(--coral);box-shadow:0 0 12px var(--coral)}
+.v-shield .sh-row[data-state="risk"] .sh-ev{color:#E6B3A9}
+.v-shield .sh-row[data-state="warn"]{background:rgba(255,199,114,.045);border-color:rgba(255,199,114,.18)}
+.v-shield .sh-row[data-state="warn"] .sh-dot{background:var(--amber);box-shadow:0 0 10px rgba(255,199,114,.7)}
+.v-shield .sh-row[data-state="ok"] .sh-dot{background:var(--mint);box-shadow:0 0 10px rgba(158,240,196,.6)}
+.v-shield .sh-row[data-state="unknown"] .sh-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--dim)}
+.v-shield .sh-row[data-state="pending"]{background:transparent}
+.v-shield .sh-row[data-state="pending"] .sh-dot{opacity:.45}
+.v-shield .sh-row[data-state="pending"] .sh-what b{color:var(--muted)}
+.v-shield .sh-row[data-state="pending"] .sh-ev{color:var(--dim)}
+.v-shield .sh-row[data-state="checking"]{background:linear-gradient(90deg,rgba(183,169,255,.04),rgba(183,169,255,.16),rgba(183,169,255,.04));background-size:200% 100%;animation:sh-shim 1s linear infinite;border-color:var(--line-2)}
+.v-shield .sh-row[data-state="checking"] .sh-dot{background:transparent;border:2px solid var(--lavender);border-right-color:transparent;width:12px;height:12px;animation:sh-spin .7s linear infinite}
+.v-shield .sh-notes summary{cursor:pointer;font:600 12.5px/1.6 var(--nf-u);color:var(--muted)}
+.v-shield .sh-notes ul{margin:8px 0 0;padding-left:18px;font:400 12px/1.5 var(--nf-m);color:var(--muted)}
+
+/* score: gradient arc like the reference speed gauge */
+.v-shield .sh-dial{position:relative;width:100%;max-width:240px;margin:0 auto}
+.v-shield .sh-dial svg{width:100%;height:auto;display:block;overflow:visible}
+.v-shield .sh-dial .sc-track{fill:none;stroke:#221E42;stroke-width:16;stroke-linecap:round}
+.v-shield .sh-dial .sc-val{fill:none;stroke-width:16;stroke-linecap:round;filter:drop-shadow(0 0 10px rgba(124,108,255,.55));transition:stroke-dasharray 1.2s var(--nv-ease)}
+.v-shield .sh-dial .sc-tick{fill:var(--dim);font:500 10px var(--nf-u)}
+.v-shield .sh-dial .sc-mark{stroke:rgba(183,169,255,.35);stroke-width:1.5}
+.v-shield .sh-dial-center{position:absolute;left:0;right:0;top:34%;display:flex;flex-direction:column;align-items:center;text-align:center;pointer-events:none;gap:4px}
+.v-shield .sh-dial-center b{font:700 54px/1 var(--nf-d);letter-spacing:-.045em;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.v-shield .sh-dial-center span{display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1.3 var(--nf-u);color:var(--muted);max-width:16ch}
+.v-shield .sh-dial-center span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.v-shield .sh-dial[data-level="ok"] .sh-dial-center span{color:var(--mint)}
+.v-shield .sh-dial[data-level="warn"] .sh-dial-center span{color:var(--amber)}
+.v-shield .sh-dial[data-level="risk"] .sh-dial-center span{color:var(--coral)}
+.v-shield .sh-dial:is([data-level="ok"],[data-level="warn"],[data-level="risk"]) .sh-dial-center span::before{background:currentColor;box-shadow:0 0 10px currentColor}
+
+/* tables */
+.v-shield .sh-table-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:rgba(7,6,14,.35)}
+.v-shield .sh-table{width:100%;border-collapse:collapse;font-size:13px}
+.v-shield .sh-table th{text-align:left;padding:12px 12px 10px;font:600 12px/1 var(--nf-u);color:var(--muted);border-bottom:1px solid var(--line-2);white-space:nowrap}
+.v-shield .sh-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.v-shield .sh-table tbody tr:last-child td{border-bottom:0}
+.v-shield .sh-n{font-family:var(--nf-m);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--lavender)}
+.v-shield .sh-desc{color:var(--muted);word-break:break-word}
+.v-shield .sh-portlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.v-shield .sh-portlist li{display:grid;grid-template-columns:12px 64px minmax(0,1fr);gap:10px;align-items:center;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid var(--line);font-size:13.5px}
+.v-shield .sh-portlist li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.v-shield .sh-portlist li[data-level="risk"]{background:rgba(255,142,122,.06);border-color:rgba(255,142,122,.2)}
+.v-shield .sh-portlist li[data-level="risk"]::before{background:var(--coral);box-shadow:0 0 8px var(--coral)}
+.v-shield .sh-portlist li[data-level="warn"]::before{background:var(--amber);box-shadow:0 0 8px rgba(255,199,114,.6)}
+
+@keyframes sh-spin{to{transform:rotate(360deg)}}
+@keyframes sh-blink{50%{opacity:.35}}
+@keyframes sh-shim{to{background-position:-200% 0}}
+@media (prefers-reduced-motion: reduce){
+  .v-shield .sh-led[data-state="scan"],.v-shield .sh-row[data-state="checking"],.v-shield .sh-row[data-state="checking"] .sh-dot{animation:none}
+  .v-shield .sh-progress span,.v-shield .sh-dial .sc-val{transition:none}
+}

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-n8+jxQQiFpXtbzq1WD+NmksgJ3pcK63X7EQmwa0D1nE=' 'sha256-CjrcGuCz7gQfLeqixaTDpz4kpB9cOdGzKzp6AIp0YaM='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
+<title>Bastion Hero</title>
+<link rel="stylesheet" href="../node_modules/@fontsource-variable/bricolage-grotesque/index.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/500.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/plus-jakarta-sans/700.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/jetbrains-mono/400.css">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#07060E; --ground-2:#0D0B1A;
+  --panel:rgba(28,24,54,.66); --panel-2:rgba(14,12,28,.78);
+  --line:rgba(183,169,255,.13); --line-2:rgba(183,169,255,.26);
+  --text:#F3F0FF; --muted:#ABA6CB; --dim:#857FA9;
+  --violet:#7C6CFF; --lavender:#B7A9FF; --sky:#8FD3FF; --mint:#9EF0C4; --coral:#FF8E7A; --amber:#FFC772;
+  --magenta:#FF5FD2; --teal:#3FE3C9; --clay:#E8A07F; --ink:#120C2E;
+  --f-display:"Bricolage Grotesque Variable","Plus Jakarta Sans",system-ui,sans-serif;
+  --f-ui:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--ground);color:var(--text);font:500 14px/1.5 var(--f-ui);overflow:hidden;-webkit-font-smoothing:antialiased}
+#hero{position:fixed;inset:0}
+.copy{position:fixed;left:16px;right:16px;top:12vh;z-index:3;text-align:center;pointer-events:none}
+.copy small{font:400 12px var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--lavender)}
+.copy h1{margin:10px 0 0;font:700 clamp(36px,6vw,64px)/1.02 var(--f-display);letter-spacing:-.04em;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.copy p{margin:12px auto 0;max-width:460px;color:var(--muted)}
+.hud{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:5;width:max-content;max-width:calc(100% - 32px);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;padding:6px;border-radius:26px;background:rgba(14,12,28,.62);border:1px solid var(--line-2);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);box-shadow:0 30px 80px -30px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.06)}
+.btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);font:600 13px var(--f-ui);cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.btn:hover{color:var(--text);background:rgba(183,169,255,.08)}
+.btn[aria-pressed="true"]{background:rgba(183,169,255,.16);color:var(--text)}
+.btn.warn[aria-pressed="true"]{background:rgba(255,199,114,.16);color:var(--amber)}
+.btn.danger[aria-pressed="true"]{background:rgba(255,142,122,.16);color:var(--coral)}
+.btn.go{background:linear-gradient(135deg,#C2B6FF,#7C6CFF);color:var(--ink)}
+.btn i{width:8px;height:8px;border-radius:50%;flex:none}
+:focus-visible{outline:2px solid var(--sky);outline-offset:3px}
+.sig{display:inline-flex;align-items:center;gap:10px;min-height:40px;padding:0 14px;color:var(--muted);font:600 13px var(--f-ui)}
+.sig input{width:120px;accent-color:var(--violet)}
+.sig output{font:400 12px var(--f-mono);min-width:3ch;text-align:right;color:var(--sky)}
+.sep{width:1px;height:24px;background:var(--line-2);margin:0 2px;flex:none}
+@media (max-width:900px){.hud{flex-wrap:nowrap;justify-content:flex-start;width:calc(100% - 32px);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;bottom:12px}.hud::-webkit-scrollbar{display:none}.hud>*{flex:none}}
+</style>
+</head>
+<body>
+<div id="hero" role="img" aria-label="A router sitting on the glowing horizon of a night planet, with three agent orbs circling it"></div>
+<div class="copy" aria-hidden="true"><small>Bastion · hero preview</small><h1>Readable centre-top</h1><p>Overlay copy sits here; the router stays in the lower-middle third.</p></div>
+<div class="hud" role="toolbar" aria-label="Hero controls">
+  <button class="btn" type="button" data-threat="0" aria-pressed="true">All clear</button>
+  <button class="btn warn" type="button" data-threat="1" aria-pressed="false">Warnings</button>
+  <button class="btn danger" type="button" data-threat="2" aria-pressed="false">Door open</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button class="btn go" type="button" id="pulse">Pulse</button>
+  <label class="sig"><span>Signal</span><input id="signal" type="range" min="0" max="100" value="70"><output id="sigOut" for="signal">70</output></label>
+  <button class="btn" type="button" id="shield" aria-pressed="true">Shield on</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button class="btn" type="button" data-agent="claude" aria-pressed="true"><i style="background:var(--clay)"></i>Claude</button>
+  <button class="btn" type="button" data-agent="openai" aria-pressed="false"><i style="background:var(--mint)"></i>ChatGPT</button>
+  <button class="btn" type="button" data-agent="grok" aria-pressed="true"><i style="background:var(--sky)"></i>Grok</button>
+  <button class="btn" type="button" id="flare">Flare agent</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button class="btn" type="button" id="pause" aria-pressed="false">Pause</button>
+  <button class="btn" type="button" id="replay">Replay intro</button>
+</div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../node_modules/three/build/three.module.js",
+    "three/addons/": "../node_modules/three/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import { initRouterHero } from './js/hero3d.js';
+
+const el = document.getElementById('hero');
+const agentBtns = [...document.querySelectorAll('[data-agent]')];
+const NAMES = { claude: 'Claude', openai: 'ChatGPT', grok: 'Grok' };
+const agentList = () => agentBtns.map((b) => ({ id: b.dataset.agent, label: NAMES[b.dataset.agent], active: b.getAttribute('aria-pressed') === 'true' }));
+const shieldBtn = document.getElementById('shield');
+const shieldOn = () => shieldBtn.getAttribute('aria-pressed') === 'true';
+
+let hero = initRouterHero(el, { threat: 0, signal: 0.7, agents: agentList(), debug: location.hash === '#debug' });
+window.__hero = hero;
+
+const threatBtns = [...document.querySelectorAll('[data-threat]')];
+let threat = 0;
+for (const b of threatBtns) {
+  b.addEventListener('click', () => {
+    threat = Number(b.dataset.threat);
+    hero.setThreat(threat);
+    threatBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  });
+}
+document.getElementById('pulse').addEventListener('click', () => hero.pulse());
+
+const sig = document.getElementById('signal');
+const sigOut = document.getElementById('sigOut');
+sig.addEventListener('input', () => {
+  sigOut.value = sig.value;
+  hero.setSignal(Number(sig.value) / 100);
+});
+
+shieldBtn.addEventListener('click', () => {
+  const on = !shieldOn();
+  shieldBtn.setAttribute('aria-pressed', String(on));
+  shieldBtn.textContent = on ? 'Shield on' : 'Shield off';
+  hero.setShield(on);
+});
+
+for (const b of agentBtns) {
+  b.addEventListener('click', () => {
+    b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+    hero.setAgents(agentList());
+  });
+}
+let flareIdx = 0;
+document.getElementById('flare').addEventListener('click', () => {
+  const id = agentBtns[flareIdx % agentBtns.length].dataset.agent;
+  flareIdx++;
+  hero.flareAgent(id);
+});
+
+const pause = document.getElementById('pause');
+pause.addEventListener('click', () => {
+  const on = pause.getAttribute('aria-pressed') !== 'true';
+  pause.setAttribute('aria-pressed', String(on));
+  hero.setPaused(on);
+});
+
+document.getElementById('replay').addEventListener('click', () => {
+  hero.dispose();
+  hero = initRouterHero(el, {
+    threat,
+    signal: Number(sig.value) / 100,
+    shield: shieldOn(),
+    agents: agentList(),
+    paused: pause.getAttribute('aria-pressed') === 'true',
+    debug: location.hash === '#debug',
+  });
+  window.__hero = hero;
+});
+</script>
+</body>
+</html>

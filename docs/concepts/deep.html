@@ -1,0 +1,1428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bastion Deep Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: full-bleed living "deep sea" hero (canvas) with a centred agent prompt, then a hairline dashboard band. */
+:root{
+  color-scheme: dark;
+  --bg:#050608;
+  --bg-2:#0A0C10;
+  --glass:rgba(12,14,18,0.72);
+  --glass-2:rgba(9,11,14,0.9);
+  --line:rgba(190,208,222,0.09);
+  --line-2:rgba(190,208,222,0.17);
+  --fg:#E7ECEF;
+  --fg-2:#C3CBD1;
+  --muted:#8C969E;
+  --track:#14181D;
+  --teal:#2DE2BE;
+  --teal-ink:#03140F;
+  --violet:#9B8CFF;
+  --amber:#F2B65A;
+  --coral:#FF7A66;
+  --claude:#D97757;
+  --font-display:'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body:'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --gut-l:max(16px, env(safe-area-inset-left, 0px));
+  --gut-r:max(16px, env(safe-area-inset-right, 0px));
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--font-body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mono{font-family:var(--font-mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* back pill */
+.back{position:fixed;z-index:60;top:calc(14px + env(safe-area-inset-top, 0px));left:var(--gut-l);display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line-2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--fg-2);text-decoration:none;font:500 12px var(--font-mono);letter-spacing:.02em}
+.back:hover{color:var(--fg);border-color:rgba(190,208,222,0.32)}
+
+/* hero */
+.hero{position:relative;height:clamp(620px, 85vh, 940px);overflow:hidden;background:radial-gradient(120% 90% at 50% 42%, #0B0F14 0%, var(--bg) 62%)}
+#sea{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-top{position:absolute;top:calc(18px + env(safe-area-inset-top, 0px));right:var(--gut-r);display:flex;flex-direction:column;align-items:flex-end;gap:4px;font:500 11px var(--font-mono);letter-spacing:.08em;color:var(--muted);pointer-events:none}
+.brand{display:flex;align-items:center;gap:8px;color:var(--fg);letter-spacing:.24em;font-size:12px}
+.brand-mark{width:10px;height:10px;background:var(--teal);box-shadow:4px 4px 0 var(--violet)}
+.live{display:inline-flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:blink 1.8s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:92px var(--gut-r) 96px var(--gut-l);pointer-events:none}
+.center .ui{pointer-events:auto}
+.hist-wrap{position:relative;z-index:30}
+.pill{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:rgba(12,14,18,0.6);color:var(--muted);font:500 12px var(--font-body);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pill:hover{color:var(--fg);border-color:rgba(190,208,222,0.3)}
+.pill svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.menu{position:absolute;z-index:20;top:calc(100% + 8px);left:50%;transform:translateX(-50%);min-width:250px;padding:6px;border-radius:14px;background:var(--glass-2);border:1px solid var(--line-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 20px 50px -20px rgba(0,0,0,.9);display:flex;flex-direction:column;gap:2px}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--fg-2);font:500 13px var(--font-body);text-align:left}
+.menu button:hover,.menu button[aria-checked="true"]{background:rgba(190,208,222,0.07);color:var(--fg)}
+.menu .mlabel{font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+
+h1.headline{margin:0;font:300 clamp(34px, 5.6vw, 62px)/1.05 var(--font-display);letter-spacing:-0.04em;text-align:center;text-wrap:balance;text-shadow:0 0 30px var(--bg),0 0 60px var(--bg)}
+h1.headline .w{display:inline-block}
+
+.prompt{width:min(640px, 100%);border-radius:18px;background:var(--glass);border:1px solid var(--line-2);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:0 30px 80px -30px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,0.04);padding:14px 12px 10px 18px;display:flex;flex-direction:column;gap:8px}
+.prompt:focus-within{border-color:var(--violet);box-shadow:0 0 0 1px var(--violet),0 30px 80px -30px rgba(0,0,0,.95)}
+.prompt input{width:100%;border:0;outline:none;background:transparent;font:400 15.5px var(--font-body);color:var(--fg);padding:4px 0}
+.prompt input::placeholder{color:var(--muted)}
+.prow{display:flex;align-items:center;gap:6px}
+.ibtn{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--muted)}
+.ibtn:hover{color:var(--fg);background:rgba(190,208,222,0.07)}
+.ibtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hint{margin-left:auto;font:500 11px var(--font-mono);color:var(--muted);display:flex;gap:12px;align-items:center}
+.prov-wrap{position:relative}
+.prov{display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:0 10px 0 8px;border-radius:9px;border:1px solid var(--line-2);background:rgba(190,208,222,0.04);color:var(--fg-2);font:600 12px var(--font-body)}
+.prov:hover{color:var(--fg);background:rgba(190,208,222,0.09)}
+.prov svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+.prov-wrap .menu{left:auto;right:0;transform:none;min-width:210px;top:auto;bottom:calc(100% + 8px)}
+.mark{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:700 10px var(--font-body);flex:none}
+.mark.claude{background:var(--claude);color:#1B0C05}
+.mark.chatgpt{background:var(--fg);color:var(--bg)}
+.mark.grok{background:transparent;border:1px solid var(--fg-2);color:var(--fg)}
+.send{width:38px;height:38px;border-radius:11px;border:0;background:var(--fg);color:var(--bg);display:grid;place-items:center}
+.send:hover{background:#fff}
+.send svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+.answer{width:min(640px, 100%);max-height:236px;overflow:auto;border-radius:16px;background:var(--glass-2);border:1px solid var(--line-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:14px 16px;display:flex;flex-direction:column;gap:10px;animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+.ahead{display:flex;align-items:center;gap:8px;font:600 12.5px var(--font-body)}
+.ahead .meta{margin-left:auto;font:500 10.5px var(--font-mono);color:var(--muted)}
+.atext{margin:0;font:400 14px/1.6 var(--font-body);color:var(--fg-2);min-height:1.6em}
+.atext.thinking::after{content:"";display:inline-block;width:28px;height:8px;background:radial-gradient(circle, var(--muted) 1.5px, transparent 2px) 0 50%/9px 8px repeat-x;animation:think 1s steps(3) infinite}
+@keyframes think{from{width:0}to{width:28px}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:rgba(190,208,222,0.04);color:var(--fg);font:600 12px var(--font-body);animation:rise .4s ease both}
+.chip:hover{background:rgba(190,208,222,0.1)}
+.chip.go{background:var(--teal);border-color:transparent;color:var(--teal-ink)}
+.chip.go:hover{background:#5FF0D2}
+
+.corner{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-wrap:wrap;gap:6px 18px;font:500 11.5px var(--font-mono);color:var(--muted);letter-spacing:.03em;pointer-events:none}
+.corner b{color:var(--fg);font-weight:500}
+.corner,.hero-top{text-shadow:0 0 8px var(--bg),0 0 16px var(--bg)}
+.corner.bl{left:var(--gut-l)}
+.corner.br{right:var(--gut-r);justify-content:flex-end;align-items:center;pointer-events:auto}
+.linkbtn{border:0;background:transparent;padding:6px 0;color:var(--muted);font:500 11.5px var(--font-mono);text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px}
+.linkbtn:hover{color:var(--fg)}
+
+.tip{position:absolute;z-index:6;pointer-events:none;padding:6px 9px;border-radius:7px;background:rgba(5,6,8,0.88);border:1px solid var(--line-2);font:500 11px var(--font-mono);color:var(--fg);white-space:nowrap;letter-spacing:.02em}
+.tip i{font-style:normal;color:var(--muted)}
+
+.detail{position:absolute;z-index:8;top:76px;right:var(--gut-r);width:336px;max-height:calc(100% - 150px);overflow:auto;border-radius:18px;background:var(--glass-2);border:1px solid var(--line-2);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 30px 80px -30px rgba(0,0,0,.95);padding:18px;display:flex;flex-direction:column;gap:14px;animation:slide .45s cubic-bezier(.2,.7,.2,1) both}
+@keyframes slide{from{opacity:0;transform:translateX(16px)}}
+.dhead{display:flex;align-items:flex-start;gap:10px}
+.dhead h3{margin:0;font:600 17px/1.25 var(--font-display);letter-spacing:-0.01em}
+.dhead .sub{font:500 11px var(--font-mono);color:var(--muted);padding-top:3px}
+.close{margin-left:auto;flex:none}
+.state{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font:500 10.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line-2);color:var(--fg-2)}
+.state.warn{color:var(--amber);border-color:rgba(242,182,90,0.4)}
+.state.crit{color:var(--coral);border-color:rgba(255,122,102,0.45)}
+.state.ok{color:var(--teal);border-color:rgba(45,226,190,0.4)}
+.state.guest{color:var(--violet);border-color:rgba(155,140,255,0.45)}
+.dstats{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.dstats div{background:var(--bg);padding:10px 12px}
+.dstats span{display:block;font:500 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.dstats b{font:600 17px var(--font-display);font-variant-numeric:tabular-nums}
+.dlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.dlist li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font:500 12px var(--font-mono);color:var(--fg-2)}
+.dlist li span:last-child{color:var(--muted);text-align:right}
+.verdict{padding:12px;border-radius:12px;background:rgba(190,208,222,0.035);border:1px solid var(--line);font:400 13px/1.55 var(--font-body);color:var(--fg-2)}
+.verdict .by{display:flex;align-items:center;gap:7px;font:600 11.5px var(--font-body);color:var(--fg);padding-bottom:6px}
+.dact{display:flex;flex-wrap:wrap;gap:6px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 15px;border-radius:10px;border:1px solid var(--line-2);background:rgba(190,208,222,0.04);color:var(--fg);font:600 13px var(--font-body);transition:background .15s, border-color .15s, transform .15s}
+.btn:hover{background:rgba(190,208,222,0.1);border-color:rgba(190,208,222,0.3)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--teal);color:var(--teal-ink);border-color:transparent}
+.btn.primary:hover{background:#5FF0D2}
+.btn.danger{color:var(--coral);border-color:rgba(255,122,102,0.4);background:rgba(255,122,102,0.06)}
+.btn.danger:hover{background:rgba(255,122,102,0.14)}
+.btn.sm{min-height:32px;padding:0 11px;font-size:12px;border-radius:8px}
+
+.toast{position:fixed;z-index:70;left:50%;bottom:calc(24px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:var(--glass-2);border:1px solid var(--line-2);font:500 12.5px var(--font-body);color:var(--fg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 20px 40px -20px rgba(0,0,0,.9);width:max-content;max-width:calc(100% - 32px)}
+
+/* band */
+.band{padding-block:64px 88px;padding-left:var(--gut-l);padding-right:var(--gut-r);border-top:1px solid var(--line);background:linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)}
+.band-in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.band-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 40px}
+.eyebrow{margin:0 0 10px;font:500 11px var(--font-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+.band-head h2{margin:0;font:300 clamp(28px, 3.4vw, 40px)/1.1 var(--font-display);letter-spacing:-0.035em;text-wrap:balance;max-width:640px}
+.band-note{margin:0;max-width:420px;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:1px;background:var(--line);border:1px solid var(--line);grid-template-areas:"speed" "scan" "boost" "guard" "log"}
+@media (min-width:720px){.grid{grid-template-columns:repeat(2, minmax(0,1fr));grid-template-areas:"speed boost" "scan scan" "guard log"}}
+@media (min-width:1100px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"speed scan boost" "guard scan log"}}
+.panel{background:var(--bg);padding:22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.phead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.phead h3{margin:0;font:500 11px var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.phead .val{font:500 11.5px var(--font-mono);color:var(--fg-2)}
+
+/* speed */
+.gauge{position:relative;width:min(250px, 100%);align-self:center}
+.gauge svg{display:block;width:100%;height:auto;overflow:visible}
+.gauge .tick{font:500 8.5px var(--font-mono);fill:var(--muted)}
+.gread{display:flex;flex-direction:column;align-items:center;margin-top:-18px}
+.gread .big{font:300 46px/1 var(--font-display);letter-spacing:-0.04em;font-variant-numeric:tabular-nums}
+.gread .unit{font:500 11px var(--font-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding-top:6px}
+.trio{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.trio div{background:var(--bg);padding:10px 12px}
+.trio span{display:block;font:500 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.trio b{font:500 16px var(--font-display);font-variant-numeric:tabular-nums}
+
+/* scan */
+.scan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);min-height:56px;transition:opacity .25s}
+.row:last-child{border-bottom:0}
+.ic{width:22px;height:22px;flex:none;display:grid;place-items:center;border:1px solid var(--line-2);border-radius:6px}
+.ic svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rt{flex:1;min-width:0}
+.rtitle{font:600 13.5px var(--font-body)}
+.rmeta{font:500 11px var(--font-mono);color:var(--muted);overflow-wrap:anywhere}
+.s-fixed .ic{color:var(--teal);border-color:rgba(45,226,190,0.35);background:rgba(45,226,190,0.06)}
+.s-fixed .rtitle{color:var(--fg-2)}
+.s-open.sev-crit .ic{color:var(--coral);border-color:rgba(255,122,102,0.5);background:rgba(255,122,102,0.08)}
+.s-open.sev-high .ic,.s-open.sev-med .ic{color:var(--amber);border-color:rgba(242,182,90,0.45);background:rgba(242,182,90,0.06)}
+.sev{font:500 10px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.sev-crit .sev{color:var(--bg);background:var(--coral)}
+.sev-high .sev,.sev-med .sev{color:var(--amber);border:1px solid rgba(242,182,90,0.45)}
+.s-pending .rtitle,.s-pending .rmeta{color:var(--muted)}
+.s-pending .ic{color:var(--muted);opacity:.5}
+.s-checking .ic{color:var(--violet);border-color:rgba(155,140,255,0.5)}
+.s-checking .ic svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.s-reveal{animation:flash .6s ease}
+@keyframes flash{from{background:rgba(155,140,255,0.08)}}
+.okbadge{font:500 10.5px var(--font-mono);letter-spacing:.08em;color:var(--teal);text-transform:uppercase}
+
+/* boost */
+.chbars{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:6px}
+.chc{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.chc .n{font:500 10px var(--font-mono);color:var(--muted)}
+.chc .bar{width:100%;background:repeating-linear-gradient(0deg, #3A434B 0 5px, transparent 5px 7px);transition:height .6s cubic-bezier(.2,.7,.2,1)}
+.chc.crowd .bar{background:repeating-linear-gradient(0deg, rgba(255,122,102,0.75) 0 5px, transparent 5px 7px)}
+.chc .lab{font:500 10.5px var(--font-mono);color:var(--muted)}
+.chc .you{font:600 9.5px var(--font-mono);letter-spacing:.08em;color:var(--teal-ink);background:var(--teal);padding:1px 5px;visibility:hidden}
+.chc.me .you{visibility:visible}
+.chc.me .bar{box-shadow:inset 0 7px 0 var(--teal)}
+.chc.me .lab{color:var(--teal)}
+.bstat{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bstat .big{font:300 40px/1 var(--font-display);letter-spacing:-0.04em;font-variant-numeric:tabular-nums}
+.bstat .big.up{color:var(--teal)}
+.bstat .note{font:500 11.5px var(--font-mono);color:var(--muted)}
+.brow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* guard toggles */
+.sw{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;min-height:52px}
+.sw:last-child{border-bottom:0}
+.sw .t{flex:1;min-width:0}
+.sw .t b{display:block;font:600 13.5px var(--font-body)}
+.sw .t span{font:500 11px var(--font-mono);color:var(--muted)}
+.sw input{appearance:none;-webkit-appearance:none;flex:none;width:40px;height:24px;border-radius:999px;background:var(--track);border:1px solid var(--line-2);position:relative;cursor:pointer;margin:0;transition:background .2s}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .2s, background .2s}
+.sw input:checked{background:rgba(45,226,190,0.22);border-color:rgba(45,226,190,0.5)}
+.sw input:checked::after{transform:translateX(16px);background:var(--teal)}
+.sw input:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+
+/* log */
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;font:400 12px/1.55 var(--font-mono);color:var(--fg-2)}
+.log li{animation:rise .4s ease both}
+.log time{color:var(--muted);margin-right:6px}
+.tag{margin-right:6px}
+.tag.claude{color:#F0A584}
+.tag.chatgpt{color:var(--fg)}
+.tag.grok{color:var(--violet)}
+.tag.you{color:var(--teal)}
+
+/* intro */
+.intro{animation:rise 1s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d, 0s)}
+@keyframes rise{from{opacity:0;transform:translateY(14px);filter:blur(6px)}}
+
+@media (min-width:761px) and (max-width:1343px){
+  .hero.has-detail .center{padding-right:calc(352px + var(--gut-r))}
+}
+@media (max-width:760px){
+  .hero{height:auto;min-height:clamp(620px, 85vh, 940px)}
+  .center{position:relative;inset:auto;min-height:clamp(620px, 85vh, 940px);padding:108px var(--gut-r) 64px var(--gut-l)}
+  .answer{max-height:none}
+  .detail{top:auto;left:var(--gut-l);right:var(--gut-r);bottom:16px;width:auto;max-height:62%}
+  .hint .kbd{display:none}
+  .corner{font-size:10.5px;gap:4px 12px}
+  .corner.br{bottom:auto;top:calc(64px + env(safe-area-inset-top, 0px))}
+}
+@media (pointer:coarse){
+  .pill,.prov,.chip,.btn.sm,.back,.menu button{min-height:44px}
+  .ibtn,.send{width:44px;height:44px}
+  .linkbtn{min-height:44px;padding-block:0;display:inline-flex;align-items:center}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-delay:0s !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">&larr; All concepts</a>
+
+<section class="hero" id="hero" aria-label="Your network, live">
+  <canvas id="sea" aria-hidden="true"></canvas>
+
+  <div class="hero-top intro" style="--d:.1s">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>BASTION</div>
+    <div class="live"><span class="dot" aria-hidden="true"></span>live · gateway 192.168.1.1</div>
+  </div>
+
+  <div class="center">
+    <div class="hist-wrap ui intro" style="--d:.25s">
+      <button class="pill" id="histBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="histMenu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>History
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="menu" id="histMenu" hidden>
+        <div class="mlabel">Earlier today</div>
+        <button type="button" data-q="Why is my Wi-Fi slow in the evening?">Why is my Wi-Fi slow in the evening?</button>
+        <button type="button" data-q="Is my router safe from my ISP?">Is my router safe from my ISP?</button>
+        <button type="button" data-q="What is the TV box doing at night?">What is the TV box doing at night?</button>
+        <button type="button" data-q="Who is the new device?">Who is the new device?</button>
+      </div>
+    </div>
+
+    <h1 class="headline" id="headline"><span class="w intro" style="--d:.35s">what's</span> <span class="w intro" style="--d:.45s">on</span> <span class="w intro" style="--d:.55s">your</span> <span class="w intro" style="--d:.65s">network?</span></h1>
+
+    <form class="prompt ui intro" id="askForm" style="--d:.8s" autocomplete="off">
+      <label class="sr" for="q">Ask an agent about your network</label>
+      <input id="q" name="q" type="text" placeholder="Ask Claude anything about your Wi-Fi…">
+      <div class="prow">
+        <button class="ibtn" type="button" id="attachBtn" aria-label="Attach a router photo or log">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        </button>
+        <button class="ibtn" type="button" id="micBtn" aria-label="Voice input">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+        </button>
+        <div class="hint"><span class="kbd">&crarr; send</span>
+          <div class="prov-wrap">
+            <button class="prov" type="button" id="provBtn" aria-haspopup="true" aria-expanded="false" aria-controls="provMenu">
+              <span class="mark claude" id="provMark" aria-hidden="true">C</span><span id="provName">Claude</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            </button>
+            <div class="menu" id="provMenu" role="menu" hidden>
+              <div class="mlabel">Agent · your API key</div>
+              <button type="button" role="menuitemradio" aria-checked="true" data-p="claude"><span class="mark claude" aria-hidden="true">C</span>Claude</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-p="chatgpt"><span class="mark chatgpt" aria-hidden="true">G</span>ChatGPT</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-p="grok"><span class="mark grok" aria-hidden="true">X</span>Grok</button>
+            </div>
+          </div>
+        </div>
+        <button class="send" type="submit" aria-label="Send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+        </button>
+      </div>
+    </form>
+
+    <div class="answer ui" id="answer" hidden aria-live="polite">
+      <div class="ahead"><span class="mark claude" id="ansMark" aria-hidden="true">C</span><span id="ansName">Claude</span><span class="meta" id="ansMeta">read 24 h of flow metadata</span></div>
+      <p class="atext" id="ansText"></p>
+      <div class="chips" id="ansChips"></div>
+    </div>
+  </div>
+
+  <div class="corner bl intro" style="--d:1.1s">
+    <span>&darr; <b class="num" id="cDown">298.9</b> Mbps</span>
+    <span>&uarr; <b class="num" id="cUp">71.2</b> Mbps</span>
+    <span>ping <b class="num" id="cPing">14</b> ms</span>
+  </div>
+  <div class="corner br intro" style="--d:1.2s">
+    <span><b class="num" id="cDev">29</b> devices</span>
+    <span>score <b class="num" id="cScore">92</b>/100</span>
+    <button class="linkbtn" type="button" id="nextDev">inspect next</button>
+  </div>
+
+  <div class="tip" id="tip" hidden></div>
+
+  <aside class="detail ui" id="detail" hidden aria-labelledby="dName">
+    <div class="dhead">
+      <div><h3 id="dName">Device</h3><div class="sub" id="dSub"></div></div>
+      <button class="ibtn close" type="button" id="dClose" aria-label="Close device details">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+    <span class="state" id="dState">Normal</span>
+    <div class="dstats">
+      <div><span>Right now</span><b id="dNow">0</b></div>
+      <div><span>Last 24 h</span><b id="dDay">0</b></div>
+    </div>
+    <ul class="dlist" id="dDest"></ul>
+    <div class="verdict"><div class="by"><span class="mark claude" id="dMark" aria-hidden="true">C</span><span id="dBy">Claude</span></div><span id="dVerdict"></span></div>
+    <div class="dact">
+      <button class="btn danger sm" type="button" id="dBlock">Block device</button>
+      <button class="btn sm" type="button" id="dTrust">Trust</button>
+      <button class="btn sm" type="button" id="dAsk">Ask agent</button>
+    </div>
+  </aside>
+</section>
+
+<section class="band" aria-labelledby="bandTitle">
+  <div class="band-in">
+    <div class="band-head">
+      <div>
+        <p class="eyebrow">Under the surface</p>
+        <h2 id="bandTitle">Speed, backdoors and airtime, checked in one pass.</h2>
+      </div>
+      <p class="band-note">Numbers come from your router and this computer. Agents only see connection metadata, never page contents, and nothing changes until you approve it.</p>
+    </div>
+
+    <div class="grid">
+      <article class="panel" style="grid-area:speed" aria-labelledby="hSpeed">
+        <div class="phead"><h3 id="hSpeed">Speed test</h3><span class="val" id="gPhase">idle · last run 10 min ago</span></div>
+        <div class="gauge">
+          <svg viewBox="0 0 220 168" role="img" aria-labelledby="gTitle">
+            <title id="gTitle">Speed gauge</title>
+            <defs>
+              <linearGradient id="gGrad" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" style="stop-color:var(--teal)"></stop>
+                <stop offset="1" style="stop-color:var(--violet)"></stop>
+              </linearGradient>
+            </defs>
+            <circle cx="110" cy="110" r="90" fill="none" style="stroke:var(--track)" stroke-width="12" stroke-dasharray="376.99 999" transform="rotate(150 110 110)"></circle>
+            <circle id="gArc" cx="110" cy="110" r="90" fill="none" stroke="url(#gGrad)" stroke-width="12" stroke-dasharray="0 999" transform="rotate(150 110 110)"></circle>
+            <circle cx="110" cy="110" r="90" fill="none" style="stroke:var(--bg)" stroke-width="14" stroke-dasharray="2.2 4.08" transform="rotate(150 110 110)"></circle>
+            <g id="gTicks"></g>
+            <line id="gNeedle" x1="110" y1="110" x2="178" y2="110" style="stroke:var(--fg)" stroke-width="2" stroke-linecap="round" transform="rotate(150 110 110)"></line>
+            <circle cx="110" cy="110" r="5" style="fill:var(--bg);stroke:var(--fg)" stroke-width="2"></circle>
+          </svg>
+          <div class="gread"><span class="big" id="gVal">298.9</span><span class="unit" id="gUnit">Mbps down</span></div>
+        </div>
+        <div class="trio">
+          <div><span>Down</span><b id="sDown">298.9</b></div>
+          <div><span>Up</span><b id="sUp">71.2</b></div>
+          <div><span>Ping</span><b id="sPing">14 ms</b></div>
+        </div>
+        <button class="btn primary" type="button" id="runSpeed">Run speed test</button>
+      </article>
+
+      <article class="panel" style="grid-area:scan" aria-labelledby="hScan">
+        <div class="phead"><h3 id="hScan">Backdoor scan</h3><span class="val">score <b class="num" id="scanScore">92</b>/100</span></div>
+        <ul class="scan" id="scanList"></ul>
+        <div class="brow"><button class="btn primary" type="button" id="runScan">Run deep scan</button><span class="mono" id="scanNote" style="align-self:center;font-size:11px;color:var(--muted)">last deep scan 12 min ago</span></div>
+      </article>
+
+      <article class="panel" style="grid-area:boost" aria-labelledby="hBoost">
+        <div class="phead"><h3 id="hBoost">Wi-Fi boost · 5 GHz</h3><span class="val">neighbours per channel</span></div>
+        <div class="chbars" id="chBars"></div>
+        <div class="bstat"><span class="big" id="bBig">ch 36</span><span class="note" id="bNote">shared with 7 neighbours after 19:00</span></div>
+        <div class="brow"><button class="btn primary" type="button" id="boostBtn">Move to channel 149 · +38%</button></div>
+      </article>
+
+      <article class="panel" style="grid-area:guard" aria-labelledby="hGuard">
+        <div class="phead"><h3 id="hGuard">Protections</h3><span class="val">applied on the router</span></div>
+        <div>
+          <label class="sw" for="tDoh"><span class="t"><b>Encrypted DNS</b><span>DNS-over-HTTPS · ISP can't read lookups</span></span><input type="checkbox" id="tDoh" role="switch" checked></label>
+          <label class="sw" for="tIsp"><span class="t"><b>Block ISP remote control</b><span>TR-069 · 7547/tcp from WAN</span></span><input type="checkbox" id="tIsp" role="switch"></label>
+          <label class="sw" for="tMap"><span class="t"><b>Hide from location maps</b><span>adds _nomap to the network name</span></span><input type="checkbox" id="tMap" role="switch" checked></label>
+          <label class="sw" for="tMac"><span class="t"><b>Private Wi-Fi address</b><span>random MAC on this computer</span></span><input type="checkbox" id="tMac" role="switch" checked></label>
+          <label class="sw" for="tAuto"><span class="t"><b>Let agents act without asking</b><span>off · every change needs your OK</span></span><input type="checkbox" id="tAuto" role="switch"></label>
+        </div>
+      </article>
+
+      <article class="panel" style="grid-area:log" aria-labelledby="hLog">
+        <div class="phead"><h3 id="hLog">Agent log</h3><span class="val">Claude · ChatGPT · Grok</span></div>
+        <ul class="log" id="log" aria-live="polite"></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => 1 - Math.pow(1 - t, 3);
+
+function hash(x, y, s) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 1442695041);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/* ---------------- palette ---------------- */
+const GREY = [[24, 28, 33], [40, 46, 53], [66, 76, 86], [104, 116, 127], [154, 166, 176], [216, 224, 230]];
+const TINTS = { grey: [150, 165, 175], teal: [45, 226, 190], violet: [155, 140, 255], amber: [242, 182, 90], coral: [255, 122, 102] };
+const TK = Object.keys(TINTS);
+const PAL = [];
+TK.forEach((k, ti) => {
+  const t = TINTS[k];
+  for (let acc = 0; acc < 2; acc++) for (let l = 0; l < 6; l++) {
+    const g = GREY[l];
+    let c;
+    if (acc) { const s = 0.26 + 0.74 * l / 5; c = [t[0] * s, t[1] * s, t[2] * s]; }
+    else { const m = k === 'grey' ? 0 : 0.12; c = [g[0] + (t[0] - g[0]) * m, g[1] + (t[1] - g[1]) * m, g[2] + (t[2] - g[2]) * m]; }
+    PAL[(ti * 2 + acc) * 6 + l] = 'rgb(' + c.map(Math.round).join(',') + ')';
+  }
+});
+const BUCKETS = PAL.map(() => []);
+const HOLES = [];
+const pidx = (tint, acc, l) => (TK.indexOf(tint) * 2 + acc) * 6 + l;
+
+/* ---------------- creature kinds ---------------- */
+const KINDS = {
+  shark: { len: 170, w: 15, speed: 30, amp: 6, waves: 0.9, freq: 3.0,
+    prof: u => u < 0.22 ? 0.35 + 0.65 * Math.sin(u / 0.22 * Math.PI / 2) : 1 - (u - 0.22) / 0.78 * 0.86,
+    fins: [{ u: 0.30, len: 1.7, sweep: 0.16, base: 0.5 }, { u: 0.64, len: 0.55, sweep: 0.07, base: 0.28 }, { tail: true, len: 1.45, back: 0.15, base: 0.32 }] },
+  hammer: { len: 176, w: 14, speed: 28, amp: 6, waves: 0.9, freq: 2.8,
+    prof: u => u < 0.18 ? 0.5 + 0.5 * Math.sin(u / 0.18 * Math.PI / 2) : 1 - (u - 0.18) / 0.82 * 0.86,
+    fins: [{ u: 0.035, len: 1.45, sweep: 0.0, base: 0.32 }, { u: 0.32, len: 1.5, sweep: 0.15, base: 0.45 }, { tail: true, len: 1.35, back: 0.15, base: 0.3 }] },
+  manta: { len: 120, w: 46, speed: 22, amp: 2, waves: 0.4, freq: 1.7, flap: true,
+    prof: u => u < 0.58 ? Math.pow(Math.sin(Math.PI * (0.12 + 0.88 * u / 0.58)), 0.72) : 0.05,
+    fins: [] },
+  eel: { len: 196, w: 4.6, speed: 26, amp: 13, waves: 1.8, freq: 4.2,
+    prof: u => u < 0.06 ? 0.55 + 0.45 * u / 0.06 : 1 - (u - 0.06) * 0.88,
+    fins: [] },
+  fish: { len: 44, w: 8, speed: 44, amp: 3, waves: 0.8, freq: 6.5,
+    prof: u => u < 0.78 ? Math.pow(Math.sin(Math.PI * (0.1 + 0.9 * u / 0.78)), 0.8) : 0.12,
+    fins: [{ tail: true, len: 1.0, back: 0.2, base: 0.4 }] }
+};
+
+/* ---------------- devices ---------------- */
+const quiet = 'Quiet and normal. Nothing to change.';
+const DEVICES = [
+  { id: 'mac', name: 'MacBook Pro', ip: '192.168.1.12', vendor: 'Apple', mbps: 4.8, kind: 'shark', tint: 'teal', day: '0.86 GB', dest: [['github.com', '312 MB'], ['figma.com', '204 MB'], ['icloud.com', '96 MB']], verdict: 'Normal work traffic. Nothing to change.' },
+  { id: 'ps5', name: 'PS5', ip: '192.168.1.31', vendor: 'Sony', mbps: 3.6, kind: 'hammer', tint: 'violet', day: '0.31 GB', dest: [['playstation.net', '210 MB'], ['game servers via UPnP', '88 MB']], verdict: 'Opened 3 ports through UPnP for online play. Keep them if you play online, close them if not.' },
+  { id: 'tv', name: 'Living-room TV box', ip: '192.168.1.23', vendor: 'Android TV', mbps: 2.7, kind: 'manta', tint: 'amber', day: '1.20 GB', flag: 'tv', dest: [['analytics host', '1.2 GB · screen off'], ['video CDN', '340 MB'], ['time server', '1 MB']], verdict: 'Sends usage data every 90 seconds, even with the screen off. Streaming uses a different host, so blocking the analytics one won’t break Netflix or YouTube.' },
+  { id: 'unk', name: 'Unknown device', ip: '192.168.1.47', vendor: 'randomised MAC', mbps: 0.9, kind: 'eel', tint: 'coral', day: '18 MB', flag: 'unknown', dest: [['connectivity check', '2 MB'], ['DHCP lease', '4 min ago']], verdict: 'Joined 4 minutes ago with a randomised MAC. The DHCP fingerprint looks like an Android phone. Ask the household before trusting it.' },
+  { id: 'work', name: 'Work laptop', ip: '192.168.1.15', vendor: 'Dell', mbps: 2.2, kind: 'eel', tint: 'violet', day: '0.62 GB', dest: [['corporate VPN', '590 MB']], verdict: 'Everything goes through your employer’s VPN. Bastion can’t see inside it, which is expected.' },
+  { id: 'cam', name: 'Door camera', ip: '192.168.1.44', vendor: 'camera', mbps: 1.4, kind: 'shark', tint: 'teal', day: '0.41 GB', dest: [['camera cloud', '400 MB']], verdict: 'Uploads motion clips to its own cloud. Steady and expected.' },
+  { id: 'iph', name: 'iPhone 15', ip: '192.168.1.14', vendor: 'Apple · private address', mbps: 1.9, kind: 'fish', tint: 'teal', day: '0.54 GB', dest: [['icloud.com', '220 MB'], ['instagram.com', '180 MB']], verdict: quiet },
+  { id: 'ipad', name: 'iPad', ip: '192.168.1.18', vendor: 'Apple', mbps: 1.1, kind: 'fish', tint: 'violet', day: '0.21 GB', dest: [['youtube.com', '160 MB']], verdict: quiet },
+  { id: 'spk', name: 'Smart speaker', ip: '192.168.1.36', vendor: 'speaker', mbps: 0.3, kind: 'fish', tint: 'teal', day: '46 MB', dest: [['music streaming', '44 MB']], verdict: quiet },
+  { id: 'vac', name: 'Robot vacuum', ip: '192.168.1.40', vendor: 'vacuum', mbps: 0.1, kind: 'fish', tint: 'teal', day: '12 MB', dest: [['vendor cloud', '12 MB']], verdict: quiet },
+  { id: 'prn', name: 'Printer', ip: '192.168.1.50', vendor: 'printer', mbps: 0.05, kind: 'fish', tint: 'violet', day: '3 MB', dest: [['firmware check', '3 MB']], verdict: quiet },
+  { id: 'thermo', name: 'Thermostat', ip: '192.168.1.52', vendor: 'thermostat', mbps: 0.02, kind: 'fish', tint: 'teal', day: '1 MB', dest: [['vendor cloud', '1 MB']], verdict: quiet },
+  { id: 'watch', name: 'Watch', ip: '192.168.1.19', vendor: 'Apple', mbps: 0.2, kind: 'fish', tint: 'violet', day: '30 MB', dest: [['icloud.com', '30 MB']], verdict: quiet },
+  { id: 'plug', name: 'Smart plug', ip: '192.168.1.53', vendor: 'plug', mbps: 0.01, kind: 'fish', tint: 'teal', day: '1 MB', dest: [['vendor cloud', '1 MB']], verdict: quiet }
+];
+DEVICES.forEach(d => { d.state = 'normal'; });
+let deviceCount = 29;
+
+/* ---------------- canvas ---------------- */
+const hero = $('#hero'), sea = $('#sea'), ctx = sea.getContext('2d');
+const bg = document.createElement('canvas'), bctx = bg.getContext('2d');
+let W = 1, H = 1, DPR = 1, C = 6, sizeMul = 1;
+const SX = new Float32Array(1024), SY = new Float32Array(1024);
+
+function resize() {
+  const r = hero.getBoundingClientRect();
+  W = Math.max(1, r.width); H = Math.max(1, r.height);
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  C = W < 640 ? 5 : 6;
+  sizeMul = W < 640 ? 0.66 : W < 1000 ? 0.85 : 1;
+  sea.width = Math.round(W * DPR); sea.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bg.width = sea.width; bg.height = sea.height;
+  bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bctx.clearRect(0, 0, W, H);
+  const cols = Math.ceil(W / C), rows = Math.ceil(H / C);
+  for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) {
+    const field = Math.sin(gx * 0.045 + 1.3) + Math.sin(gy * 0.06 + gx * 0.021) + Math.sin((gx - gy) * 0.031);
+    const p = field > 1.75 ? 0.2 : 0.014;
+    if (hash(gx, gy, 3) < p) {
+      bctx.fillStyle = 'rgba(150,172,188,' + (0.04 + hash(gx, gy, 4) * 0.1).toFixed(3) + ')';
+      bctx.fillRect(gx * C + 1, gy * C + 1, C - 3, C - 3);
+    }
+  }
+  creatures.forEach(c => { c.scale = c.tScale = scaleFor(c.dev); });
+  if (reduce || !raf) draw();
+}
+
+function scaleFor(d) {
+  let s;
+  if (d.kind === 'fish') s = 0.72 + 0.55 * Math.min(1, Math.sqrt(d.mbps / 2));
+  else s = 0.62 + 0.7 * Math.sqrt(Math.min(d.mbps, 5) / 5);
+  return s * sizeMul;
+}
+function look(d) {
+  if (d.state === 'trusted') return ['teal', 0.12];
+  if (d.state === 'calmed') return ['teal', 0.2];
+  if (d.state === 'guest') return ['violet', 0.38];
+  if (d.flag === 'tv') return ['amber', 0.55];
+  if (d.flag === 'unknown') return ['coral', 0.6];
+  return [d.tint, 0.14];
+}
+
+let uid = 0;
+const creatures = [];
+function makeCreature(dev, i) {
+  const K = KINDS[dev.kind];
+  const c = {
+    dev, K, id: ++uid, seed: (Math.random() * 1e6) | 0,
+    x: W * (0.08 + Math.random() * 0.84), y: H * (0.08 + Math.random() * 0.84),
+    a: Math.random() * Math.PI * 2, turn: 0, spd: K.speed * (0.85 + Math.random() * 0.3), mul: 1,
+    phase: Math.random() * 6.28, hist: [], scale: scaleFor(dev), tScale: scaleFor(dev),
+    alpha: 0, delay: 0.3 + i * 0.09, map: new Map(), n: 0,
+    sx: new Float32Array(512), sy: new Float32Array(512), nx: new Float32Array(512), ny: new Float32Array(512), sw: new Float32Array(512),
+    box: [0, 0, 0, 0], dying: false
+  };
+  const len = K.len * c.scale;
+  for (let s = 4; s <= len + 24; s += 4) c.hist.push({ x: c.x - Math.cos(c.a) * s, y: c.y - Math.sin(c.a) * s });
+  return c;
+}
+
+function spine(c, N, step) {
+  const P = c.hist;
+  let ax = c.x, ay = c.y, j = 0, dx = -Math.cos(c.a), dy = -Math.sin(c.a);
+  SX[0] = ax; SY[0] = ay;
+  for (let i = 1; i < N; i++) {
+    let need = step;
+    while (need > 0) {
+      let bx, by;
+      if (j < P.length) { bx = P[j].x; by = P[j].y; } else { bx = ax + dx * need; by = ay + dy * need; }
+      const sx = bx - ax, sy = by - ay, d = Math.hypot(sx, sy);
+      if (d === 0) { j++; continue; }
+      if (d >= need) { ax += sx / d * need; ay += sy / d * need; dx = sx / d; dy = sy / d; need = 0; }
+      else { ax = bx; ay = by; dx = sx / d; dy = sy / d; need -= d; j++; }
+    }
+    SX[i] = ax; SY[i] = ay;
+  }
+}
+
+function put(map, x, y, b) {
+  const gx = Math.floor(x / C), gy = Math.floor(y / C);
+  const key = (gx + 2048) * 4096 + (gy + 2048);
+  const p = map.get(key);
+  if (p === undefined || b > p) map.set(key, b);
+}
+function stamp(map, x, y, r, b) {
+  if (r < C * 0.6) { put(map, x, y, b); return; }
+  const gx0 = Math.floor((x - r) / C), gx1 = Math.floor((x + r) / C), gy0 = Math.floor((y - r) / C), gy1 = Math.floor((y + r) / C);
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+    const cx = gx * C + C / 2, cy = gy * C + C / 2;
+    if ((cx - x) * (cx - x) + (cy - y) * (cy - y) <= r * r) put(map, cx, cy, b);
+  }
+}
+
+function raster(c) {
+  const K = c.K, s = c.scale, len = K.len * s, maxW = K.w * s, step = C * 0.8;
+  const N = Math.min(500, Math.max(4, Math.ceil(len / step) + 1));
+  spine(c, N, step);
+  const map = c.map; map.clear();
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const flap = K.flap ? 0.7 + 0.3 * Math.sin(c.phase * 0.9) : 1;
+  for (let i = 0; i < N; i++) {
+    const u = i / (N - 1);
+    let tx, ty;
+    if (i === 0) { tx = Math.cos(c.a); ty = Math.sin(c.a); }
+    else { tx = SX[i - 1] - SX[i]; ty = SY[i - 1] - SY[i]; const d = Math.hypot(tx, ty) || 1; tx /= d; ty /= d; }
+    const nx = -ty, ny = tx;
+    const off = Math.sin(c.phase - u * K.waves * 6.283) * K.amp * s * (0.16 + 0.84 * u);
+    let hw = K.prof(u) * maxW;
+    if (K.flap && u < 0.58) hw *= flap;
+    hw = Math.max(hw, C * 0.45);
+    const px = SX[i] + nx * off, py = SY[i] + ny * off;
+    c.sx[i] = px; c.sy[i] = py; c.nx[i] = nx; c.ny[i] = ny; c.sw[i] = hw;
+    if (px - hw < x0) x0 = px - hw; if (px + hw > x1) x1 = px + hw;
+    if (py - hw < y0) y0 = py - hw; if (py + hw > y1) y1 = py + hw;
+    const cnt = Math.max(1, Math.ceil(2 * hw / (C * 0.7)));
+    for (let k = 0; k <= cnt; k++) {
+      const d = -hw + 2 * hw * k / cnt;
+      const t = Math.abs(d) / hw;
+      put(map, px + nx * d, py + ny * d, 0.36 + 0.64 * Math.pow(1 - t, 0.7) + (u < 0.1 ? 0.08 : 0));
+    }
+  }
+  for (const f of K.fins) {
+    for (let side = -1; side <= 1; side += 2) {
+      let ax, ay, bx, by;
+      if (f.tail) {
+        const i = N - 1, tx = c.ny[i], ty = -c.nx[i];
+        ax = c.sx[i]; ay = c.sy[i];
+        bx = ax - tx * f.back * len + c.nx[i] * side * f.len * maxW;
+        by = ay - ty * f.back * len + c.ny[i] * side * f.len * maxW;
+      } else {
+        const i0 = Math.round(f.u * (N - 1)), i1 = Math.min(N - 1, Math.round((f.u + f.sweep) * (N - 1)));
+        const fl = f.len * (0.92 + 0.08 * Math.sin(c.phase + side));
+        ax = c.sx[i0] + c.nx[i0] * side * c.sw[i0] * 0.8; ay = c.sy[i0] + c.ny[i0] * side * c.sw[i0] * 0.8;
+        bx = c.sx[i1] + c.nx[i1] * side * (c.sw[i1] + fl * maxW); by = c.sy[i1] + c.ny[i1] * side * (c.sw[i1] + fl * maxW);
+      }
+      const L = Math.hypot(bx - ax, by - ay), steps = Math.max(1, Math.ceil(L / (C * 0.6)));
+      for (let k = 0; k <= steps; k++) {
+        const q = k / steps, x = lerp(ax, bx, q), y = lerp(ay, by, q);
+        stamp(map, x, y, f.base * maxW * (1 - q) * 0.9 + C * 0.3, 0.55 - 0.25 * q);
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  c.n = N; c.box[0] = x0; c.box[1] = y0; c.box[2] = x1; c.box[3] = y1;
+}
+
+/* ambient: plankton, packets, debris */
+const plankton = [];
+for (let i = 0; i < 110; i++) plankton.push({ x: Math.random(), y: Math.random(), vx: (Math.random() - 0.5) * 0.006, vy: -0.002 - Math.random() * 0.006, s: Math.random() < 0.2 ? 2 : 1, ph: Math.random() * 6.28 });
+const packets = [];
+const debris = [];
+let emit = 0;
+
+let T = 0, raf = 0, last = 0, onScreen = true;
+let hovered = null, selected = null, hlC = null, hlUntil = 0;
+
+function step(dt) {
+  T += dt;
+  for (const c of creatures) {
+    if (c.dying) continue;
+    c.alpha = clamp((T - c.delay) / 1.4, 0, 1);
+    c.scale = lerp(c.scale, c.tScale, Math.min(1, dt * 1.5));
+    const focus = c === selected || (c === hlC && T < hlUntil);
+    c.mul = lerp(c.mul, focus ? 0.22 : 1, Math.min(1, dt * 2));
+    c.turn += (Math.random() - 0.5) * dt * 2.2;
+    c.turn = clamp(c.turn * 0.985, -0.85, 0.85);
+    const m = c.K.len * c.scale * 0.5 + 40;
+    if (c.x < -m || c.x > W + m || c.y < -m || c.y > H + m) {
+      const want = Math.atan2(H / 2 - c.y, W / 2 - c.x);
+      let diff = want - c.a; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      c.a += diff * dt * 1.3;
+    }
+    c.a += c.turn * dt;
+    const sp = c.spd * c.mul * (c.dev.flag === 'unknown' && c.dev.state === 'normal' ? 1.25 : 1);
+    c.x += Math.cos(c.a) * sp * dt; c.y += Math.sin(c.a) * sp * dt;
+    c.phase += dt * c.K.freq * (0.35 + 0.65 * c.mul);
+    const h0 = c.hist[0];
+    if (!h0 || Math.hypot(c.x - h0.x, c.y - h0.y) >= 4) c.hist.unshift({ x: c.x, y: c.y });
+    const maxLen = Math.ceil((c.K.len * c.scale + 30) / 4) + 4;
+    if (c.hist.length > maxLen) c.hist.length = maxLen;
+  }
+  for (const p of plankton) {
+    p.x += p.vx * dt; p.y += p.vy * dt; p.ph += dt * 1.3;
+    if (p.y < -0.02) p.y = 1.02; if (p.x < -0.02) p.x = 1.02; if (p.x > 1.02) p.x = -0.02;
+  }
+  const tv = creatures.find(c => c.dev.id === 'tv' && !c.dying);
+  if (tv && tv.dev.state === 'normal' && tv.alpha > 0.8) {
+    emit -= dt;
+    if (emit <= 0) {
+      emit = 0.16;
+      const tx = W + 60, ty = -60, d = Math.hypot(tx - tv.x, ty - tv.y) || 1;
+      const sp = 120 + Math.random() * 60;
+      packets.push({ x: tv.x, y: tv.y, vx: (tx - tv.x) / d * sp, vy: (ty - tv.y) / d * sp, w: Math.random() * 6.28, life: 1 });
+    }
+  }
+  for (let i = packets.length - 1; i >= 0; i--) {
+    const p = packets[i];
+    p.w += dt * 5; p.x += p.vx * dt + Math.sin(p.w) * 0.6; p.y += p.vy * dt; p.life -= dt * 0.28;
+    if (p.life <= 0 || p.x > W + 40 || p.y < -40) packets.splice(i, 1);
+  }
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const p = debris[i];
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.vy = p.vy * 0.985 - 14 * dt; p.life -= dt / 1.7;
+    if (p.life <= 0) debris.splice(i, 1);
+  }
+  for (let i = creatures.length - 1; i >= 0; i--) if (creatures[i].dying && T > creatures[i].dieAt) creatures.splice(i, 1);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(bg, 0, 0, W, H);
+  // plankton
+  for (let pass = 0; pass < 3; pass++) {
+    ctx.fillStyle = ['rgba(170,192,206,0.10)', 'rgba(170,192,206,0.22)', 'rgba(200,220,232,0.4)'][pass];
+    for (const p of plankton) {
+      const tw = 0.5 + 0.5 * Math.sin(p.ph);
+      if (((tw * 2.99) | 0) !== pass) continue;
+      ctx.fillRect(Math.round(p.x * W), Math.round(p.y * H), p.s, p.s);
+    }
+  }
+  for (const b of BUCKETS) b.length = 0;
+  HOLES.length = 0;
+  const sparkT = (T * 5) | 0;
+  for (const c of creatures) {
+    if (c.dying) continue;
+    if (c.alpha <= 0) continue;
+    raster(c);
+    const [tint, accP] = look(c.dev);
+    const ti = TK.indexOf(tint);
+    let a = c.alpha;
+    if (c.dev.flag === 'unknown' && c.dev.state === 'normal') a *= 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(T * 4.5));
+    const boost = (c === hovered || c === selected || (c === hlC && T < hlUntil)) ? 0.14 : 0;
+    for (const [key, b0] of c.map) {
+      const gxo = Math.floor(key / 4096), gx = gxo - 2048, gy = key - gxo * 4096 - 2048;
+      let v = (b0 * 0.82 + hash(gx, gy, c.seed) * 0.32 - 0.12 + boost) * a;
+      if (hash(gx, gy, c.seed + sparkT) > 0.988) v = a;
+      if (v < 0.06) continue;
+      const L = v >= 1 ? 5 : (v * 6) | 0;
+      const acc = hash(gx, gy, c.seed + 99) < accP ? 1 : 0;
+      BUCKETS[(ti * 2 + acc) * 6 + L].push(gx * C, gy * C);
+      if (L >= 3 && hash(gx, gy, c.seed + 7) > 0.6) HOLES.push(gx * C, gy * C);
+    }
+  }
+  const s = C - 1;
+  for (let i = 0; i < BUCKETS.length; i++) {
+    const b = BUCKETS[i]; if (!b.length) continue;
+    ctx.fillStyle = PAL[i];
+    for (let k = 0; k < b.length; k += 2) ctx.fillRect(b[k], b[k + 1], s, s);
+  }
+  if (HOLES.length) {
+    ctx.fillStyle = 'rgba(5,6,8,0.78)';
+    const o = Math.round(C * 0.3), hs = Math.max(1, C - 1 - o * 2);
+    for (let k = 0; k < HOLES.length; k += 2) ctx.fillRect(HOLES[k] + o, HOLES[k + 1] + o, hs, hs);
+  }
+  // packets leaving the TV box
+  for (const p of packets) {
+    const L = clamp((p.life * 6) | 0, 0, 5);
+    ctx.fillStyle = PAL[pidx('amber', 1, L)];
+    ctx.fillRect(Math.floor(p.x / C) * C, Math.floor(p.y / C) * C, s, s);
+  }
+  // dissolve debris
+  for (const p of debris) {
+    const L = clamp((p.life * 6) | 0, 0, 5);
+    ctx.fillStyle = PAL[(p.ti * 2 + p.acc) * 6 + L];
+    ctx.fillRect(Math.round(p.x / C) * C, Math.round(p.y / C) * C, s, s);
+  }
+  if (selected && !selected.dying) brackets(selected, 'rgba(231,236,239,0.85)');
+  else if (hlC && T < hlUntil && !hlC.dying) brackets(hlC, 'rgba(242,182,90,0.9)');
+}
+
+function brackets(c, col) {
+  const p = 10, L = 10, a = c.box[0] - p, b = c.box[1] - p, r = c.box[2] + p, d = c.box[3] + p;
+  ctx.strokeStyle = col; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(a, b + L); ctx.lineTo(a, b); ctx.lineTo(a + L, b);
+  ctx.moveTo(r - L, b); ctx.lineTo(r, b); ctx.lineTo(r, b + L);
+  ctx.moveTo(r, d - L); ctx.lineTo(r, d); ctx.lineTo(r - L, d);
+  ctx.moveTo(a + L, d); ctx.lineTo(a, d); ctx.lineTo(a, d - L);
+  ctx.stroke();
+  ctx.font = '500 10.5px "JetBrains Mono", monospace';
+  ctx.fillStyle = col;
+  const label = (c.dev.name + ' · ' + c.dev.ip.split('.').pop()).toUpperCase();
+  const tw = ctx.measureText(label).width;
+  ctx.fillText(label, clamp(a, 8, W - tw - 8), b - 7 < 14 ? d + 16 : b - 7);
+}
+
+let fc = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000 || 0);
+  last = now;
+  step(dt);
+  draw();
+  if (++fc % 6 === 0) recheckHover();
+  raf = (!document.hidden && onScreen) ? requestAnimationFrame(frame) : 0;
+}
+function start() {
+  if (reduce || raf || document.hidden || !onScreen) return;
+  last = performance.now();
+  raf = requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', start);
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(es => { onScreen = es[0].isIntersecting; start(); }, { threshold: 0 }).observe(hero);
+}
+
+/* ---------------- hover / select ---------------- */
+const tip = $('#tip');
+function hit(mx, my) {
+  for (let k = creatures.length - 1; k >= 0; k--) {
+    const c = creatures[k];
+    if (c.dying || c.alpha < 0.3) continue;
+    if (mx < c.box[0] - 12 || mx > c.box[2] + 12 || my < c.box[1] - 12 || my > c.box[3] + 12) continue;
+    for (let i = 0; i < c.n; i += 2) {
+      const dx = mx - c.sx[i], dy = my - c.sy[i], r = c.sw[i] + 10;
+      if (dx * dx + dy * dy < r * r) return c;
+    }
+  }
+  return null;
+}
+function rel(e) { const r = sea.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+let lastPt = null;
+function showTip(c, mx, my) {
+  tip.innerHTML = '';
+  const nm = document.createElement('span'); nm.textContent = c.dev.name + ' ';
+  const meta = document.createElement('i'); meta.textContent = '· ' + c.dev.ip + ' · ' + c.dev.mbps + ' Mbps';
+  tip.append(nm, meta);
+  tip.hidden = false;
+  const tw = tip.offsetWidth;
+  tip.style.left = clamp(mx + 14, 8, W - tw - 8) + 'px';
+  tip.style.top = clamp(my + 16, 8, H - 40) + 'px';
+}
+hero.addEventListener('pointermove', e => {
+  if (e.target.closest('.ui, .corner.br, .back')) { lastPt = null; setHover(null); return; }
+  const [mx, my] = rel(e);
+  lastPt = [mx, my];
+  const c = hit(mx, my);
+  setHover(c);
+  if (c) showTip(c, mx, my);
+});
+hero.addEventListener('pointerleave', () => { lastPt = null; setHover(null); });
+function recheckHover() {
+  if (!lastPt) return;
+  const c = hit(lastPt[0], lastPt[1]);
+  if (c === hovered) return;
+  setHover(c);
+  if (c) showTip(c, lastPt[0], lastPt[1]);
+}
+function setHover(c) {
+  hovered = c;
+  sea.style.cursor = c ? 'pointer' : '';
+  hero.style.cursor = c ? 'pointer' : '';
+  if (!c) tip.hidden = true;
+  if (reduce) draw();
+}
+hero.addEventListener('click', e => {
+  if (e.target.closest('.ui, .corner, .back')) return;
+  const [mx, my] = rel(e);
+  const c = hit(mx, my);
+  if (c) openDetail(c); else if (selected) closeDetail();
+});
+
+/* ---------------- detail card ---------------- */
+const detail = $('#detail');
+const STATE_LABEL = { normal: ['Normal', 'ok'], trusted: ['Trusted', 'ok'], calmed: ['Analytics blocked', 'ok'], guest: ['Guest network', 'guest'] };
+function stateOf(d) {
+  if (d.state === 'normal' && d.flag === 'tv') return ['Chatty while off', 'warn'];
+  if (d.state === 'normal' && d.flag === 'unknown') return ['Unknown · new', 'crit'];
+  return STATE_LABEL[d.state] || ['Normal', 'ok'];
+}
+function openDetail(c) {
+  selected = c;
+  fillDetail();
+  detail.hidden = false;
+  hero.classList.add('has-detail');
+  if (reduce) draw();
+}
+function fillDetail() {
+  if (!selected) return;
+  const d = selected.dev;
+  $('#dName').textContent = d.name;
+  $('#dSub').textContent = d.ip + ' · ' + d.vendor;
+  const [lab, cls] = stateOf(d);
+  const st = $('#dState'); st.textContent = lab; st.className = 'state ' + cls;
+  $('#dNow').textContent = d.mbps + ' Mbps';
+  $('#dDay').textContent = d.day;
+  const ul = $('#dDest'); ul.innerHTML = '';
+  d.dest.forEach(([a, b]) => { const li = document.createElement('li'); const s1 = document.createElement('span'); s1.textContent = a; const s2 = document.createElement('span'); s2.textContent = b; li.append(s1, s2); ul.append(li); });
+  $('#dVerdict').textContent = d.state === 'calmed' ? 'Analytics host blocked on the router. Streaming still works; data use dropped to normal.' : d.state === 'guest' ? 'Parked on the guest network. It can reach the internet but none of your devices.' : d.state === 'trusted' ? 'You marked this device as trusted. I’ll still flag anything unusual.' : d.verdict;
+  setMark($('#dMark'), prov); $('#dBy').textContent = PROV[prov].name;
+  $('#dTrust').disabled = d.state === 'trusted';
+  $('#dTrust').textContent = d.state === 'trusted' ? 'Trusted' : 'Trust';
+}
+function closeDetail() { selected = null; detail.hidden = true; hero.classList.remove('has-detail'); if (reduce) draw(); }
+$('#dClose').addEventListener('click', closeDetail);
+$('#dBlock').addEventListener('click', () => { if (selected) blockDevice(selected); });
+$('#dTrust').addEventListener('click', () => {
+  if (!selected) return;
+  selected.dev.state = 'trusted';
+  log('you', 'trusted ' + selected.dev.name.toLowerCase());
+  fillDetail(); if (reduce) draw();
+});
+$('#dAsk').addEventListener('click', () => {
+  if (!selected) return;
+  const d = selected.dev;
+  if (window.matchMedia('(max-width:760px)').matches) closeDetail();
+  q.value = 'What is the ' + d.name + ' doing?';
+  ask(q.value, d);
+});
+let nextIdx = -1;
+$('#nextDev').addEventListener('click', () => {
+  const list = creatures.filter(c => !c.dying);
+  if (!list.length) return;
+  nextIdx = (nextIdx + 1) % list.length;
+  openDetail(list[nextIdx]);
+});
+
+function blockDevice(c) {
+  const d = c.dev;
+  const [tint, accP] = look(d);
+  const ti = TK.indexOf(tint);
+  const cx = (c.box[0] + c.box[2]) / 2, cy = (c.box[1] + c.box[3]) / 2;
+  const entries = Array.from(c.map.keys());
+  const stride = Math.max(1, Math.ceil(entries.length / 700));
+  if (!reduce) {
+    for (let i = 0; i < entries.length; i += stride) {
+      const key = entries[i], gxo = Math.floor(key / 4096), gx = gxo - 2048, gy = key - gxo * 4096 - 2048;
+      const x = gx * C, y = gy * C;
+      debris.push({ x, y, vx: (x - cx) * (0.8 + Math.random() * 1.4) + (Math.random() - 0.5) * 50, vy: (y - cy) * (0.8 + Math.random() * 1.4) + (Math.random() - 0.5) * 50, life: 0.7 + Math.random() * 0.3, ti, acc: hash(gx, gy, c.seed + 99) < accP ? 1 : 0 });
+    }
+  }
+  c.dying = true; c.dieAt = T; d.blocked = true;
+  if (hlC === c) hlC = null;
+  if (reduce) creatures.splice(creatures.indexOf(c), 1);
+  if (selected === c) closeDetail();
+  if (hovered === c) setHover(null);
+  deviceCount--;
+  $('#cDev').textContent = deviceCount;
+  log('you', 'blocked ' + d.name.toLowerCase() + ' (' + d.ip + ')');
+  toast(d.name + ' blocked. It can’t rejoin until you allow it.');
+  if (reduce) draw();
+}
+function calmTv() {
+  const c = creatures.find(x => x.dev.id === 'tv' && !x.dying);
+  if (!c) { toast('The TV box is blocked, so there is nothing left to filter.'); return; }
+  if (c.dev.state === 'calmed') { toast('The analytics host is already blocked.'); return; }
+  c.dev.state = 'calmed'; c.dev.mbps = 0.4; c.dev.day = '0.34 GB';
+  c.tScale = scaleFor(c.dev);
+  log(prov, 'blocked analytics host for tv-box.lan · streaming unaffected');
+  toast('Analytics host blocked for the TV box.');
+  fillDetail(); if (reduce) { c.scale = c.tScale; draw(); }
+}
+function setDev(id, state, msg) {
+  const c = creatures.find(x => x.dev.id === id && !x.dying);
+  if (!c) return false;
+  c.dev.state = state;
+  log('you', msg);
+  fillDetail(); if (reduce) draw();
+  return true;
+}
+let hlTimer = 0;
+function highlight(id) {
+  const c = creatures.find(x => x.dev.id === id && !x.dying);
+  if (!c) return;
+  hlC = c; hlUntil = T + 7;
+  if (reduce) {
+    clearTimeout(hlTimer);
+    hlTimer = setTimeout(() => { if (hlC === c) { hlC = null; draw(); } }, 7000);
+    draw();
+  }
+}
+
+/* ---------------- agent prompt ---------------- */
+const PROV = {
+  claude: { name: 'Claude', letter: 'C', lead: '' },
+  chatgpt: { name: 'ChatGPT', letter: 'G', lead: 'Here’s what I see. ' },
+  grok: { name: 'Grok', letter: 'X', lead: 'Short version: ' }
+};
+let prov = 'claude';
+const q = $('#q');
+function setMark(el, p) { el.className = 'mark ' + p; el.textContent = PROV[p].letter; }
+function setProv(p) {
+  prov = p;
+  setMark($('#provMark'), p); $('#provName').textContent = PROV[p].name;
+  q.placeholder = 'Ask ' + PROV[p].name + ' anything about your Wi-Fi…';
+  document.querySelectorAll('#provMenu [data-p]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.p === p)));
+  fillDetail();
+}
+function menu(btnSel, menuSel) {
+  const btn = $(btnSel), m = $(menuSel);
+  btn.addEventListener('click', e => { e.stopPropagation(); const open = m.hidden; closeMenus(); m.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+  return { btn, m };
+}
+const menus = [menu('#histBtn', '#histMenu'), menu('#provBtn', '#provMenu')];
+function closeMenus() { menus.forEach(({ btn, m }) => { m.hidden = true; btn.setAttribute('aria-expanded', 'false'); }); }
+document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenus(); if (selected) closeDetail(); } });
+document.querySelectorAll('#provMenu [data-p]').forEach(b => b.addEventListener('click', () => { setProv(b.dataset.p); closeMenus(); toast('Agent switched to ' + PROV[b.dataset.p].name + '.'); }));
+document.querySelectorAll('#histMenu [data-q]').forEach(b => b.addEventListener('click', () => { closeMenus(); q.value = b.dataset.q; ask(q.value); }));
+$('#micBtn').addEventListener('click', () => toast('Voice input works in the desktop app.'));
+$('#attachBtn').addEventListener('click', () => toast('In the desktop app you can drop a router photo or a log file here.'));
+
+const SHORT = { tr069: 'ISP remote management', telnet: 'Telnet', wps: 'WPS PIN', upnp: 'UPnP auto-forwards', dns: 'encrypted DNS', admin: 'the admin password', maps: 'the location-map opt-out' };
+const OPEN_SHORT = { dns: 'plain-text DNS', admin: 'the sticker admin password', maps: 'the location-map listing' };
+const listJoin = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+const devById = id => DEVICES.find(d => d.id === id);
+function answerFor(text, dev) {
+  const t = text.toLowerCase();
+  if ((dev && dev.id === 'tv') || /\btv\b|tv box|television|analytics|night/.test(t)) {
+    const d = devById('tv');
+    if (d.blocked) return { text: 'The living-room TV box is blocked, so it isn’t sending anything right now. Allow it again from the router if you want to stream on it.', chips: [] };
+    if (d.state === 'calmed') return { focus: 'tv', text: 'The analytics host is blocked for the TV box. Its traffic dropped to ' + d.day + ' and streaming still works.', chips: [['Show the TV box', 'showTv']] };
+    return {
+      focus: 'tv',
+      text: 'Your living-room TV box sent 1.2 GB to an analytics host in the last 24 hours, and most of it went out while the screen was off. It checks in every 90 seconds. Streaming uses a different host, so blocking the analytics one won’t break Netflix or YouTube.',
+      chips: [['Block analytics host', 'calmTv', true], ['Show the TV box', 'showTv']]
+    };
+  }
+  if ((dev && dev.id === 'unk') || /unknown|new device|who is|stranger|\.47\b|\b47\b/.test(t)) {
+    const d = devById('unk');
+    if (d.blocked) return { text: 'The unknown device at 192.168.1.47 is blocked. It can’t rejoin until you allow it.', chips: [] };
+    if (d.state === 'guest') return { focus: 'unk', text: 'The unknown device is parked on the guest network. It can reach the internet but none of your devices.', chips: [['Trust it', 'trustUnk'], ['Show it', 'showUnk']] };
+    if (d.state === 'trusted') return { focus: 'unk', text: 'You marked the device at 192.168.1.47 as trusted. I’ll still flag anything unusual.', chips: [['Show it', 'showUnk']] };
+    return {
+      focus: 'unk',
+      text: 'A new device joined 4 minutes ago at 192.168.1.47. It uses a randomised MAC and its DHCP fingerprint looks like an Android phone. So far it has only made a connectivity check. I’d park it on the guest network until someone at home claims it.',
+      chips: [['Move to guest network', 'guestUnk', true], ['Trust it', 'trustUnk'], ['Show it', 'showUnk']]
+    };
+  }
+  if (/slow|speed|fast|channel|evening|lag|boost/.test(t)) {
+    if (boosted) return {
+      text: 'You’re on channel 149 now, with no neighbouring networks on it. That should give you about 38% more throughput than channel 36. Run a speed test to confirm.',
+      chips: [['Run a speed test', 'speed', true]]
+    };
+    return {
+      text: 'You’re on channel 36, which 7 neighbouring networks also use, mostly after 19:00. Channel 149 is empty right now. Moving there should give you about 38% more throughput, and Bastion can keep you on it.',
+      chips: [['Move to channel 149', 'boost', true], ['Run a speed test', 'speed']]
+    };
+  }
+  if (/\bisp\b|backdoor|safe|secure|router|tr-?069|7547|remote|hack/.test(t)) {
+    const tr = FINDINGS.find(f => f.id === 'tr069');
+    const others = FINDINGS.filter(f => f.id !== 'tr069' && f.result === 'open').map(f => OPEN_SHORT[f.id] || SHORT[f.id]);
+    const fixedL = FINDINGS.filter(f => f.id !== 'tr069' && f.result === 'fixed').map(f => SHORT[f.id]);
+    let s = tr.result === 'open'
+      ? 'One real backdoor is still open: your provider’s remote management channel (TR-069, port 7547) is reachable from the internet, so the ISP can change router settings or push firmware without asking.'
+      : 'Your provider’s remote management channel (TR-069, port 7547) is blocked from the internet, so the ISP can’t change router settings without asking.';
+    if (others.length) s += ' Still open: ' + listJoin(others) + '.';
+    if (fixedL.length) s += ' Already fixed: ' + listJoin(fixedL) + '.';
+    return { text: s, chips: (tr.result === 'open' ? [['Isolate port 7547', 'isolate', true]] : []).concat([['Run a deep scan', 'scan', tr.result !== 'open']]) };
+  }
+  if (dev) {
+    if (dev.blocked) return { text: dev.name + ' is blocked. It can’t rejoin until you allow it.', chips: [] };
+    return {
+      focus: dev.id,
+      text: dev.name + ' used ' + dev.day + ' today, mostly ' + dev.dest[0][0] + '. ' + dev.verdict,
+      chips: [['Show it', 'show:' + dev.id]]
+    };
+  }
+  const tvD = devById('tv'), trOpen = FINDINGS.find(f => f.id === 'tr069').result === 'open';
+  const issues = [], chips = [];
+  if (!tvD.blocked && tvD.state === 'normal') { issues.push('The TV box keeps sending analytics while it’s off'); chips.push(['What is the TV box doing?', 'askTv']); }
+  if (trOpen) { issues.push('port 7547 lets your ISP into the router'); chips.push(['Is my router safe?', 'askIsp']); }
+  const lead = 'In the last 24 hours: ' + deviceCount + ' devices, nothing talking to known malicious ranges. ';
+  const body = issues.length === 2 ? 'Two things deserve attention. ' + issues[0] + ', and ' + issues[1] + '. Ask me about either one.'
+    : issues.length === 1 ? 'One thing deserves attention: ' + issues[0].charAt(0).toLowerCase() + issues[0].slice(1) + '.'
+    : 'Nothing urgent is left open.';
+  if (!chips.length) chips.push(['Is my router safe?', 'askIsp']);
+  return { text: lead + body, chips };
+}
+let typer = 0;
+function ask(text, dev) {
+  text = (text || '').trim();
+  if (!text) { q.focus(); return; }
+  const r = answerFor(text, dev);
+  const p = PROV[prov];
+  const card = $('#answer'), el = $('#ansText'), chips = $('#ansChips');
+  setMark($('#ansMark'), prov); $('#ansName').textContent = p.name;
+  $('#ansMeta').textContent = 'your API key · read 24 h of flow metadata';
+  card.hidden = false;
+  chips.innerHTML = '';
+  clearInterval(typer); clearTimeout(typer);
+  el.textContent = ''; el.classList.add('thinking');
+  if (r.focus) highlight(r.focus);
+  const full = p.lead + r.text;
+  const done = () => {
+    r.chips.forEach(([label, act, go], i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip' + (go ? ' go' : ''); b.textContent = label;
+      b.style.animationDelay = (i * 0.06) + 's';
+      b.addEventListener('click', () => doAct(act));
+      chips.append(b);
+    });
+  };
+  if (reduce) { el.classList.remove('thinking'); el.textContent = full; done(); return; }
+  typer = setTimeout(() => {
+    el.classList.remove('thinking');
+    let i = 0;
+    typer = setInterval(() => {
+      i += 2;
+      el.textContent = full.slice(0, i);
+      if (i >= full.length) { clearInterval(typer); done(); }
+    }, 16);
+  }, 650);
+}
+$('#askForm').addEventListener('submit', e => { e.preventDefault(); ask(q.value); });
+function doAct(act) {
+  if (act === 'calmTv') calmTv();
+  else if (act === 'showTv') { const c = creatures.find(x => x.dev.id === 'tv' && !x.dying); if (c) openDetail(c); }
+  else if (act === 'guestUnk') toast(setDev('unk', 'guest', 'moved unknown device (.47) to guest network') ? 'Unknown device moved to the guest network.' : 'That device is blocked.');
+  else if (act === 'trustUnk') toast(setDev('unk', 'trusted', 'trusted unknown device (.47)') ? 'Unknown device marked as trusted.' : 'That device is blocked.');
+  else if (act === 'showUnk') { const c = creatures.find(x => x.dev.id === 'unk' && !x.dying); if (c) openDetail(c); }
+  else if (act.startsWith('show:')) { const c = creatures.find(x => x.dev.id === act.slice(5) && !x.dying); if (c) openDetail(c); }
+  else if (act === 'boost') { if (speedRunning) { toast('Wait for the speed test to finish first.'); return; } if (!boosted) applyBoost(); document.getElementById('hBoost').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); }
+  else if (act === 'speed') { document.getElementById('hSpeed').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); runSpeed(); }
+  else if (act === 'isolate') fix('tr069');
+  else if (act === 'scan') { document.getElementById('hScan').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); runScan(); }
+  else if (act === 'askTv') { q.value = 'What is the TV box doing?'; ask(q.value); }
+  else if (act === 'askIsp') { q.value = 'Is my router safe from my ISP?'; ask(q.value); }
+}
+
+/* ---------------- toast + log ---------------- */
+let toastT = 0;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2800);
+}
+const logEl = $('#log');
+function hhmmss(d) { return d.toTimeString().slice(0, 8); }
+function log(who, text, when) {
+  const li = document.createElement('li');
+  const tm = document.createElement('time'); tm.textContent = hhmmss(when || new Date());
+  const tag = document.createElement('span'); tag.className = 'tag ' + who; tag.textContent = '[' + (who === 'chatgpt' ? 'gpt' : who) + ']';
+  const tx = document.createElement('span'); tx.textContent = text;
+  li.append(tm, tag, tx);
+  logEl.prepend(li);
+  while (logEl.children.length > 7) logEl.lastChild.remove();
+}
+{
+  const now = Date.now();
+  log('grok', '0 hits against threat-intel ranges · 24 h window', new Date(now - 11 * 60000));
+  log('chatgpt', 'ps5 opened 3074/udp, 3478/udp, 3479/udp via UPnP', new Date(now - 7 * 60000));
+  log('grok', 'new host .47 · randomised MAC · Android DHCP fingerprint', new Date(now - 4 * 60000));
+  log('claude', 'tv-box.lan → analytics host every 90 s while display=off · suggest: block', new Date(now - 60000));
+}
+
+/* ---------------- speed test ---------------- */
+const ARC = 376.99;
+const gArc = $('#gArc'), gNeedle = $('#gNeedle');
+let gaugeV = 0;
+function setGauge(v) {
+  gaugeV = v;
+  const f = Math.sqrt(clamp(v, 0, 1000) / 1000);
+  gArc.setAttribute('stroke-dasharray', (ARC * f).toFixed(1) + ' 999');
+  gNeedle.setAttribute('transform', 'rotate(' + (150 + 240 * f).toFixed(2) + ' 110 110)');
+}
+{
+  const g = $('#gTicks'), NS = 'http://www.w3.org/2000/svg';
+  [0, 50, 100, 250, 500, 1000].forEach(v => {
+    const f = Math.sqrt(v / 1000), a = (150 + 240 * f) * Math.PI / 180;
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', (110 + Math.cos(a) * 68).toFixed(1));
+    t.setAttribute('y', (110 + Math.sin(a) * 68 + 3).toFixed(1));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('class', 'tick');
+    t.textContent = v === 1000 ? '1G' : String(v);
+    g.append(t);
+  });
+}
+let boosted = false, heroDown = 298.9, heroUp = 71.2, heroPing = 14, speedRunning = false;
+const runBtn = $('#runSpeed');
+function speedTargets() { return boosted ? { d: 412.6, u: 98.4, p: 9 } : { d: 298.9, u: 71.2, p: 14 }; }
+function setHeroStats(d, u, p) {
+  heroDown = d; heroUp = u; heroPing = p;
+  $('#cDown').textContent = d.toFixed(1); $('#cUp').textContent = u.toFixed(1); $('#cPing').textContent = p;
+}
+function runSpeed() {
+  if (speedRunning) return;
+  const tg = speedTargets();
+  const phase = $('#gPhase'), val = $('#gVal'), unit = $('#gUnit');
+  if (reduce) {
+    setGauge(tg.d); val.textContent = tg.d.toFixed(1); unit.textContent = 'Mbps down';
+    $('#sDown').textContent = tg.d.toFixed(1); $('#sUp').textContent = tg.u.toFixed(1); $('#sPing').textContent = tg.p + ' ms';
+    phase.textContent = 'done · just now'; setHeroStats(tg.d, tg.u, tg.p); return;
+  }
+  speedRunning = true; runBtn.disabled = true; runBtn.textContent = 'Testing…'; boostBtn.disabled = true;
+  $('#sDown').textContent = '—'; $('#sUp').textContent = '—'; $('#sPing').textContent = '—';
+  const t0 = performance.now(), P1 = 900, P2 = 3300, P3 = 2500;
+  const tick = now => {
+    const t = now - t0;
+    if (t < P1) {
+      const k = t / P1;
+      phase.textContent = 'measuring ping';
+      setGauge(lerp(gaugeV, 0, 0.2));
+      const pv = Math.round(lerp(48, tg.p, ease(k)));
+      val.textContent = pv; unit.textContent = 'ms ping';
+    } else if (t < P1 + P2) {
+      const k = (t - P1) / P2;
+      if ($('#sPing').textContent === '—') $('#sPing').textContent = tg.p + ' ms';
+      phase.textContent = 'download';
+      const v = tg.d * ease(Math.min(1, k * 1.25)) + Math.sin(t * 0.021) * tg.d * 0.045 * (1 - k) + (Math.random() - 0.5) * 6 * (1 - k);
+      setGauge(Math.max(0, v)); val.textContent = Math.max(0, v).toFixed(1); unit.textContent = 'Mbps down';
+    } else if (t < P1 + P2 + P3) {
+      const k = (t - P1 - P2) / P3;
+      if ($('#sDown').textContent === '—') $('#sDown').textContent = tg.d.toFixed(1);
+      phase.textContent = 'upload';
+      const v = lerp(tg.d, tg.u, ease(Math.min(1, k * 2.2))) + Math.sin(t * 0.025) * tg.u * 0.05 * (1 - k);
+      setGauge(Math.max(0, v)); val.textContent = Math.max(0, v).toFixed(1); unit.textContent = 'Mbps up';
+    } else {
+      $('#sUp').textContent = tg.u.toFixed(1);
+      setGauge(tg.d); val.textContent = tg.d.toFixed(1); unit.textContent = 'Mbps down';
+      phase.textContent = 'done · just now';
+      setHeroStats(tg.d, tg.u, tg.p);
+      log('you', 'speed test · ' + tg.d.toFixed(1) + ' down / ' + tg.u.toFixed(1) + ' up / ' + tg.p + ' ms');
+      speedRunning = false; runBtn.disabled = false; runBtn.textContent = 'Run again'; boostBtn.disabled = false;
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+runBtn.addEventListener('click', runSpeed);
+setGauge(298.9);
+
+/* ---------------- backdoor scan ---------------- */
+const FINDINGS = [
+  { id: 'tr069', title: 'ISP remote management', sev: 'crit', sevLabel: 'critical', w: 4, result: 'open', fixLabel: 'Isolate', openMeta: 'TR-069 / CWMP · 7547/tcp reachable from WAN', fixedMeta: '7547/tcp blocked from WAN · ISP can’t push config' },
+  { id: 'telnet', title: 'Telnet left on by vendor', sev: 'high', sevLabel: 'high', w: 2, result: 'open', fixLabel: 'Close', openMeta: '23/tcp · open shell on LAN', fixedMeta: '23/tcp closed' },
+  { id: 'wps', title: 'WPS PIN mode', sev: 'med', sevLabel: 'medium', w: 1, result: 'open', fixLabel: 'Disable', openMeta: 'PIN can be brute-forced in hours', fixedMeta: 'WPS disabled' },
+  { id: 'upnp', title: 'UPnP auto-forwards', sev: 'med', sevLabel: 'medium', w: 1, result: 'open', fixLabel: 'Close ports', openMeta: '3074/udp · 3478/udp · 3479/udp · opened by PS5', fixedMeta: 'forwards removed · PS5 will ask next time' },
+  { id: 'dns', title: 'DNS lookups', sev: 'high', sevLabel: 'high', w: 2, result: 'fixed', fixLabel: 'Encrypt', openMeta: 'plain text to the ISP resolver', fixedMeta: 'DNS-over-HTTPS · ISP can’t read lookups' },
+  { id: 'admin', title: 'Router admin password', sev: 'high', sevLabel: 'high', w: 2, result: 'fixed', fixLabel: 'Rotate', openMeta: 'still the one from the sticker', fixedMeta: 'rotated · no longer the sticker one' },
+  { id: 'maps', title: 'Network name in location maps', sev: 'med', sevLabel: 'medium', w: 1, result: 'fixed', fixLabel: 'Opt out', openMeta: 'SSID collected by public Wi-Fi maps', fixedMeta: '_nomap added to the network name' }
+];
+FINDINGS.forEach(f => { f.view = f.result; });
+const ICON = {
+  fixed: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>',
+  open: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v5.5M8 12v.5"></path></svg>',
+  pending: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="1.5"></circle></svg>',
+  checking: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2a6 6 0 1 1-6 6"></path></svg>'
+};
+const scanList = $('#scanList');
+let scanning = false;
+function renderScan(revealId) {
+  scanList.innerHTML = '';
+  FINDINGS.forEach(f => {
+    const li = document.createElement('li');
+    li.className = 'row s-' + f.view + ' sev-' + f.sev + (f.id === revealId ? ' s-reveal' : '');
+    const ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = ICON[f.view];
+    const rt = document.createElement('div'); rt.className = 'rt';
+    const t = document.createElement('div'); t.className = 'rtitle'; t.textContent = f.title;
+    if (f.view === 'open') { const sv = document.createElement('span'); sv.className = 'sev'; sv.textContent = f.sevLabel; t.append(sv); }
+    const m = document.createElement('div'); m.className = 'rmeta';
+    m.textContent = f.view === 'pending' ? 'queued' : f.view === 'checking' ? 'checking…' : f.view === 'fixed' ? f.fixedMeta : f.openMeta;
+    rt.append(t, m);
+    li.append(ic, rt);
+    if (f.view === 'open') {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm' + (f.sev === 'crit' ? ' danger' : ''); b.textContent = f.fixLabel;
+      b.addEventListener('click', () => fix(f.id));
+      li.append(b);
+    } else if (f.view === 'fixed') {
+      const s = document.createElement('span'); s.className = 'okbadge'; s.textContent = 'closed'; li.append(s);
+    }
+    scanList.append(li);
+  });
+}
+function score() { return 100 - FINDINGS.reduce((a, f) => a + (f.result === 'open' ? f.w : 0), 0); }
+function updateScore() { const s = score(); $('#cScore').textContent = s; $('#scanScore').textContent = s; }
+const TOGGLE_FOR = { tr069: 'tIsp', dns: 'tDoh', maps: 'tMap' };
+function fix(id, quiet) {
+  const f = FINDINGS.find(x => x.id === id);
+  if (!f || f.result === 'fixed') return;
+  f.result = 'fixed'; if (!scanning || (f.view !== 'pending' && f.view !== 'checking')) f.view = 'fixed';
+  if (TOGGLE_FOR[id]) $('#' + TOGGLE_FOR[id]).checked = true;
+  renderScan(id); updateScore();
+  if (!quiet) { log('you', 'approved: ' + f.title.toLowerCase() + ' → ' + f.fixedMeta); toast(f.title + ': fixed. Score ' + score() + '/100.'); }
+}
+function unfix(id) {
+  const f = FINDINGS.find(x => x.id === id);
+  if (!f || f.result === 'open') return;
+  f.result = 'open'; if (!scanning || (f.view !== 'pending' && f.view !== 'checking')) f.view = 'open';
+  renderScan(); updateScore();
+  log('you', 'turned off protection: ' + f.title.toLowerCase());
+}
+function runScan() {
+  if (scanning) return;
+  const btn = $('#runScan'), note = $('#scanNote');
+  if (reduce) { FINDINGS.forEach(f => { f.view = f.result; }); renderScan(); note.textContent = 'deep scan finished just now'; return; }
+  scanning = true; btn.disabled = true; btn.textContent = 'Scanning…';
+  FINDINGS.forEach(f => { f.view = 'pending'; });
+  renderScan();
+  let i = 0;
+  const next = () => {
+    if (i >= FINDINGS.length) {
+      scanning = false; btn.disabled = false; btn.textContent = 'Run again';
+      const open = FINDINGS.filter(f => f.result === 'open').length;
+      note.textContent = 'finished just now · ' + open + ' open';
+      log('claude', 'deep scan complete · ' + open + ' open · score ' + score());
+      return;
+    }
+    const f = FINDINGS[i];
+    f.view = 'checking'; note.textContent = 'checking ' + (i + 1) + ' of ' + FINDINGS.length; renderScan();
+    setTimeout(() => { f.view = f.result; renderScan(f.id); i++; setTimeout(next, 140); }, 420);
+  };
+  next();
+}
+$('#runScan').addEventListener('click', runScan);
+renderScan(); updateScore();
+
+/* ---------------- toggles ---------------- */
+$('#tIsp').addEventListener('change', e => e.target.checked ? fix('tr069') : unfix('tr069'));
+$('#tDoh').addEventListener('change', e => e.target.checked ? fix('dns') : unfix('dns'));
+$('#tMap').addEventListener('change', e => e.target.checked ? fix('maps') : unfix('maps'));
+$('#tMac').addEventListener('change', e => { log('you', 'private Wi-Fi address ' + (e.target.checked ? 'on' : 'off')); toast('Private Wi-Fi address ' + (e.target.checked ? 'on' : 'off') + '.'); });
+$('#tAuto').addEventListener('change', e => { log('you', 'agents may act without asking: ' + (e.target.checked ? 'on' : 'off')); toast(e.target.checked ? 'Agents can now act on their own. You’ll get a summary of every change.' : 'Every agent action needs your OK again.'); });
+
+/* ---------------- Wi-Fi boost ---------------- */
+const CH = [{ ch: 36, n: 7 }, { ch: 44, n: 4 }, { ch: 52, n: 3 }, { ch: 100, n: 2 }, { ch: 132, n: 1 }, { ch: 149, n: 0 }, { ch: 157, n: 2 }];
+let myCh = 36;
+const chBars = $('#chBars');
+function renderCh() {
+  chBars.innerHTML = '';
+  CH.forEach(c => {
+    const col = document.createElement('div');
+    col.className = 'chc' + (c.n >= 4 ? ' crowd' : '') + (c.ch === myCh ? ' me' : '');
+    const you = document.createElement('span'); you.className = 'you'; you.textContent = 'YOU';
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = c.n;
+    const bar = document.createElement('span'); bar.className = 'bar'; bar.style.height = (7 + c.n * 13 + (c.ch === myCh ? 7 : 0)) + 'px';
+    const lab = document.createElement('span'); lab.className = 'lab'; lab.textContent = c.ch;
+    col.append(you, n, bar, lab);
+    chBars.append(col);
+  });
+}
+function countTo(el, from, to, ms, fmt) {
+  cancelAnimationFrame(el._anim); el._anim = 0;
+  if (reduce) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const tk = now => { const k = Math.min(1, (now - t0) / ms); el.textContent = fmt(lerp(from, to, ease(k))); el._anim = k < 1 ? requestAnimationFrame(tk) : 0; };
+  el._anim = requestAnimationFrame(tk);
+}
+const boostBtn = $('#boostBtn');
+let boostT = 0;
+function stopBoostAnims() {
+  ['#bBig', '#cDown'].forEach(s => { const el = $(s); cancelAnimationFrame(el._anim); el._anim = 0; });
+  clearTimeout(boostT);
+}
+function applyBoost() {
+  stopBoostAnims();
+  boosted = true; myCh = 149; renderCh();
+  const big = $('#bBig');
+  big.classList.add('up');
+  countTo(big, 0, 38, 1100, v => '+' + Math.round(v) + '%');
+  $('#bNote').textContent = 'locked on 149 · 80 MHz · no neighbours';
+  boostBtn.textContent = 'Undo · back to 36'; boostBtn.classList.remove('primary');
+  const tg = speedTargets();
+  countTo($('#cDown'), heroDown, tg.d, 1100, v => v.toFixed(1));
+  heroDown = tg.d; heroUp = tg.u; heroPing = tg.p;
+  boostT = setTimeout(() => { $('#cUp').textContent = tg.u.toFixed(1); $('#cPing').textContent = tg.p; }, reduce ? 0 : 1100);
+  log(prov, 'moved Wi-Fi from channel 36 to 149 · +38% throughput expected');
+  toast('Moved to channel 149. Run a speed test to confirm.');
+}
+function undoBoost() {
+  stopBoostAnims();
+  boosted = false; myCh = 36; renderCh();
+  const big = $('#bBig'); big.classList.remove('up'); big.textContent = 'ch 36';
+  $('#bNote').textContent = 'shared with 7 neighbours after 19:00';
+  boostBtn.textContent = 'Move to channel 149 · +38%'; boostBtn.classList.add('primary');
+  setHeroStats(298.9, 71.2, 14);
+  log('you', 'reverted Wi-Fi to channel 36');
+}
+boostBtn.addEventListener('click', () => boosted ? undoBoost() : applyBoost());
+renderCh();
+
+/* live jitter on hero stats */
+if (!reduce) setInterval(() => {
+  if (document.hidden || speedRunning || $('#cDown')._anim) return;
+  $('#cDown').textContent = (heroDown * (0.985 + Math.random() * 0.03)).toFixed(1);
+  $('#cUp').textContent = (heroUp * (0.985 + Math.random() * 0.03)).toFixed(1);
+}, 1600);
+
+/* ---------------- boot ---------------- */
+function boot() {
+  const r = hero.getBoundingClientRect();
+  W = Math.max(1, r.width); H = Math.max(1, r.height);
+  sizeMul = W < 640 ? 0.66 : W < 1000 ? 0.85 : 1;
+  DEVICES.forEach((d, i) => creatures.push(makeCreature(d, i)));
+  creatures.sort((a, b) => b.scale - a.scale);
+  resize();
+  if (reduce) {
+    for (let i = 0; i < 260; i++) step(1 / 30);
+    creatures.forEach(c => { c.alpha = 1; });
+    draw();
+  } else start();
+  if ('ResizeObserver' in window) {
+    let rt = 0;
+    new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(resize, 80); }).observe(hero);
+  } else window.addEventListener('resize', resize);
+  const watchDpr = () => {
+    const m = window.matchMedia('(resolution: ' + window.devicePixelRatio + 'dppx)');
+    if (m.addEventListener) m.addEventListener('change', () => { resize(); watchDpr(); }, { once: true });
+  };
+  watchDpr();
+}
+boot();
+})();
+</script>
+</body>
+</html>

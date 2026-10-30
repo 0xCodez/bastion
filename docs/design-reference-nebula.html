@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bastion Nebula Voice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: full-bleed planet hero (canvas) with centered shield, voice dock on the planet surface, three glass cards below. */
+:root{
+  color-scheme: dark;
+  --ground:#07060E; --ground-2:#0D0B1A;
+  --panel:rgba(28,24,54,.66); --panel-2:rgba(14,12,28,.78);
+  --line:rgba(183,169,255,.13); --line-2:rgba(183,169,255,.26);
+  --text:#F3F0FF; --muted:#ABA6CB; --dim:#857FA9;
+  --violet:#7C6CFF; --lavender:#B7A9FF; --sky:#8FD3FF; --mint:#9EF0C4; --coral:#FF8E7A; --amber:#FFC772;
+  --magenta:#FF5FD2; --teal:#3FE3C9; --clay:#E8A07F;
+  --ink:#120C2E;
+  --f-display:"Bricolage Grotesque","Plus Jakarta Sans",system-ui,sans-serif;
+  --f-ui:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --gl:max(16px, env(safe-area-inset-left, 0px));
+  --gr:max(16px, env(safe-area-inset-right, 0px));
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html{background:var(--ground)}
+body{margin:0;background:var(--ground);color:var(--text);font:400 15px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased;overflow-x:clip}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:10px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mono{font-family:var(--f-mono)}
+
+/* back pill */
+.back{position:fixed;z-index:50;top:calc(14px + env(safe-area-inset-top,0px));left:var(--gl);display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 10px;border-radius:999px;background:rgba(12,10,24,.72);border:1px solid var(--line-2);color:var(--text);text-decoration:none;font:600 13px var(--f-ui);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:background .2s,border-color .2s}
+.back:hover{background:rgba(40,34,80,.8);border-color:var(--lavender)}
+
+/* hero */
+.hero{position:relative;height:900px;overflow:hidden;isolation:isolate;background:var(--ground)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}
+.top{position:absolute;z-index:4;top:env(safe-area-inset-top,0px);left:0;right:0;height:64px;display:flex;align-items:center;gap:16px;padding-left:calc(var(--gl) + 150px);padding-right:var(--gr)}
+.brand{display:flex;align-items:center;gap:10px;font:800 19px var(--f-display);letter-spacing:-.03em}
+.brand svg{flex:none}
+.tabs{margin:0 auto;display:flex;gap:2px;padding:4px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.tab{min-height:40px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;transition:background .2s,color .2s}
+.tab:hover{color:var(--text);background:rgba(183,169,255,.08)}
+.tab[aria-current="true"]{background:rgba(183,169,255,.16);color:var(--text)}
+.top-r{display:flex;align-items:center;gap:8px;margin-left:auto}
+.keys{display:flex;align-items:center;gap:6px;white-space:nowrap;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);font:500 12px var(--f-mono);color:var(--muted)}
+.keys i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.pro{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:rgba(183,169,255,.07);color:#DDD7FF;font-weight:700;font-size:12.5px}
+.pro:hover{background:rgba(183,169,255,.16)}
+
+.hero-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;padding:calc(92px + env(safe-area-inset-top,0px)) var(--gr) 0 var(--gl)}
+.status{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 14px 0 12px;border-radius:999px;background:rgba(158,240,196,.08);border:1px solid rgba(158,240,196,.25);color:var(--mint);font-weight:600;font-size:13px;transition:background .4s,border-color .4s,color .4s}
+.status .dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor;animation:blink 1.8s ease-in-out infinite}
+.status.paused{background:rgba(255,142,122,.08);border-color:rgba(255,142,122,.3);color:var(--coral)}
+.timer{margin-top:18px;font:700 clamp(58px,9vw,92px)/1 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.045em;background:linear-gradient(180deg,#fff 30%,#C9C0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.timer-l{margin-top:6px;font:500 12px var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.rates{margin-top:18px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px 30px}
+.rate{display:flex;align-items:center;gap:10px;text-align:left}
+.rate small{display:block;font-size:12px;color:var(--muted)}
+.rate b{font:700 19px var(--f-ui);font-variant-numeric:tabular-nums}
+.rate b span{font-size:12px;font-weight:500;color:var(--muted)}
+.power{margin-top:26px;width:116px;height:116px;border-radius:50%;border:1px solid rgba(220,214,255,.6);background:radial-gradient(circle at 50% 28%,#9F90FF,#4B39D0 72%);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 14px rgba(124,108,255,.08),0 0 0 30px rgba(124,108,255,.035),0 0 60px rgba(150,130,255,.55);animation:breathe 3.4s ease-in-out infinite;transition:background .5s,filter .5s,transform .25s var(--ease)}
+.power:hover{transform:scale(1.04)}
+.power:active{transform:scale(.97)}
+.power span{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:12px;letter-spacing:.02em}
+.power[aria-pressed="false"]{background:radial-gradient(circle at 50% 28%,#4A4470,#211D3C 72%);animation:none;box-shadow:0 0 0 14px rgba(124,108,255,.04),0 0 0 30px rgba(124,108,255,.02);border-color:var(--line-2)}
+@keyframes breathe{50%{box-shadow:0 0 0 20px rgba(124,108,255,.06),0 0 0 42px rgba(124,108,255,.025),0 0 90px rgba(160,140,255,.75)}}
+@keyframes blink{50%{opacity:.35}}
+
+/* voice dock */
+.dock{position:absolute;z-index:3;left:0;right:0;bottom:28px;padding:0 var(--gr) 0 var(--gl);display:flex;justify-content:center}
+.vox{position:relative;width:min(600px,100%);border-radius:26px;background:rgba(18,15,36,.58);border:1px solid var(--line-2);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);box-shadow:0 30px 80px -30px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.07);transition:height .55s var(--ease),width .55s var(--ease),border-radius .55s var(--ease);--amp:1}
+.vox[data-state="listening"]{width:min(480px,100%);border-radius:36px}
+.vox.anim{overflow:hidden}
+.vox-clip{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.aurora{position:absolute;left:-12%;right:-12%;bottom:-34px;height:110px;opacity:.78;pointer-events:none;transform-origin:50% 100%;transform:scaleY(var(--amp));filter:blur(16px) saturate(150%);-webkit-mask-image:linear-gradient(to top,#000 35%,transparent);mask-image:linear-gradient(to top,#000 35%,transparent);transition:height .6s var(--ease),opacity .6s}
+.vox[data-state="listening"] .aurora{height:240px;opacity:1}
+.vox[data-state="answer"] .aurora{opacity:.5}
+.aurora i{position:absolute;bottom:0;width:44%;height:100%;border-radius:50%;mix-blend-mode:screen}
+.aurora .b1{left:0;background:radial-gradient(closest-side,var(--magenta),transparent);animation:fa 7s ease-in-out infinite alternate}
+.aurora .b2{left:22%;background:radial-gradient(closest-side,var(--violet),transparent);animation:fb 9s ease-in-out infinite alternate}
+.aurora .b3{left:44%;background:radial-gradient(closest-side,var(--teal),transparent);animation:fa 8s ease-in-out -3s infinite alternate-reverse}
+.aurora .b4{left:62%;background:radial-gradient(closest-side,var(--amber),transparent);animation:fb 10s ease-in-out -5s infinite alternate}
+@keyframes fa{0%{transform:translateX(-18%) scale(1,.8)}100%{transform:translateX(30%) scale(1.25,1.1)}}
+@keyframes fb{0%{transform:translateX(20%) scale(1.1,1)}100%{transform:translateX(-28%) scale(.85,1.2)}}
+.vox::after{content:"";position:absolute;left:10%;right:10%;bottom:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--magenta),var(--violet),var(--teal),var(--amber),transparent);opacity:.9;pointer-events:none}
+.vox-body,.vox-bar{position:relative;z-index:1}
+.vox-idle{padding:16px 18px 4px}
+.vox-idle input{width:100%;border:0;outline:0;background:transparent;font-size:15.5px;padding:6px 2px;color:var(--text)}
+.vox-idle input:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.vox-idle input::placeholder{color:var(--dim)}
+.vox-listen{display:none;min-height:176px;align-items:center;justify-content:center;padding:26px 28px 8px;text-align:center}
+.vox-listen p{margin:0;font:600 23px/1.35 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.vox-listen p .ph{color:var(--dim);font-weight:500}
+.vox-listen .w{display:inline-block;animation:word .35s var(--ease) both}
+@keyframes word{from{opacity:0;transform:translateY(6px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+.vox-answer{display:none;padding:18px 20px 6px;max-height:300px;overflow:auto}
+.vox[data-state="idle"] .vox-idle{display:block}
+.vox[data-state="idle"] .vox-idle~*{display:none}
+.vox[data-state="listening"] .vox-idle{display:none}
+.vox[data-state="listening"] .vox-listen{display:flex}
+.vox[data-state="answer"] .vox-idle{display:none}
+.vox[data-state="answer"] .vox-answer{display:block}
+.q{font-size:12.5px;color:var(--muted);padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.q b{color:var(--text);font-weight:600}
+.who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:6px}
+.who i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.ans{margin:0;font-size:14.5px;line-height:1.62;color:#E6E2FF;min-height:1.6em}
+.caret{display:inline-block;width:7px;height:1.05em;margin-left:2px;vertical-align:-2px;background:var(--lavender);animation:blink 1s steps(1) infinite}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0 6px}
+.chip{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:rgba(183,169,255,.07);color:#DCD6FF;font-weight:600;font-size:12.5px;animation:word .4s var(--ease) both;transition:background .2s,border-color .2s}
+.chip:hover{background:rgba(183,169,255,.17);border-color:var(--lavender)}
+.chip.go{background:#5B49E2;border-color:#5B49E2;color:#fff}
+.chip.go:hover{background:#6A59EE}
+.vox-bar{display:flex;align-items:center;gap:8px;padding:8px 10px 12px 12px}
+.ic{width:40px;height:40px;flex:none;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;place-items:center;transition:background .2s,border-color .2s,transform .2s}
+.ic:hover{background:rgba(255,255,255,.11);border-color:var(--line-2)}
+.ic.stop{background:rgba(255,255,255,.14)}
+.ic.stop span{width:13px;height:13px;border-radius:3px;background:var(--text)}
+.agent-wrap{position:relative;margin-left:auto;min-width:0}
+.agent{max-width:100%;min-width:0;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13px;transition:background .2s}
+.agent:hover{background:rgba(255,255,255,.11)}
+.agent i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--lavender)}
+.agent svg{flex:none}
+#agentName{min-width:0;max-width:12ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu{position:absolute;right:0;bottom:48px;min-width:200px;padding:6px;border-radius:16px;background:rgba(20,17,40,.96);border:1px solid var(--line-2);box-shadow:0 20px 50px -10px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:2px;z-index:5}
+.menu button{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;text-align:left;font-weight:600;font-size:13px}
+.menu button:hover{background:rgba(183,169,255,.1)}
+.menu button i{width:8px;height:8px;border-radius:50%}
+.menu button small{margin-left:auto;font:400 11px var(--f-mono);color:var(--dim)}
+.menu button[aria-checked="true"]{background:rgba(183,169,255,.15)}
+.rec{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.05);font:500 14px var(--f-mono);font-variant-numeric:tabular-nums;color:#E7E3FF}
+.rec i{width:8px;height:8px;border-radius:50%;background:var(--coral);animation:blink 1s ease-in-out infinite}
+
+/* below */
+.below{max-width:1240px;margin:0 auto;padding:64px var(--gr) 72px var(--gl)}
+.below-h{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:24px}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--lavender)}
+.below-h h2{margin:8px 0 0;font:700 clamp(30px,4vw,44px)/1.05 var(--f-display);letter-spacing:-.035em;text-wrap:balance}
+.below-h p{margin:0;max-width:440px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:18px;align-items:start}
+.card{position:relative;min-width:0;padding:24px;border-radius:30px;background:linear-gradient(180deg,rgba(30,26,60,.72),rgba(14,12,28,.78));border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 30px 60px -40px rgba(0,0,0,.9);display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.card::before{content:"";position:absolute;inset:-1px -1px auto;height:160px;background:radial-gradient(60% 100% at 30% 0%,rgba(124,108,255,.18),transparent 70%);pointer-events:none}
+.card>*{position:relative}
+.card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card-h h3{margin:0;font:700 21px var(--f-display);letter-spacing:-.025em}
+.sub{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.tag{flex:none;height:28px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:500 11.5px var(--f-mono);color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.btn{min-height:46px;padding:0 20px;border-radius:999px;font-weight:700;font-size:14px;border:1px solid transparent;transition:transform .2s var(--ease),background .2s,box-shadow .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,#C2B6FF,#7C6CFF);color:var(--ink);box-shadow:0 14px 36px -14px rgba(124,108,255,.9)}
+.btn.primary:hover{box-shadow:0 18px 44px -12px rgba(124,108,255,1)}
+.btn.ghost{background:rgba(255,255,255,.04);border-color:var(--line-2);color:var(--text)}
+.btn.ghost:hover{background:rgba(255,255,255,.09)}
+.btn[disabled]{opacity:.55;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.row .btn{flex:1 1 140px}
+
+/* gauge */
+.gauge{position:relative;width:100%;max-width:300px;margin:0 auto}
+.gauge svg{display:block;width:100%;height:auto;overflow:visible}
+.g-track{fill:none;stroke:#221E42;stroke-width:20;stroke-linecap:round}
+.g-val{fill:none;stroke-width:20;stroke-linecap:round;filter:drop-shadow(0 0 10px rgba(124,108,255,.55))}
+.g-tick{fill:var(--dim);font:500 10px var(--f-ui)}
+.g-mark{stroke:rgba(183,169,255,.35);stroke-width:1.5}
+#gNeedle line{stroke:var(--text);stroke-width:4;stroke-linecap:round}
+#gNeedle circle{fill:var(--text)}
+.g-read{position:absolute;left:0;right:0;top:60%;display:flex;flex-direction:column;align-items:center;transform:translateY(-10%)}
+.g-phase{font-size:12.5px;color:var(--muted)}
+.g-num{font:700 42px/1.05 var(--f-display);letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.g-unit{font-size:12px;color:var(--muted)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.trio div{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.trio dt{font-size:12px;color:var(--muted)}
+.trio dd{margin:2px 0 0;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.hint{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:rgba(255,199,114,.07);border:1px solid rgba(255,199,114,.22);font-size:13px;line-height:1.5;color:#F3E2BE}
+.hint.ok{background:rgba(158,240,196,.07);border-color:rgba(158,240,196,.25);color:#CDF6E0}
+.hint svg{flex:none;margin-top:1px}
+
+/* backdoors */
+.prog{display:flex;align-items:center;gap:12px}
+.prog-bar{flex:1;height:8px;border-radius:99px;background:#1E1A3A;overflow:hidden}
+.prog-bar span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--mint));transition:width .7s var(--ease)}
+.prog b{font:500 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.scanline{font:500 12px var(--f-mono);color:var(--lavender);min-height:18px}
+.doors{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.door{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid var(--line);transition:background .4s,border-color .4s}
+.door.risk{background:rgba(255,142,122,.06);border-color:rgba(255,142,122,.2)}
+.door.checking{background:linear-gradient(90deg,rgba(183,169,255,.04),rgba(183,169,255,.16),rgba(183,169,255,.04));background-size:200% 100%;animation:shim 1s linear infinite;border-color:var(--line-2)}
+@keyframes shim{to{background-position:-200% 0}}
+.door-t{flex:1;min-width:0}
+.door-t strong{display:block;font-size:14px;font-weight:600}
+.door-t span{display:block;font-size:12px;color:var(--muted)}
+.door.risk .door-t span{color:#E6B3A9}
+.sev{flex:none;font:500 10.5px var(--f-mono);letter-spacing:.06em;padding:3px 7px;border-radius:6px;text-transform:uppercase}
+.sev.crit{background:rgba(255,142,122,.16);color:var(--coral)}
+.sev.high{background:rgba(255,199,114,.14);color:var(--amber)}
+.sev.med{background:rgba(183,169,255,.14);color:var(--lavender)}
+.sev.fixed{background:rgba(158,240,196,.12);color:var(--mint)}
+.sw{position:relative;flex:none;width:48px;height:28px;border-radius:99px;border:0;background:#2A2550;transition:background .3s}
+.sw::before{content:"";position:absolute;inset:-6px -2px}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#9690BC;transition:transform .35s var(--ease),background .3s}
+.sw[aria-checked="true"]{background:var(--violet);box-shadow:0 0 18px -2px rgba(124,108,255,.8)}
+.sw[aria-checked="true"]::after{transform:translateX(20px);background:#fff}
+.foot{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center}
+
+/* devices */
+.devs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.dev{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.dev:last-child{border-bottom:0}
+.dev-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(183,169,255,.08);color:var(--lavender)}
+.dev.warn .dev-ic{background:rgba(255,199,114,.1);color:var(--amber)}
+.dev.new .dev-ic{background:rgba(255,142,122,.1);color:var(--coral)}
+.dev-n{font-weight:600;font-size:14px}
+.dev-m{font-size:12px;color:var(--muted)}
+.dev.warn .dev-m{color:#EBCB8F}
+.dev.new .dev-m{color:#E6B3A9}
+.dev-v{font:500 12.5px var(--f-mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.dev-bar{grid-column:2 / 4;height:4px;border-radius:99px;background:#1E1A3A;overflow:hidden}
+.dev-bar span{display:block;height:100%;border-radius:99px;background:var(--lavender)}
+.dev.warn .dev-bar span{background:var(--amber)}
+.dev-act{grid-column:2 / 4;display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
+.mini{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);font-weight:600;font-size:12px;transition:background .2s}
+.mini:hover{background:rgba(255,255,255,.1)}
+.mini.go{background:rgba(124,108,255,.25);border-color:rgba(124,108,255,.6)}
+.done-note{font:500 12px var(--f-mono);color:var(--mint)}
+
+.toast{position:fixed;z-index:60;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;max-width:min(520px,calc(100% - var(--gl) - var(--gr)));padding:12px 16px 12px 14px;border-radius:16px;background:rgba(22,19,44,.94);border:1px solid var(--line-2);box-shadow:0 20px 50px -12px rgba(0,0,0,.8);display:flex;gap:10px;align-items:center;font-size:13.5px;transition:opacity .3s,transform .4s var(--ease);pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast i{width:8px;height:8px;border-radius:50%;background:var(--mint);flex:none;box-shadow:0 0 10px var(--mint)}
+footer{max-width:1240px;margin:0 auto;padding:0 var(--gr) 48px var(--gl);font:500 12px var(--f-mono);color:var(--dim);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+
+/* intro */
+.rise{animation:rise .9s var(--ease) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(16px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+
+@media (max-width:980px){.tabs,.keys{display:none}}
+@media (max-width:420px){.rec{padding:0 10px}.vox-bar{gap:6px}}
+@media (max-width:560px){
+  .top{padding-left:calc(var(--gl) + 140px)}
+  .brand span{display:none}
+  .hero{height:960px}
+  .hero-inner{padding-top:calc(84px + env(safe-area-inset-top,0px))}
+  .power{width:104px;height:104px}
+  .vox-listen p{font-size:20px}
+  .card{padding:20px;border-radius:24px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+  .aurora i{animation:none!important}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← All concepts</a>
+
+<section class="hero" id="hero" aria-label="Network status">
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <header class="top">
+    <div class="brand rise" style="--d:.05s">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><defs><linearGradient id="bl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D4CBFF"/><stop offset="1" stop-color="#7C6CFF"/></linearGradient></defs><path d="M14 2.5l9.5 4v6.8c0 6-4 10.7-9.5 12.7-5.5-2-9.5-6.7-9.5-12.7V6.5z" fill="url(#bl)"/><path d="M9.5 14.5a6.4 6.4 0 0 1 9 0M11.6 17a3.4 3.4 0 0 1 4.8 0" fill="none" stroke="#120C2E" stroke-width="1.9" stroke-linecap="round"/><circle cx="14" cy="19.6" r="1.3" fill="#120C2E"/></svg>
+      <span>Bastion</span>
+    </div>
+    <nav class="tabs rise" style="--d:.12s" aria-label="Sections">
+      <button class="tab" aria-current="true" data-go="hero">Home</button>
+      <button class="tab" aria-current="false" data-go="doorsCard">Shield</button>
+      <button class="tab" aria-current="false" data-go="devCard">Traffic</button>
+      <button class="tab" aria-current="false" data-go="speedCard">Speed</button>
+      <button class="tab" aria-current="false" data-go="vox">Agents</button>
+    </nav>
+    <div class="top-r rise" style="--d:.18s">
+      <span class="keys" title="Connected API keys"><i style="background:var(--clay)"></i><i style="background:var(--mint)"></i><i style="background:var(--sky)"></i>3 keys</span>
+      <button class="pro" id="proBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B7A9FF" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></svg>Pro</button>
+    </div>
+  </header>
+
+  <div class="hero-inner" id="heroInner">
+    <div class="status rise" id="status" style="--d:.25s" role="status"><span class="dot"></span><span id="statusText">Shield active · 4 doors open</span></div>
+    <div class="timer rise" id="timer" style="--d:.32s" aria-label="Secure session time">01:20:15</div>
+    <div class="timer-l rise" style="--d:.38s">Secure session</div>
+    <div class="rates rise" style="--d:.44s">
+      <div class="rate"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v14M6 12l6 6 6-6"/></svg><div><small>Download</small><b id="hDown">312.4 <span>Mbps</span></b></div></div>
+      <div class="rate"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B7A9FF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 20V6M6 12l6-6 6 6"/></svg><div><small>Upload</small><b id="hUp">96.1 <span>Mbps</span></b></div></div>
+      <div class="rate"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9EF0C4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><div><small>Ping</small><b id="hPing">11 <span>ms</span></b></div></div>
+    </div>
+    <div class="rise" style="--d:.52s"><button class="power" id="power" aria-pressed="true" aria-label="Shield on. Press to pause">
+      <span><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><em id="powerLabel" style="font-style:normal">Protected</em></span>
+    </button></div>
+  </div>
+
+  <div class="dock rise" style="--d:.7s">
+    <div class="vox" id="vox" data-state="idle">
+      <div class="vox-clip" aria-hidden="true"><div class="aurora"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div></div>
+      <div class="vox-body">
+        <div class="vox-idle">
+          <label for="ask" class="sr">Ask Bastion about your network</label>
+          <input id="ask" type="text" autocomplete="off" placeholder="Ask about your network, or tap the mic…">
+        </div>
+        <div class="vox-listen" aria-live="polite"><p id="transcript"><span class="ph">Listening…</span></p></div>
+        <div class="vox-answer" aria-live="polite">
+          <div class="q">You asked: <b id="ansQ"></b></div>
+          <div class="who" id="ansWho"><i></i><span></span></div>
+          <p class="ans" id="ansText"></p>
+          <div class="chips" id="ansChips"></div>
+        </div>
+      </div>
+      <div class="vox-bar">
+        <button class="ic" id="plusBtn" aria-label="Add a router photo or config backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <div class="agent-wrap">
+          <button class="agent" id="agentBtn" aria-haspopup="true" aria-expanded="false" aria-controls="agentMenu"><i id="agentDot"></i><span id="agentName">Agent (auto)</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="menu" id="agentMenu" role="menu" hidden>
+            <button role="menuitemradio" aria-checked="true" data-agent="auto"><i style="background:var(--lavender)"></i>Auto<small>best per task</small></button>
+            <button role="menuitemradio" aria-checked="false" data-agent="Claude"><i style="background:var(--clay)"></i>Claude<small>security</small></button>
+            <button role="menuitemradio" aria-checked="false" data-agent="ChatGPT"><i style="background:var(--mint)"></i>ChatGPT<small>devices</small></button>
+            <button role="menuitemradio" aria-checked="false" data-agent="Grok"><i style="background:var(--sky)"></i>Grok<small>speed</small></button>
+          </div>
+        </div>
+        <span class="rec" id="rec" hidden><i></i><span id="recTime">00:00</span></span>
+        <button class="ic" id="micBtn" aria-label="Speak to the agent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button class="ic stop" id="stopBtn" aria-label="Stop and send" hidden><span></span></button>
+        <button class="ic" id="closeBtn" aria-label="Clear"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="below">
+  <div class="below-h">
+    <div>
+      <div class="eyebrow">Tonight on your network</div>
+      <h2>Faster, quieter, closed.</h2>
+    </div>
+    <p>Sample data from a typical home router. Every fix runs on your machine; agents only see connection metadata and always ask first.</p>
+  </div>
+
+  <div class="grid">
+    <article class="card" id="speedCard">
+      <div class="card-h"><div><h3>Speed test</h3><p class="sub" id="spSub">Last run 14 min ago · nearest edge server</p></div><span class="tag" id="spTag">5 GHz · ch 36</span></div>
+      <div class="gauge">
+        <svg viewBox="0 0 260 232" role="img" aria-labelledby="gTitle">
+          <title id="gTitle">Speed gauge from 0 to 1 gigabit</title>
+          <defs><linearGradient id="gGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8FD3FF"/><stop offset=".55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#D3C8FF"/></linearGradient></defs>
+          <path class="g-track" d="M59.29 200.71 A100 100 0 1 1 200.71 200.71" pathLength="100"/>
+          <path class="g-val" id="gVal" d="M59.29 200.71 A100 100 0 1 1 200.71 200.71" pathLength="100" stroke="url(#gGrad)" stroke-dasharray="0 100"/>
+          <g id="gTicks"></g>
+          <g id="gNeedle" transform="rotate(135 130 130)"><line x1="130" y1="130" x2="196" y2="130"/><circle cx="130" cy="130" r="7"/></g>
+        </svg>
+        <div class="g-read"><span class="g-phase" id="gPhase">Download</span><span class="g-num" id="gNum">312.4</span><span class="g-unit">Mbps</span></div>
+      </div>
+      <dl class="trio">
+        <div><dt>Ping</dt><dd id="spPing">11 ms</dd></div>
+        <div><dt>Download</dt><dd id="spDown">312.4</dd></div>
+        <div><dt>Upload</dt><dd id="spUp">96.1</dd></div>
+      </dl>
+      <div class="hint" id="spHint"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC772" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg><span id="spHintText">Channel 36 is shared with 7 neighbours. Moving to 149 should add about 38%.</span></div>
+      <div class="row"><button class="btn primary" id="runTest">Run test</button><button class="btn ghost" id="boostBtn">Move to ch 149</button></div>
+    </article>
+
+    <article class="card" id="doorsCard">
+      <div class="card-h"><div><h3>Close backdoors</h3><p class="sub">One switch per fix. Bastion does the router work.</p></div><span class="tag" id="scanAge">scanned 2 min ago</span></div>
+      <div class="prog"><div class="prog-bar"><span id="progBar" style="width:33%"></span></div><b id="progText">2 of 6 closed</b></div>
+      <div class="scanline" id="scanLine" aria-live="polite"></div>
+      <ul class="doors" id="doors"></ul>
+      <div class="foot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9EF0C4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Also fixed: the admin password from the sticker was rotated.</div>
+      <div class="row"><button class="btn primary" id="scanBtn">Deep scan</button><button class="btn ghost" id="closeAll">Close all</button></div>
+    </article>
+
+    <article class="card" id="devCard">
+      <div class="card-h"><div><h3>Who's on your Wi-Fi</h3><p class="sub">29 known devices · 1 new · last 24 h</p></div><span class="tag">live</span></div>
+      <ul class="devs">
+        <li class="dev warn" id="devTV">
+          <span class="dev-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span>
+          <div><div class="dev-n">Living-room TV box</div><div class="dev-m" id="tvMeta">Talks to an analytics host while the screen is off</div></div>
+          <div class="dev-v">1.2 GB</div>
+          <div class="dev-bar"><span style="width:100%"></span></div>
+          <div class="dev-act" id="tvAct"><button class="mini go" id="tvBlock">Block analytics host</button><button class="mini" id="tvWhy">Why?</button></div>
+        </li>
+        <li class="dev new" id="devNew">
+          <span class="dev-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
+          <div><div class="dev-n" id="newName">Unknown device</div><div class="dev-m" id="newMeta">Joined 4 min ago · randomised MAC · on guest network</div></div>
+          <div class="dev-v">38 MB</div>
+          <div class="dev-bar"><span style="width:6%"></span></div>
+          <div class="dev-act" id="newAct"><button class="mini go" id="newTrust">It's ours, trust it</button><button class="mini" id="newKick">Remove</button></div>
+        </li>
+        <li class="dev">
+          <span class="dev-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span>
+          <div><div class="dev-n">MacBook Pro</div><div class="dev-m">This computer · github.com, figma.com</div></div>
+          <div class="dev-v">860 MB</div>
+          <div class="dev-bar"><span style="width:72%"></span></div>
+        </li>
+        <li class="dev">
+          <span class="dev-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
+          <div><div class="dev-n">iPhone</div><div class="dev-m">Private Wi-Fi address on</div></div>
+          <div class="dev-v">540 MB</div>
+          <div class="dev-bar"><span style="width:45%"></span></div>
+        </li>
+        <li class="dev">
+          <span class="dev-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6l-.7 6.9A2.9 2.9 0 0 0 7 17.7L9 15h6l2 2.7a2.9 2.9 0 0 0 5-2.2l-.7-6.9A4 4 0 0 0 17.3 5z"/></svg></span>
+          <div><div class="dev-n">Game console</div><div class="dev-m">Opened 3 ports with UPnP</div></div>
+          <div class="dev-v">310 MB</div>
+          <div class="dev-bar"><span style="width:26%"></span></div>
+        </li>
+      </ul>
+    </article>
+  </div>
+</main>
+<footer><span>Bastion · concept B · Nebula Voice</span><span>Sample data · Windows &amp; macOS</span></footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><i></i><span id="toastText"></span></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var AGENTS={Claude:{col:"#E8A07F"},ChatGPT:{col:"#9EF0C4"},Grok:{col:"#8FD3FF"}};
+var state={shield:true,agent:"auto",boosted:false,tvBlocked:false,newDev:"",secs:4815,speedRunning:false,scanning:false};
+
+/* ---------- toast ---------- */
+var toastT=0;
+function toast(msg){
+  $("#toastText").textContent=msg;
+  var t=$("#toast");t.classList.add("on");
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on")},3400);
+}
+
+/* ---------- hero canvas ---------- */
+var flareAgent=function(){};
+(function(){
+  var hero=$("#hero"),cv=$("#sky"),ctx=cv.getContext("2d"),inner=$("#heroInner");
+  var W=0,H=0,dpr=1,hy=0,k=1,stars=[],grid=[],cell=7,running=false,raf=0,last=0,T=0,inView=true;
+  var orbs=[
+    {name:"Claude",col:[232,160,127],a:300,b:74,tilt:-0.12,sp:0.30,ph:0.4,flare:0},
+    {name:"ChatGPT",col:[158,240,196],a:410,b:98,tilt:0.07,sp:0.21,ph:2.5,flare:0},
+    {name:"Grok",col:[143,211,255],a:215,b:52,tilt:0.18,sp:0.38,ph:4.4,flare:0}
+  ];
+  var BETA=0.5,cb=Math.cos(BETA),sb=Math.sin(BETA);
+  flareAgent=function(name){
+    for(var i=0;i<orbs.length;i++) if(orbs[i].name===name) orbs[i].flare=1;
+    if(!running){draw(reduce?3:T);if(reduce) for(i=0;i<orbs.length;i++) orbs[i].flare=0}
+  };
+  function easeOut(x){return 1-Math.pow(1-x,3)}
+  function planetR(){return Math.max(W*1.15,1150)}
+  function resize(){
+    W=hero.clientWidth;H=hero.clientHeight;dpr=Math.min(2,window.devicePixelRatio||1);
+    cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+    k=Math.max(0.62,Math.min(1,W/1440));
+    var ib=inner.offsetTop+inner.offsetHeight;
+    hy=Math.min(ib+175*Math.max(k,0.85),H-270);
+    cell=W<600?6:7;
+    stars=[];
+    var n=Math.round(W*hy/5000);
+    for(var i=0;i<n;i++) stars.push([Math.random()*W,Math.random()*hy,Math.random()*1.2+0.3,Math.random()*6.28,0.4+Math.random()*1.6]);
+    /* screen-space dot grid on the visible planet, inverse projected to lat/lon */
+    grid=[];
+    var R=planetR(),cx=W/2,pcy=hy+R;
+    for(var y=hy+cell*0.5;y<H+cell;y+=cell){
+      for(var x=(cell/2)+((Math.round((y-hy)/cell)%2)?cell/2:0);x<W;x+=cell){
+        var X=(x-cx)/R,Yp=(pcy-y)/R,rr=X*X+Yp*Yp;
+        if(rr>=1) continue;
+        var Zp=Math.sqrt(1-rr);
+        var Y=Yp*cb-Zp*sb, Z=Yp*sb+Zp*cb;
+        var lat=Math.asin(Math.max(-1,Math.min(1,Y)));
+        var lon=Math.atan2(X,Z);
+        grid.push([x,y-hy,Zp,lat,lon]);
+      }
+    }
+    if(!running) draw(reduce?3:T);
+  }
+  function mask(l,p){
+    return Math.sin(l*3+p*2.2)*Math.cos(l*2-p*5.1)+0.55*Math.sin(l*7+p*3+1.3)+0.28*Math.sin(l*13-p*9);
+  }
+  function rr(x,y,w,h,r){
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  }
+  var buckets=[];for(var bi=0;bi<10;bi++) buckets.push([]);
+  function draw(t){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    var intro=reduce?1:easeOut(Math.min(1,t/1.9));
+    var off=(1-intro)*190;
+    var H0=hy+off,cx=W/2,R=planetR(),pcy=H0+R,on=state.shield?1:0.4;
+    var g;
+    /* sky glow */
+    g=ctx.createRadialGradient(cx,H0,0,cx,H0,Math.max(W*0.7,620));
+    g.addColorStop(0,"rgba(124,108,255,"+(0.24*on+0.06)+")");g.addColorStop(0.45,"rgba(124,108,255,0.06)");g.addColorStop(1,"rgba(124,108,255,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    /* stars */
+    ctx.fillStyle="#E9E5FF";
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];var a=(0.2+0.6*(0.5+0.5*Math.sin(t*s[4]+s[3])))*Math.max(0,Math.min(1,(H0-60-s[1])/120));
+      if(a<=0) continue;ctx.globalAlpha=a;ctx.fillRect(s[0],s[1],s[2],s[2]);
+    }
+    ctx.globalAlpha=1;
+    /* atmosphere */
+    g=ctx.createRadialGradient(cx,pcy,R-30,cx,pcy,R+270*k);
+    g.addColorStop(0,"rgba(183,169,255,0)");
+    g.addColorStop(0.1,"rgba(208,200,255,"+(0.5*on+0.12)+")");
+    g.addColorStop(0.17,"rgba(143,211,255,"+(0.22*on+0.05)+")");
+    g.addColorStop(0.45,"rgba(124,108,255,0.07)");
+    g.addColorStop(1,"rgba(124,108,255,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,Math.max(0,H0-300*k),W,H);
+    /* planet body */
+    ctx.beginPath();ctx.arc(cx,pcy,R,0,Math.PI*2);
+    g=ctx.createLinearGradient(0,H0,0,H0+360);
+    g.addColorStop(0,"#2A2266");g.addColorStop(0.16,"#161236");g.addColorStop(1,"#07060E");
+    ctx.fillStyle=g;ctx.fill();
+    /* dot-matrix surface, continents drift through a fixed grid */
+    var rot=t*0.035;
+    for(var b=0;b<10;b++) buckets[b].length=0;
+    var amber=[];
+    var dsz=cell<7?1.8:2.1;
+    for(var j=0;j<grid.length;j++){
+      var d=grid[j],y=d[1]+H0;if(y>H) continue;
+      var m=mask(d[4]+rot,d[3]);
+      var fade=Math.min(1,(d[1])/28);
+      var base=d[2];
+      var al;
+      if(m>0.25){al=(0.18+0.8*base)*fade*(0.55+0.45*Math.min(1,(m-0.25)*2.2));if(m>1.15&&((j*7919)%13===0)){amber.push(d[0],y,al);continue}}
+      else al=0.07*fade*(0.4+base);
+      var q=Math.min(9,Math.floor(al*10));buckets[q].push(d[0],y);
+    }
+    for(b=0;b<10;b++){
+      var arr=buckets[b];if(!arr.length) continue;
+      ctx.fillStyle="rgba(196,186,255,"+((b+0.5)/10)+")";
+      ctx.beginPath();
+      for(var p=0;p<arr.length;p+=2) ctx.rect(arr[p],arr[p+1],dsz,dsz);
+      ctx.fill();
+    }
+    for(p=0;p<amber.length;p+=3){ctx.fillStyle="rgba(255,199,114,"+Math.min(1,amber[p+2]+0.2)+")";ctx.fillRect(amber[p],amber[p+1],dsz+0.4,dsz+0.4)}
+    /* inner haze + rim */
+    g=ctx.createRadialGradient(cx,pcy,R-90*k,cx,pcy,R);
+    g.addColorStop(0,"rgba(124,108,255,0)");g.addColorStop(1,"rgba(183,169,255,"+(0.28*on+0.06)+")");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,pcy,R,Math.PI,Math.PI*2);ctx.fill();
+    var lg=ctx.createLinearGradient(0,0,W,0);
+    lg.addColorStop(0,"rgba(143,211,255,0.15)");lg.addColorStop(0.5,"rgba(244,240,255,0.95)");lg.addColorStop(1,"rgba(143,211,255,0.15)");
+    var widths=[22*k,8*k,2],alph=[0.08,0.22,1];
+    for(var w=0;w<3;w++){ctx.globalAlpha=alph[w]*(0.5+0.5*on);ctx.strokeStyle=lg;ctx.lineWidth=widths[w];ctx.beginPath();ctx.arc(cx,pcy,R,Math.PI*1.02,Math.PI*1.98);ctx.stroke()}
+    ctx.globalAlpha=1;
+    /* router geometry */
+    var rw=150*k,rh=24*k,rd=12*k,rx0=cx-rw/2,ry0=H0-rh-3*k;
+    var ox=cx,oy=ry0-rd-6*k;
+    /* orbit paths */
+    var ocy=H0-44*k,oka=Math.min(k,Math.max(0.2,(W/2-60)/410));
+    ctx.lineWidth=1;
+    for(i=0;i<orbs.length;i++){var o=orbs[i];ctx.strokeStyle="rgba(183,169,255,0.09)";ctx.beginPath();ctx.ellipse(cx,ocy,o.a*oka,o.b*k,o.tilt,0,Math.PI*2);ctx.stroke()}
+    var pos=[];
+    for(i=0;i<orbs.length;i++){
+      o=orbs[i];var an=o.ph+t*o.sp;var ex=o.a*oka*Math.cos(an),ey=o.b*k*Math.sin(an);
+      pos.push({o:o,x:cx+ex*Math.cos(o.tilt)-ey*Math.sin(o.tilt),y:ocy+ex*Math.sin(o.tilt)+ey*Math.cos(o.tilt),front:Math.sin(an)>0,depth:0.72+0.28*Math.sin(an)});
+    }
+    function orb(P){
+      var o=P.o,c=o.col,sc=P.depth*Math.max(k,0.8),f=o.flare;
+      var rad=(5+3*f)*sc,glow=(18+40*f)*sc;
+      var gg=ctx.createRadialGradient(P.x,P.y,0,P.x,P.y,glow);
+      gg.addColorStop(0,"rgba("+c[0]+","+c[1]+","+c[2]+","+(0.55+0.4*f)+")");gg.addColorStop(1,"rgba("+c[0]+","+c[1]+","+c[2]+",0)");
+      ctx.fillStyle=gg;ctx.beginPath();ctx.arc(P.x,P.y,glow,0,Math.PI*2);ctx.fill();
+      if(f>0.02){ctx.strokeStyle="rgba("+c[0]+","+c[1]+","+c[2]+","+f+")";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(P.x,P.y,rad+(1-f)*70*sc,0,Math.PI*2);ctx.stroke()}
+      ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(P.x,P.y,rad*0.55,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba("+c[0]+","+c[1]+","+c[2]+",1)";ctx.beginPath();ctx.arc(P.x,P.y,rad*0.55+1.2,0,Math.PI*2);ctx.globalAlpha=0.35;ctx.fill();ctx.globalAlpha=1;
+      ctx.font="600 "+Math.round(11.5*Math.max(k,0.85))+"px 'Plus Jakarta Sans', system-ui, sans-serif";
+      ctx.fillStyle="rgba(243,240,255,"+(0.45+0.5*P.depth*(0.6+0.4*f))+")";
+      var tx0=P.x+rad+8;ctx.textAlign="left";
+      if(tx0+ctx.measureText(o.name).width>W-6){ctx.textAlign="right";tx0=P.x-rad-8}
+      ctx.fillText(o.name,tx0,P.y+4);ctx.textAlign="left";
+    }
+    for(i=0;i<pos.length;i++) if(!pos[i].front) orb(pos[i]);
+    /* signal arcs */
+    var maxR=560*k;
+    ctx.lineWidth=1.6;
+    for(i=0;i<6;i++){
+      var r=((t*70+i*(maxR/6))%maxR)+26*k;
+      var aa=Math.pow(1-r/(maxR+26*k),1.7)*0.6*on*intro;
+      if(aa<=0.005) continue;
+      ctx.strokeStyle="rgba(183,169,255,"+aa+")";
+      ctx.beginPath();ctx.arc(ox,oy,r,Math.PI*1.13,Math.PI*1.87);ctx.stroke();
+      ctx.strokeStyle="rgba(143,211,255,"+aa*0.5+")";
+      ctx.beginPath();ctx.arc(ox,oy,r+3,Math.PI*1.2,Math.PI*1.8);ctx.stroke();
+    }
+    /* light pool under router */
+    g=ctx.createRadialGradient(cx,H0+6*k,0,cx,H0+6*k,170*k);
+    g.addColorStop(0,"rgba(183,169,255,"+(0.38*on+0.08)+")");g.addColorStop(1,"rgba(183,169,255,0)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(cx,H0+6*k,170*k,40*k,0,0,Math.PI*2);ctx.fill();
+    /* antennas */
+    for(var sx=-1;sx<=1;sx+=2){
+      var ax=cx+sx*(rw/2-18*k),ay=ry0-rd*0.55,L=72*k,ang=-Math.PI/2+sx*0.2;
+      var tx=ax+Math.cos(ang)*L,ty=ay+Math.sin(ang)*L;
+      ctx.lineCap="round";ctx.strokeStyle="#1B1638";ctx.lineWidth=6*k;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(tx,ty);ctx.stroke();
+      ctx.strokeStyle="rgba(183,169,255,0.75)";ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(ax+sx*2*k,ay);ctx.lineTo(tx+sx*2*k,ty);ctx.stroke();
+      var tg=ctx.createRadialGradient(tx,ty,0,tx,ty,10*k);tg.addColorStop(0,"rgba(220,214,255,"+(0.8*on+0.1)+")");tg.addColorStop(1,"rgba(220,214,255,0)");
+      ctx.fillStyle=tg;ctx.beginPath();ctx.arc(tx,ty,10*k,0,Math.PI*2);ctx.fill();
+    }
+    /* top face */
+    ctx.beginPath();ctx.moveTo(rx0+3*k,ry0);ctx.lineTo(rx0+rw-3*k,ry0);ctx.lineTo(rx0+rw-16*k,ry0-rd);ctx.lineTo(rx0+16*k,ry0-rd);ctx.closePath();
+    g=ctx.createLinearGradient(0,ry0-rd,0,ry0);g.addColorStop(0,"#2C2560");g.addColorStop(1,"#1A1540");
+    ctx.fillStyle=g;ctx.fill();ctx.strokeStyle="rgba(206,198,255,0.55)";ctx.lineWidth=1;ctx.stroke();
+    /* front face with glow */
+    ctx.save();ctx.shadowColor="rgba(150,130,255,"+(0.8*on+0.1)+")";ctx.shadowBlur=22*k;
+    rr(rx0,ry0,rw,rh,7*k);g=ctx.createLinearGradient(0,ry0,0,ry0+rh);g.addColorStop(0,"#17133A");g.addColorStop(1,"#0B0919");
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+    rr(rx0,ry0,rw,rh,7*k);ctx.strokeStyle="rgba(206,198,255,0.8)";ctx.lineWidth=1.2;ctx.stroke();
+    /* light strip */
+    lg=ctx.createLinearGradient(rx0,0,rx0+rw,0);lg.addColorStop(0,"rgba(143,211,255,0)");lg.addColorStop(0.5,"rgba(143,211,255,"+(0.9*on+0.1)+")");lg.addColorStop(1,"rgba(143,211,255,0)");
+    ctx.fillStyle=lg;ctx.fillRect(rx0+10*k,ry0+rh-5*k,rw-20*k,1.5);
+    /* LEDs */
+    for(i=0;i<5;i++){
+      var lx=rx0+22*k+i*13*k,ly=ry0+rh*0.42;
+      var blink=(i===2||i===3)?(0.45+0.55*Math.max(0,Math.sin(t*(7+i)+i*1.7))):1;
+      var col=state.shield?(i===4?"143,211,255":"158,240,196"):(i===0?"255,142,122":"120,114,160");
+      ctx.fillStyle="rgba("+col+","+(0.25*blink)+")";ctx.beginPath();ctx.arc(lx,ly,5*k,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba("+col+","+blink+")";ctx.beginPath();ctx.arc(lx,ly,1.8*k+0.4,0,Math.PI*2);ctx.fill();
+    }
+    ctx.font="500 "+Math.round(10.5*Math.max(k,0.9))+"px 'JetBrains Mono', monospace";
+    ctx.fillStyle="rgba(183,169,255,0.72)";ctx.textAlign="center";
+    ctx.fillText("192.168.1.1 · Wi-Fi 6 · "+(state.boosted?"ch 149":"ch 36"),cx,H0+26*k);
+    ctx.textAlign="left";
+    for(i=0;i<pos.length;i++) if(pos[i].front) orb(pos[i]);
+  }
+  function frame(now){
+    raf=0;var dt=Math.min(0.05,(now-last)/1000);last=now;T+=dt;
+    for(var i=0;i<orbs.length;i++) orbs[i].flare=Math.max(0,orbs[i].flare-dt*0.5);
+    draw(T);
+    if(running) raf=requestAnimationFrame(frame);
+  }
+  function update(){
+    var want=!reduce&&inView&&!document.hidden;
+    if(want&&!running){running=true;last=performance.now();raf=requestAnimationFrame(frame)}
+    else if(!want&&running){running=false;if(raf) cancelAnimationFrame(raf);raf=0}
+    if(reduce){T=3;draw(3)}
+  }
+  window.__heroRedraw=function(){if(!running) draw(reduce?3:T)};
+  document.addEventListener("visibilitychange",update);
+  if("IntersectionObserver" in window){new IntersectionObserver(function(e){inView=e[0].isIntersecting;update()}).observe(hero)}
+  if("ResizeObserver" in window){new ResizeObserver(function(){resize()}).observe(hero)} else window.addEventListener("resize",resize);
+  resize();update();
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(resize);
+  /* agents occasionally "find" something */
+  if(!reduce) setInterval(function(){if(!document.hidden&&state.shield){var o=orbs[Math.floor(Math.random()*orbs.length)];o.flare=0.8}},5200);
+})();
+
+/* ---------- session timer, rates, shield ---------- */
+function pad(n){return (n<10?"0":"")+n}
+function renderTimer(){var s=state.secs;$("#timer").textContent=pad(Math.floor(s/3600))+":"+pad(Math.floor(s%3600/60))+":"+pad(s%60)}
+setInterval(function(){if(state.shield){state.secs++;renderTimer()}},1000);
+function rates(){
+  var d=state.boosted?431:312,u=state.boosted?120.5:96;
+  $("#hDown").innerHTML=(d+(Math.random()*6-3)).toFixed(1)+" <span>Mbps</span>";
+  $("#hUp").innerHTML=(u+(Math.random()*3-1.5)).toFixed(1)+" <span>Mbps</span>";
+  $("#hPing").innerHTML=(state.boosted?9:11)+" <span>ms</span>";
+}
+setInterval(function(){if(!document.hidden&&state.shield) rates()},2200);
+
+var doors=[
+  {id:"tr069",t:"Block ISP remote control",s:"TR-069 · port 7547 open to the internet",sev:"crit",on:false,done:"TR-069 blocked on the WAN side",agent:"Claude",w:"ISP remote access on port 7547"},
+  {id:"telnet",t:"Close Telnet",s:"Port 23 left open by the vendor",sev:"high",on:false,done:"Telnet closed",agent:"Claude",w:"Telnet on port 23"},
+  {id:"upnp",t:"Close UPnP auto-forwards",s:"1900/udp · 5000 · 49152",sev:"med",on:false,done:"UPnP mappings removed",agent:"ChatGPT",w:"UPnP auto-forwards"},
+  {id:"wps",t:"Disable WPS PIN",s:"Can be brute-forced in hours",sev:"med",on:false,done:"WPS PIN disabled",agent:"Grok",w:"the WPS PIN"},
+  {id:"dns",t:"Encrypted DNS",s:"Lookups go to your ISP unencrypted",sev:"med",on:true,done:"DNS-over-HTTPS on · your ISP can't read your lookups",agent:"Claude",w:"unencrypted DNS"},
+  {id:"nomap",t:"Hide from location maps",s:"Location services can map your network name",sev:"med",on:true,done:"Network name ends in _nomap",agent:"Grok",w:"your network showing on location maps"}
+];
+var SEVL={crit:"critical",high:"high",med:"medium",fixed:"fixed"};
+function openCount(){var n=0;doors.forEach(function(d){if(!d.on)n++});return n}
+function updateStatus(){
+  var st=$("#status"),n=openCount();
+  st.classList.toggle("paused",!state.shield);
+  $("#statusText").textContent=!state.shield?"Shield paused · agents still watching":(n?"Shield active · "+n+" door"+(n>1?"s":"")+" open":"Shield active · every door closed");
+  var closed=doors.length-n;
+  $("#progBar").style.width=(closed/doors.length*100)+"%";
+  $("#progText").textContent=closed+" of "+doors.length+" closed";
+}
+function renderDoors(){
+  var ul=$("#doors");ul.innerHTML="";
+  doors.forEach(function(d){
+    var li=document.createElement("li");
+    li.className="door"+(d.on?"":" risk");li.id="door-"+d.id;
+    var sev=d.on?"fixed":d.sev;
+    li.innerHTML='<div class="door-t"><strong>'+d.t+'</strong><span>'+(d.on?d.done:d.s)+'</span></div>'+
+      '<span class="sev '+sev+'">'+SEVL[sev]+'</span>'+
+      '<button class="sw" role="switch" id="sw-'+d.id+'" aria-checked="'+d.on+'" aria-label="'+d.t+'"></button>';
+    ul.appendChild(li);
+  });
+}
+function setDoor(id,on,quiet){
+  var d=doors.filter(function(x){return x.id===id})[0];if(!d||d.on===on) return;
+  d.on=on;
+  var li=$("#door-"+id),sw=$("#sw-"+id);
+  sw.setAttribute("aria-checked",String(on));
+  li.classList.toggle("risk",!on);
+  var sev=on?"fixed":d.sev;var se=li.querySelector(".sev");se.className="sev "+sev;se.textContent=SEVL[sev];
+  li.querySelector(".door-t span").textContent=on?d.done:d.s;
+  updateStatus();
+  flareAgent(d.agent);
+  if(!quiet) toast(on?d.done+". "+d.agent+" will keep an eye on it.":d.t+" turned off.");
+  window.__heroRedraw();
+}
+var closeTok=0;
+$("#doors").addEventListener("click",function(e){
+  var b=e.target.closest(".sw");if(!b||state.scanning) return;
+  closeTok++;
+  setDoor(b.id.slice(3),b.getAttribute("aria-checked")!=="true");
+});
+renderDoors();updateStatus();
+
+$("#power").addEventListener("click",function(){
+  state.shield=!state.shield;
+  var p=$("#power");p.setAttribute("aria-pressed",String(state.shield));
+  p.setAttribute("aria-label",state.shield?"Shield on. Press to pause":"Shield paused. Press to resume");
+  $("#powerLabel").textContent=state.shield?"Protected":"Paused";
+  updateStatus();window.__heroRedraw();
+  toast(state.shield?"Shield back on. Session continues.":"Shield paused. Fixes stay applied; live blocking is off.");
+});
+
+/* ---------- deep scan ---------- */
+var CHECKS=[
+  ["WAN port sweep, 1 to 65535",null],
+  ["TR-069 / CWMP endpoint","tr069"],
+  ["Telnet and SSH on the LAN","telnet"],
+  ["UPnP port mappings","upnp"],
+  ["WPS state","wps"],
+  ["DNS resolver path","dns"],
+  ["Admin credentials",null],
+  ["Network name in location databases","nomap"]
+];
+function wait(ms){return new Promise(function(r){setTimeout(r,reduce?Math.min(ms,80):ms)})}
+async function deepScan(){
+  if(state.scanning) return;state.scanning=true;
+  var btn=$("#scanBtn");btn.disabled=true;
+  for(var i=0;i<CHECKS.length;i++){
+    var c=CHECKS[i];btn.textContent="Scanning "+(i+1)+"/"+CHECKS.length;
+    $("#scanLine").textContent="> "+c[0]+"…";
+    var li=c[1]?$("#door-"+c[1]):null;if(li) li.classList.add("checking");
+    await wait(520+Math.random()*260);
+    if(li) li.classList.remove("checking");
+  }
+  var n=openCount();
+  $("#scanLine").textContent="> done · "+n+" open · "+(doors.length-n)+" closed + admin password · 0 new";
+  $("#scanAge").textContent="scanned just now";
+  btn.textContent="Deep scan";btn.disabled=false;state.scanning=false;
+  flareAgent("Claude");
+  toast("Deep scan finished. "+(n?n+" door"+(n>1?"s":"")+" still open.":"Nothing open. Nice."));
+}
+$("#scanBtn").addEventListener("click",deepScan);
+$("#closeAll").addEventListener("click",function(){
+  var any=false,my=++closeTok;doors.forEach(function(d,i){if(!d.on){any=true;setTimeout(function(){if(my===closeTok) setDoor(d.id,true,true)},i*220)}});
+  toast(any?"Closing every open door. Your connection stays up.":"Everything is already closed.");
+});
+
+/* ---------- speed test ---------- */
+var STOPS=[0,100,200,500,750,1000],LBL=["0","100","200","500","750","1G"];
+function frac(v){v=Math.max(0,Math.min(1000,v));for(var i=1;i<STOPS.length;i++){if(v<=STOPS[i]) return ((i-1)+(v-STOPS[i-1])/(STOPS[i]-STOPS[i-1]))/(STOPS.length-1)}return 1}
+(function(){
+  var g=$("#gTicks"),ns="http://www.w3.org/2000/svg";
+  for(var i=0;i<STOPS.length;i++){
+    var a=(135+270*i/(STOPS.length-1))*Math.PI/180;
+    var t=document.createElementNS(ns,"text");
+    t.setAttribute("x",(130+124*Math.cos(a)).toFixed(1));t.setAttribute("y",(130+124*Math.sin(a)+4).toFixed(1));
+    t.setAttribute("text-anchor",Math.abs(Math.cos(a))<0.2?"middle":(Math.cos(a)<0?"end":"start"));
+    t.setAttribute("class","g-tick");t.textContent=LBL[i];g.appendChild(t);
+    var l=document.createElementNS(ns,"line");
+    l.setAttribute("x1",(130+86*Math.cos(a)).toFixed(1));l.setAttribute("y1",(130+86*Math.sin(a)).toFixed(1));
+    l.setAttribute("x2",(130+80*Math.cos(a)).toFixed(1));l.setAttribute("y2",(130+80*Math.sin(a)).toFixed(1));
+    l.setAttribute("class","g-mark");g.appendChild(l);
+  }
+})();
+function setGauge(v){
+  var f=frac(v);
+  $("#gVal").setAttribute("stroke-dasharray",(f*100).toFixed(2)+" 100");
+  $("#gNeedle").setAttribute("transform","rotate("+(135+270*f).toFixed(2)+" 130 130)");
+  $("#gNum").textContent=v.toFixed(1);
+}
+setGauge(312.4);
+var speedToken=0;
+function tween(ms,fn,token){
+  return new Promise(function(res){
+    var s=performance.now();ms=reduce?Math.min(ms,200):ms;
+    function step(now){if(token!==speedToken) return res(false);var p=Math.min(1,(now-s)/ms);fn(p);if(p<1) requestAnimationFrame(step);else res(true)}
+    requestAnimationFrame(step);
+  });
+}
+async function runSpeed(){
+  var btn=$("#runTest");
+  if(state.speedRunning){speedToken++;state.speedRunning=false;btn.textContent="Run test";$("#gPhase").textContent="Stopped";return}
+  state.speedRunning=true;var my=++speedToken;btn.textContent="Stop";
+  var dT=(state.boosted?430:312)+Math.random()*8-4,uT=(state.boosted?120.5:96)+Math.random()*3-1.5,pT=state.boosted?9:11;
+  $("#gPhase").textContent="Ping";setGauge(0);
+  var ok=await tween(700,function(p){$("#spPing").textContent=Math.round(40-(40-pT)*p)+" ms"},my);if(!ok) return;
+  $("#gPhase").textContent="Downloading";
+  ok=await tween(3200,function(p){var e=1-Math.pow(1-p,2.4);var v=dT*e+(p<1?Math.sin(p*40)*dT*0.03*(1-p):0);setGauge(Math.max(0,v));$("#spDown").textContent=Math.max(0,v).toFixed(1)},my);if(!ok) return;
+  $("#gPhase").textContent="Uploading";
+  ok=await tween(2600,function(p){var e=1-Math.pow(1-p,2.4);var v=uT*e+(p<1?Math.sin(p*36)*uT*0.05*(1-p):0);setGauge(Math.max(0,v));$("#spUp").textContent=Math.max(0,v).toFixed(1)},my);if(!ok) return;
+  $("#gPhase").textContent="Download";
+  ok=await tween(700,function(p){setGauge(uT+(dT-uT)*p)},my);if(!ok||my!==speedToken) return;
+  $("#spDown").textContent=dT.toFixed(1);$("#spUp").textContent=uT.toFixed(1);
+  $("#spSub").textContent="Just now · nearest edge server";
+  btn.textContent="Run again";state.speedRunning=false;
+  flareAgent("Grok");
+  toast(state.boosted?"Download "+dT.toFixed(0)+" Mbps on channel 149.":"Download "+dT.toFixed(0)+" Mbps. Channel 36 is holding you back.");
+}
+$("#runTest").addEventListener("click",runSpeed);
+function boost(){
+  if(state.boosted){toast("Already on channel 149.");return}
+  state.boosted=true;
+  $("#spTag").textContent="5 GHz · ch 149";
+  var h=$("#spHint");h.classList.add("ok");
+  h.querySelector("svg").setAttribute("stroke","#9EF0C4");
+  $("#spHintText").textContent="Moved to channel 149, shared with 1 network. Bastion will move you back if it gets crowded.";
+  $("#boostBtn").textContent="On ch 149";$("#boostBtn").disabled=true;
+  rates();window.__heroRedraw();flareAgent("Grok");
+  toast("Moved to channel 149. Expect about 38% more in the evening.");
+}
+$("#boostBtn").addEventListener("click",boost);
+
+/* ---------- devices ---------- */
+function blockTV(){
+  if(state.tvBlocked){toast("Already blocked.");return}
+  state.tvBlocked=true;
+  var li=$("#devTV");li.classList.remove("warn");
+  $("#tvMeta").textContent="Analytics host blocked · streaming unaffected";
+  $("#tvAct").innerHTML='<span class="done-note">Blocked by Claude, approved by you</span>';
+  flareAgent("Claude");toast("Analytics host blocked for the TV box. Netflix and YouTube still work.");
+}
+$("#tvBlock").addEventListener("click",blockTV);
+$("#tvWhy").addEventListener("click",function(){ask("Why is the TV box sending data when it's off?")});
+$("#newTrust").addEventListener("click",function(){
+  if(state.newDev) return;state.newDev="trusted";
+  var li=$("#devNew");li.classList.remove("new");$("#newName").textContent="Android phone";
+  $("#newMeta").textContent="Trusted · moved to the main network";$("#newAct").innerHTML='<span class="done-note">Trusted</span>';
+  flareAgent("ChatGPT");toast("Trusted. The phone is on the main network now.");
+});
+$("#newKick").addEventListener("click",function(){
+  if(state.newDev) return;state.newDev="removed";
+  var li=$("#devNew");li.style.transition="opacity .4s";li.style.opacity="0";setTimeout(function(){li.remove()},420);
+  flareAgent("ChatGPT");toast("Removed and blocked. It can't rejoin without the new password.");
+});
+
+/* ---------- agent switcher ---------- */
+var menu=$("#agentMenu"),agentBtn=$("#agentBtn");
+function closeMenu(){menu.hidden=true;agentBtn.setAttribute("aria-expanded","false")}
+agentBtn.addEventListener("click",function(e){e.stopPropagation();var open=menu.hidden;menu.hidden=!open;agentBtn.setAttribute("aria-expanded",String(open));if(open) menu.querySelector('[aria-checked="true"]').focus()});
+menu.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b) return;
+  state.agent=b.dataset.agent;
+  menu.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-checked",String(x===b))});
+  $("#agentName").textContent=state.agent==="auto"?"Agent (auto)":state.agent;
+  $("#agentDot").style.background=state.agent==="auto"?"var(--lavender)":AGENTS[state.agent].col;
+  closeMenu();agentBtn.focus();
+  if(state.agent!=="auto") flareAgent(state.agent);
+});
+menu.addEventListener("keydown",function(e){
+  var items=[].slice.call(menu.querySelectorAll("button")),i=items.indexOf(document.activeElement);
+  if(e.key==="Escape"){closeMenu();agentBtn.focus()}
+  else if(e.key==="ArrowDown"){e.preventDefault();items[(i+1)%items.length].focus()}
+  else if(e.key==="ArrowUp"){e.preventDefault();items[(i-1+items.length)%items.length].focus()}
+});
+document.addEventListener("click",function(e){if(!menu.hidden&&!e.target.closest(".agent-wrap")) closeMenu()});
+
+/* ---------- voice / ask ---------- */
+var vox=$("#vox");
+vox.addEventListener("transitionend",function(e){if(e.target===vox&&e.propertyName==="height"){vox.style.height="";vox.classList.remove("anim")}});
+function setVox(s){
+  closeMenu();
+  var from=vox.offsetHeight;
+  vox.dataset.state=s;
+  vox.style.height="";
+  var to=vox.offsetHeight;
+  if(reduce||from===to){vox.classList.remove("anim");return}
+  vox.classList.add("anim");
+  vox.style.height=from+"px";void vox.offsetHeight;vox.style.height=to+"px";
+}
+var TOPICS=[
+  {k:/tv|box|analytics|standby|screen/i,agent:"Claude",text:"The living-room TV box sent 1.2 GB to an analytics host in the last 24 hours, most of it while the screen was off. Blocking that one host doesn't touch streaming apps.",chips:[["Block analytics host","blocktv",1],["Show the traffic","tvtraffic"]]},
+  {k:/who|device|unknown|new|phone|guest/i,agent:"ChatGPT",
+    text:function(){
+      if(state.newDev==="trusted") return "The new device from earlier is an Android phone. It's trusted now and on the main network. Nothing else new has joined in the last 24 hours.";
+      if(state.newDev==="removed") return "The unknown device was removed and blocked, and it can't rejoin without the new password. Nothing else new has joined in the last 24 hours.";
+      return "A new device joined 4 minutes ago with a randomised MAC. Its DHCP fingerprint looks like an Android phone. I put it on the guest network until someone at home claims it.";
+    },
+    chips:function(){return state.newDev?[["Run a deep scan","scan"]]:[["It's ours, trust it","trust",1],["Remove it","kick"]]}},
+  {k:/slow|evening|speed|fast|lag|channel|wi-?fi|boost/i,agent:"Grok",
+    text:function(){return state.boosted?"You're on channel 149 now, shared with one neighbour, so evenings should hold around 431 Mbps. I'll move you back if it gets crowded.":"After 19:00, seven neighbouring networks pile onto channel 36, so your router spends most of its airtime waiting. Channel 149 has one neighbour. Moving there should give you about 38% more, and I'll keep watching it."},
+    chips:function(){return state.boosted?[["Run a speed test","speedtest",1],["Show neighbours","neighbours"]]:[["Move to channel 149","boost",1],["Show neighbours","neighbours"]]}},
+  {k:/isp|provider|backdoor|tr-?069|7547|remote|router|port|secure|safe|hack/i,agent:"Claude",
+    text:function(){
+      if(!doors[0].on) return "Your provider can still reach the router through TR-069 on port 7547, straight from the internet. That channel can push settings and firmware without asking you. I can block it on the WAN side and keep your connection up.";
+      var n=openCount();
+      return "TR-069 is already blocked on the WAN side, so your provider can't push settings or firmware from the internet. "+(n?n+" other door"+(n>1?"s are":" is")+" still open.":"Every door is closed.");
+    },
+    chips:function(){return doors[0].on?(openCount()?[["Close every door","closeall",1],["What is TR-069?","explain"]]:[["What is TR-069?","explain"]]):[["Block port 7547","tr069",1],["What is TR-069?","explain"]]}}
+];
+var FALLBACK={agent:"Claude",
+  text:function(){
+    var n=openCount(),worst=doors.filter(function(d){return !d.on})[0],dns=doors.filter(function(d){return d.id==="dns"})[0];
+    var s="Right now: 29 known devices, encrypted DNS "+(dns.on?"on":"off")+", and "+(n?n+" door"+(n>1?"s":"")+" open, the worst being "+worst.w+".":"every door closed.");
+    s+=state.boosted?" Download is around 431 Mbps on channel 149, which is quiet.":" Download is around 312 Mbps on a crowded channel.";
+    if(n&&!state.boosted) s+=" Want me to close the doors and move you to a quieter channel?";
+    else if(n) s+=" Want me to close the doors?";
+    else if(!state.boosted) s+=" Want me to move you to a quieter channel?";
+    else s+=" Nothing needs fixing right now.";
+    return s;
+  },
+  chips:function(){return openCount()?[["Close every door","closeall",1],["Run a deep scan","scan"]]:(state.boosted?[["Run a deep scan","scan"]]:[["Move to channel 149","boost",1],["Run a deep scan","scan"]])}};
+function pick(q){for(var i=0;i<TOPICS.length;i++) if(TOPICS[i].k.test(q)) return TOPICS[i];return FALLBACK}
+var typeTok=0;
+function answer(q){
+  var tp=pick(q),who=state.agent==="auto"?tp.agent:state.agent,tok=++typeTok;
+  $("#ansQ").textContent=q;
+  var w=$("#ansWho");w.querySelector("i").style.background=AGENTS[who].col;w.querySelector("i").style.color=AGENTS[who].col;
+  w.querySelector("span").textContent=who+(state.agent==="auto"?" · picked automatically":"");
+  var el=$("#ansText");el.innerHTML='<span class="caret"></span>';
+  $("#ansChips").innerHTML="";
+  setVox("answer");flareAgent(who);
+  var txt=typeof tp.text==="function"?tp.text():tp.text,i=0;
+  var chips=typeof tp.chips==="function"?tp.chips():tp.chips;
+  function tick(){
+    if(tok!==typeTok) return;
+    i=Math.min(txt.length,i+(reduce?txt.length:2));
+    el.innerHTML="";el.appendChild(document.createTextNode(txt.slice(0,i)));
+    if(i<txt.length){var c=document.createElement("span");c.className="caret";el.appendChild(c);setTimeout(tick,16)}
+    else{
+      var box=$("#ansChips");
+      chips.forEach(function(c,n){var b=document.createElement("button");b.className="chip"+(c[2]?" go":"");b.textContent=c[0];b.dataset.act=c[1];b.style.animationDelay=(n*0.08)+"s";box.appendChild(b)});
+    }
+  }
+  setTimeout(tick,reduce?0:380);
+}
+function ask(q){if(!q) return;stopListening(true);answer(q);$("#vox").scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"})}
+$("#ask").addEventListener("keydown",function(e){if(e.key==="Enter"){var q=e.target.value.trim();if(q){e.target.value="";ask(q)}}});
+$("#ansChips").addEventListener("click",function(e){
+  var b=e.target.closest(".chip");if(!b) return;var a=b.dataset.act;
+  if(a==="blocktv") blockTV();
+  else if(a==="tvtraffic") toast("TV box to analytics host: about 40 requests an hour, 50 MB an hour while idle.");
+  else if(a==="boost") boost();
+  else if(a==="neighbours") toast("Channel 36: 7 networks. Channel 149: 1 network.");
+  else if(a==="speedtest"){if(!state.speedRunning) runSpeed();$("#speedCard").scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"})}
+  else if(a==="trust"){var tb=$("#newTrust");if(!state.newDev&&tb) tb.click();else toast("That device was already "+(state.newDev||"handled")+".")}
+  else if(a==="kick"){var kb=$("#newKick");if(!state.newDev&&kb) kb.click();else toast("That device was already "+(state.newDev||"handled")+".")}
+  else if(a==="tr069"){if(doors[0].on) toast("Port 7547 is already blocked on the WAN side.");else{closeTok++;setDoor("tr069",true)}}
+  else if(a==="explain") toast("TR-069 lets a provider manage your router remotely. Handy for support, risky when exposed.");
+  else if(a==="closeall") $("#closeAll").click();
+  else if(a==="scan"){deepScan();$("#doorsCard").scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"})}
+  b.disabled=true;
+});
+
+/* listening simulation */
+var PHRASE="Why is my Wi-Fi slower in the evening?";
+var listen={on:false,timers:[],secT:0,secs:0,raf:0,words:0,boost:0};
+function ampLoop(now){
+  if(!listen.on) return;
+  var t=now/1000;listen.boost=Math.max(0,listen.boost-0.04);
+  var a=0.85+0.25*Math.sin(t*5.3)+0.18*Math.sin(t*11.7+1)+0.12*Math.sin(t*17.1)+listen.boost;
+  vox.style.setProperty("--amp",Math.max(0.6,a).toFixed(3));
+  listen.raf=requestAnimationFrame(ampLoop);
+}
+function startListening(){
+  if(listen.on) return;
+  listen.on=true;listen.secs=0;listen.words=0;
+  $("#transcript").innerHTML='<span class="ph">Listening…</span>';
+  $("#micBtn").hidden=true;$("#stopBtn").hidden=false;$("#rec").hidden=false;$("#plusBtn").hidden=true;
+  $("#recTime").textContent="00:00";
+  setVox("listening");
+  listen.secT=setInterval(function(){listen.secs++;$("#recTime").textContent="00:"+pad(listen.secs)},1000);
+  if(!reduce) listen.raf=requestAnimationFrame(ampLoop);
+  var words=PHRASE.split(" ");
+  words.forEach(function(w,i){
+    listen.timers.push(setTimeout(function(){
+      var p=$("#transcript");if(i===0) p.innerHTML="";
+      var s=document.createElement("span");s.className="w";s.textContent=w+(i<words.length-1?" ":"");p.appendChild(s);
+      listen.words=i+1;listen.boost=0.7;
+    },900+i*300));
+  });
+  listen.timers.push(setTimeout(function(){if(listen.on) finishListening()},900+words.length*300+1800));
+  $("#stopBtn").focus();
+}
+function stopListening(silent){
+  if(!listen.on) return;
+  listen.on=false;listen.timers.forEach(clearTimeout);listen.timers=[];clearInterval(listen.secT);cancelAnimationFrame(listen.raf);
+  vox.style.setProperty("--amp","1");
+  $("#micBtn").hidden=false;$("#stopBtn").hidden=true;$("#rec").hidden=true;$("#plusBtn").hidden=false;
+}
+function finishListening(){
+  var heard=listen.words?PHRASE.split(" ").slice(0,listen.words).join(" "):"";
+  if(listen.words<3) heard=PHRASE;
+  stopListening();answer(heard);
+}
+$("#micBtn").addEventListener("click",startListening);
+$("#stopBtn").addEventListener("click",finishListening);
+$("#closeBtn").addEventListener("click",function(){
+  if(listen.on){stopListening();setVox("idle");return}
+  if(vox.dataset.state==="answer"){typeTok++;setVox("idle");$("#ask").focus();return}
+  $("#ask").value="";
+});
+$("#plusBtn").addEventListener("click",function(){toast("Drop in a router photo or config backup. Bastion reads the model and firmware.")});
+$("#proBtn").addEventListener("click",function(){toast("Pro: unlimited agent checks and family profiles.")});
+
+/* tabs */
+document.querySelectorAll(".tab").forEach(function(t){
+  t.addEventListener("click",function(){
+    document.querySelectorAll(".tab").forEach(function(x){x.setAttribute("aria-current",String(x===t))});
+    var target=document.getElementById(t.dataset.go);
+    if(t.dataset.go==="vox"){target.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});setTimeout(function(){$("#ask").focus({preventScroll:true})},300)}
+    else target.scrollIntoView({behavior:reduce?"auto":"smooth",block:t.dataset.go==="hero"?"start":"center"});
+  });
+});
+renderTimer();
+})();
+</script>
+</body>
+</html>
