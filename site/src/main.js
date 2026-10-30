@@ -14,7 +14,7 @@ import './track.js';
 
 // Section order on the page. Each id has a <section id="<id>"> in index.html, a module
 // src/sections/<id>.js exporting mount(el), and a stylesheet src/sections/<id>.css.
-export const SECTIONS = ['hero', 'features', 'demo', 'agents', 'steps', 'privacy', 'faq', 'support', 'cta'];
+export const SECTIONS = ['hero', 'features', 'agents', 'demo', 'steps', 'privacy', 'faq', 'support', 'cta'];
 
 // Section modules and CSS come from ./section-modules.js (imported after base styles above).
 

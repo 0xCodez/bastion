@@ -215,7 +215,7 @@ function template() {
         <span class="ag-tile__glare" aria-hidden="true"></span>
         <span class="ag-tile__sweep" aria-hidden="true"></span>
         <span class="ag-tile__in">
-          <span class="ag-tile__top" aria-hidden="true"><span class="ag-tile__chip"></span><span class="ag-tile__key mono">Your API key</span></span>
+          <span class="ag-tile__top" aria-hidden="true"><img class="ag-tile__logo" src="/agents/${p.id === 'openai' ? 'chatgpt' : p.id}.png" alt="" width="44" height="44" decoding="async"><span class="ag-tile__key mono">Key or plan</span></span>
           <span class="ag-tile__name">${p.name}</span>
           <span class="ag-tile__vendor">by ${p.vendor}</span>
           <span class="ag-tile__host mono">${p.host}</span>
@@ -231,7 +231,7 @@ function template() {
     <header class="sec-head sec-head--center ag-head" data-reveal>
       <p class="eyebrow">AI watchers</p>
       <h2 class="display-l" id="agents-title">Ask about your <span class="aurora-text">network</span></h2>
-      <p class="lead">Connect Claude, ChatGPT or Grok with your own API key. Your agent reads what Bastion measured, explains it in plain words and proposes fixes. Nothing changes unless you make the change.</p>
+      <p class="lead">Connect Claude, ChatGPT or Grok with your own API key, or use the Claude or ChatGPT plan you already pay for. Your agent reads what Bastion measured, explains it in plain words and proposes fixes. Nothing changes unless you make the change.</p>
     </header>
 
     <div class="ag-demo" data-reveal>

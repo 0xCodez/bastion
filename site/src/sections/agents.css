@@ -1121,3 +1121,53 @@
   .ag-vox__meta i { animation: none !important; }
   .ag-stage:not([data-state='idle']) .ag-scene { transform: none; filter: none; }
 }
+
+/* agent logos on the carousel tiles */
+.ag-tile__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .18), 0 8px 22px -8px rgba(0, 0, 0, .7), 0 0 26px -6px var(--c);
+}
+
+/* Siri-style orb: bright, saturated, liquid colour */
+.ag-orb { width: 150px; }
+.ag-orb__spin {
+  inset: -38%;
+  background:
+    conic-gradient(from 0deg, #FF4FD8, #7C6CFF, #3FE3FF, #5CFFB8, #FFC24F, #FF6A88, #FF4FD8);
+  filter: blur(26px) saturate(1.4);
+  opacity: .95;
+  animation: ag-rot 6s linear infinite;
+}
+.ag-orb__core {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .95) 0, rgba(255, 255, 255, .35) 14%, transparent 34%),
+    radial-gradient(circle at 70% 72%, rgba(63, 227, 255, .95), transparent 46%),
+    radial-gradient(circle at 26% 74%, rgba(255, 79, 216, .95), transparent 48%),
+    radial-gradient(circle at 76% 26%, rgba(255, 194, 79, .85), transparent 42%),
+    radial-gradient(circle at 50% 50%, #8B6CFF, #3A2A9E 70%);
+  border: 1px solid rgba(255, 255, 255, .55);
+  box-shadow:
+    inset 0 0 24px rgba(255, 255, 255, .45),
+    inset 0 -18px 30px rgba(40, 20, 120, .55),
+    0 0 40px rgba(180, 120, 255, .75),
+    0 0 90px rgba(124, 108, 255, .55);
+  animation: ag-breathe 3.4s ease-in-out infinite;
+}
+.ag-orb__core::before,
+.ag-orb__core::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: blur(10px);
+  animation: ag-rot 7s linear infinite;
+}
+.ag-orb__core::before { background: conic-gradient(from 90deg, transparent 0 30%, rgba(255, 79, 216, .9) 45%, transparent 60%); }
+.ag-orb__core::after { background: conic-gradient(from 270deg, transparent 0 35%, rgba(63, 227, 255, .9) 50%, transparent 65%); animation-duration: 9s; animation-direction: reverse; }
+@media (max-width: 760px) { .ag-orb { width: 112px; } }
+@media (prefers-reduced-motion: reduce) { .ag-orb__core::before, .ag-orb__core::after { animation: none; } }
