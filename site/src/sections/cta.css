@@ -1,0 +1,156 @@
+/* cta: final statement over a planet horizon, drawn in CSS (no canvas, no 3D). */
+
+.sec.sec--cta {
+  --hz: clamp(150px, 19vw, 260px);       /* how much of the planet cap shows */
+  --pw: max(1500px, 160vw);              /* planet diameter */
+  overflow: hidden;
+  isolation: isolate;
+  padding-top: clamp(112px, 14vw, 200px);
+  padding-bottom: calc(var(--hz) + clamp(56px, 7vw, 96px));
+}
+
+/* ---------- sky ---------- */
+.ct-sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.ct-stars {
+  position: absolute;
+  inset: 0 0 var(--hz);
+  opacity: .8;
+  background:
+    radial-gradient(1.2px 1.2px at 8% 22%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 17% 64%, #E9E5FF, transparent),
+    radial-gradient(1.4px 1.4px at 26% 38%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 34% 12%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 41% 76%, #E9E5FF, transparent),
+    radial-gradient(1.3px 1.3px at 58% 18%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 66% 58%, #E9E5FF, transparent),
+    radial-gradient(1.4px 1.4px at 73% 30%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 81% 70%, #E9E5FF, transparent),
+    radial-gradient(1.2px 1.2px at 89% 16%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 94% 48%, #E9E5FF, transparent),
+    radial-gradient(1px 1px at 4% 82%, #E9E5FF, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+}
+.ct-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(46% 42% at 50% calc(100% - var(--hz)), rgba(160, 145, 255, .42), rgba(124, 108, 255, .12) 55%, transparent 78%),
+    radial-gradient(80% 60% at 50% 100%, rgba(124, 108, 255, .16), transparent 70%);
+  transform-origin: 50% 100%;
+}
+
+/* ---------- planet ---------- */
+.ct-planet {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - var(--hz));
+  width: var(--pw);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(180deg, #2A2266 0, #1A1544 3%, #110E2A 9%, var(--ground) 22%);
+  box-shadow:
+    0 -6px 18px rgba(208, 200, 255, .30),
+    0 -26px 80px rgba(143, 211, 255, .16),
+    0 -60px 180px rgba(124, 108, 255, .34);
+}
+/* dot-matrix surface near the horizon, in patches like the app's planet */
+.ct-surface {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--hz) + 40px);
+  background-image: radial-gradient(circle, rgba(200, 190, 255, .75) .9px, transparent 1.3px);
+  background-size: 7px 7px;
+  background-position: 0 2px;
+  -webkit-mask-image:
+    linear-gradient(180deg, #000 0, rgba(0, 0, 0, .55) 35%, transparent 100%),
+    linear-gradient(90deg, transparent 18%, #000 22% 27%, rgba(0, 0, 0, .25) 29% 33%, #000 36% 41%, transparent 44% 47%, #000 49% 56%, rgba(0, 0, 0, .3) 58% 61%, #000 63% 70%, transparent 73% 75%, #000 77% 80%, transparent 84%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, #000 0, rgba(0, 0, 0, .55) 35%, transparent 100%),
+    linear-gradient(90deg, transparent 18%, #000 22% 27%, rgba(0, 0, 0, .25) 29% 33%, #000 36% 41%, transparent 44% 47%, #000 49% 56%, rgba(0, 0, 0, .3) 58% 61%, #000 63% 70%, transparent 73% 75%, #000 77% 80%, transparent 84%);
+  mask-composite: intersect;
+  opacity: .55;
+}
+/* crisp rim light, brightest in the middle and fading toward the edges */
+.ct-rim {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - var(--hz) - 1px);
+  width: var(--pw);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(244, 240, 255, .95);
+  -webkit-mask-image: linear-gradient(90deg, transparent 16%, #000 42%, #000 58%, transparent 84%);
+  mask-image: linear-gradient(90deg, transparent 16%, #000 42%, #000 58%, transparent 84%);
+  filter: drop-shadow(0 -2px 6px rgba(208, 200, 255, .8));
+}
+
+/* ---------- content ---------- */
+.ct {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ct-mark {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 214, 255, .6);
+  background: radial-gradient(circle at 50% 28%, #9F90FF, #4B39D0 72%);
+  box-shadow: 0 0 0 12px rgba(124, 108, 255, .08), 0 0 0 26px rgba(124, 108, 255, .035), 0 0 54px rgba(150, 130, 255, .55);
+}
+.sec--cta.ct-live .ct-mark { animation: ct-breathe 3.4s ease-in-out infinite; }
+@keyframes ct-breathe {
+  50% { box-shadow: 0 0 0 18px rgba(124, 108, 255, .06), 0 0 0 38px rgba(124, 108, 255, .025), 0 0 84px rgba(160, 140, 255, .75); }
+}
+.sec--cta.ct-live .ct-glow { animation: ct-glow 6.8s ease-in-out infinite; }
+@keyframes ct-glow { 50% { opacity: .8; transform: scaleY(1.04); } }
+
+.ct-title {
+  max-width: 13ch;
+  margin-top: 18px;
+  padding-bottom: .06em; /* keeps descenders inside the gradient clip */
+}
+.ct-lead.lead {
+  margin-top: 24px;
+  max-width: 52ch;
+}
+.ct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 40px;
+}
+.ct-meta {
+  margin-top: 22px;
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: var(--dim);
+}
+
+@media (max-width: 560px) {
+  .sec.sec--cta { --pw: max(1100px, 300vw); }
+  .ct-mark { width: 68px; height: 68px; margin-bottom: 24px; }
+  .ct-actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 360px; }
+  .ct-actions .btn { white-space: normal; text-align: center; }
+  .ct-meta { line-height: 1.7; }
+}

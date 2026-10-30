@@ -1,0 +1,24 @@
+{
+  "name": "bastion-site",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Launch website for Bastion, a free, open-source router and network checkup for Windows and macOS.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "sync": "node scripts/sync-hero.mjs",
+    "sync:check": "node scripts/sync-hero.mjs --check"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.5"
+  }
+}

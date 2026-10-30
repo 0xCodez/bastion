@@ -1,0 +1,123 @@
+/* problem: "What your router does behind your back" — four glass cards. */
+
+.sec--problem {
+  overflow: clip;
+  isolation: isolate;
+}
+/* faint violet bloom behind the grid so the section has depth without competing with the hero */
+.sec--problem::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(1100px, 120vw);
+  height: 620px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(50% 50% at 50% 50%, rgba(124, 108, 255, .10), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pb-head .lead { max-width: 56ch; }
+
+.pb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 20px);
+}
+
+.pb-cell { display: flex; min-width: 0; }
+.pb-card {
+  --flare-color: var(--tone);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(22px, 2.6vw, 32px);
+  transition: border-color .35s var(--ease), transform .45s var(--ease), box-shadow .45s var(--ease);
+}
+/* tone-tinted bloom in the top-left corner, replacing the default violet one */
+.pb-card.glass::before {
+  background: radial-gradient(55% 100% at 18% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 72%);
+}
+.pb-card > * { position: relative; z-index: 1; }
+.pb-card:hover {
+  border-color: color-mix(in srgb, var(--tone) 34%, transparent);
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 40px 70px -40px rgba(0, 0, 0, .95), 0 0 0 1px color-mix(in srgb, var(--tone) 8%, transparent);
+}
+
+.pb-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.pb-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 24%, transparent);
+  box-shadow: 0 0 28px -8px color-mix(in srgb, var(--tone) 55%, transparent);
+}
+.pb-tag {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03);
+}
+
+.pb-card__title {
+  font: 650 clamp(21px, 1.9vw, 25px)/1.18 var(--f-display);
+  letter-spacing: -.024em;
+  text-wrap: balance;
+}
+.pb-card__body {
+  color: var(--muted);
+  font-size: 15.5px;
+  line-height: 1.65;
+  text-wrap: pretty;
+  max-width: 52ch;
+}
+
+.pb-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 64ch;
+  margin: clamp(28px, 4vw, 44px) auto 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: left;
+}
+.pb-foot__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 12px var(--mint);
+}
+
+@media (max-width: 760px) {
+  .pb-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 400px) {
+  .pb-card__top { flex-wrap: wrap; }
+}

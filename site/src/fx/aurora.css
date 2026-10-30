@@ -1,0 +1,155 @@
+/*
+  Iridescent aurora utility (Nebula Voice).
+
+  Markup:
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  Put it inside a positioned, overflow-clipped parent. By default it glows
+  along the parent's bottom edge. Tune with custom properties:
+    --aurora-height   glow height                 (default 110px)
+    --aurora-bottom   offset below the bottom edge (default -34px)
+    --aurora-opacity  overall strength            (default .78)
+    --aurora-blur     softness                    (default 16px)
+    --aurora-amp      vertical scale, 0.5 to 1.6  (default 1)
+
+  Modifiers:
+    .aurora--top      glow along the top edge instead
+    .aurora--calm     dimmer, for resting states
+    .aurora--intense  taller, brighter, slowly pulsing (thinking / listening)
+    .aurora.is-paused or [data-aurora-paused] ancestor: freezes the drift
+                      (pause it when off-screen to save battery)
+
+  Extras:
+    .aurora-edge      1.5px iridescent hairline on the bottom edge of any
+                      positioned element (uses ::after)
+    .aurora-text      iridescent gradient text
+*/
+
+.aurora {
+  --_h: var(--aurora-height, 110px);
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  bottom: var(--aurora-bottom, -34px);
+  height: var(--_h);
+  opacity: var(--aurora-opacity, .78);
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  transform: scaleY(var(--aurora-amp, 1));
+  filter: blur(var(--aurora-blur, 16px)) saturate(150%);
+  -webkit-mask-image: linear-gradient(to top, #000 35%, transparent);
+  mask-image: linear-gradient(to top, #000 35%, transparent);
+  transition:
+    height .7s var(--ease, cubic-bezier(.2, .8, .2, 1)),
+    opacity .7s var(--ease, cubic-bezier(.2, .8, .2, 1)),
+    transform .7s var(--ease, cubic-bezier(.2, .8, .2, 1));
+  contain: layout style;
+}
+
+.aurora > i {
+  position: absolute;
+  bottom: 0;
+  width: 44%;
+  height: 100%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.aurora > i:nth-child(1) {
+  left: 0;
+  background: radial-gradient(closest-side, var(--magenta, #FF5FD2), transparent);
+  animation: aurora-drift-a 7s ease-in-out infinite alternate;
+}
+.aurora > i:nth-child(2) {
+  left: 22%;
+  background: radial-gradient(closest-side, var(--violet, #7C6CFF), transparent);
+  animation: aurora-drift-b 9s ease-in-out infinite alternate;
+}
+.aurora > i:nth-child(3) {
+  left: 44%;
+  background: radial-gradient(closest-side, var(--teal, #3FE3C9), transparent);
+  animation: aurora-drift-a 8s ease-in-out -3s infinite alternate-reverse;
+}
+.aurora > i:nth-child(4) {
+  left: 62%;
+  background: radial-gradient(closest-side, var(--amber, #FFC772), transparent);
+  animation: aurora-drift-b 10s ease-in-out -5s infinite alternate;
+}
+
+.aurora--top {
+  top: var(--aurora-bottom, -34px);
+  bottom: auto;
+  transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent);
+}
+.aurora--top > i { top: 0; bottom: auto; }
+
+.aurora--calm { opacity: calc(var(--aurora-opacity, .78) * .6); }
+
+.aurora--intense {
+  height: calc(var(--_h) * 2.1);
+  opacity: 1;
+  animation: aurora-pulse 1.6s ease-in-out infinite;
+}
+.aurora--intense > i { animation-duration: 3.2s; }
+.aurora--intense > i:nth-child(2) { animation-duration: 4s; }
+.aurora--intense > i:nth-child(4) { animation-duration: 4.4s; }
+
+.aurora.is-paused > i,
+.aurora.is-paused,
+[data-aurora-paused] .aurora-text,
+[data-aurora-paused] .aurora > i,
+[data-aurora-paused] .aurora {
+  animation-play-state: paused;
+}
+
+@keyframes aurora-drift-a {
+  0% { transform: translateX(-18%) scale(1, .8); }
+  100% { transform: translateX(30%) scale(1.25, 1.1); }
+}
+@keyframes aurora-drift-b {
+  0% { transform: translateX(20%) scale(1.1, 1); }
+  100% { transform: translateX(-28%) scale(.85, 1.2); }
+}
+@keyframes aurora-pulse {
+  0%, 100% { transform: scaleY(var(--aurora-amp, 1)); }
+  50% { transform: scaleY(calc(var(--aurora-amp, 1) * 1.22)); }
+}
+
+/* Hairline along the bottom edge. */
+.aurora-edge::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--magenta, #FF5FD2), var(--violet, #7C6CFF), var(--teal, #3FE3C9), var(--amber, #FFC772), transparent);
+  opacity: .9;
+  pointer-events: none;
+}
+
+/* Iridescent text. */
+.aurora-text {
+  background: linear-gradient(100deg, #FFB3EC 0%, var(--lavender, #B7A9FF) 28%, var(--sky, #8FD3FF) 52%, var(--mint, #9EF0C4) 72%, #FFD9A0 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: aurora-shift 9s ease-in-out infinite alternate;
+}
+@keyframes aurora-shift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .aurora > i,
+  .aurora-text {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,205 @@
+/* privacy: what leaves the machine (table), what never does, and how keys are stored. */
+
+.pv-head .lead { max-width: 58ch; }
+
+.pv-grid {
+  display: grid;
+  gap: clamp(14px, 1.6vw, 20px);
+}
+.pv-side {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(14px, 1.6vw, 20px);
+  align-items: stretch;
+}
+
+.pv-out,
+.pv-never,
+.pv-keys {
+  padding: clamp(22px, 2.8vw, 34px);
+}
+.pv-out > *,
+.pv-never > *,
+.pv-keys > * { position: relative; }
+
+.pv-card-h {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: clamp(18px, 2.4vw, 26px);
+}
+.pv-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+.pv-ic--out {
+  color: var(--amber);
+  background: rgba(255, 199, 114, .1);
+  border: 1px solid rgba(255, 199, 114, .24);
+}
+.pv-ic--stay {
+  color: var(--mint);
+  background: rgba(158, 240, 196, .1);
+  border: 1px solid rgba(158, 240, 196, .24);
+}
+.pv-h {
+  font: 650 clamp(19px, 1.7vw, 22px)/1.25 var(--f-display);
+  letter-spacing: -.02em;
+}
+.pv-sub { margin-top: 2px; font-size: 13.5px; color: var(--dim); }
+
+/* ---------- table ---------- */
+.pv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  line-height: 1.55;
+  text-align: left;
+}
+.pv-table thead th {
+  padding: 0 16px 12px 0;
+  font: 500 10.5px/1.4 var(--f-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line-2);
+  white-space: nowrap;
+}
+.pv-table tbody th,
+.pv-table tbody td {
+  padding: 18px 20px 18px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.pv-table tbody tr:last-child th,
+.pv-table tbody tr:last-child td { border-bottom: 0; padding-bottom: 4px; }
+.pv-table tbody th {
+  width: 20%;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+}
+.pv-table td:nth-child(2) { width: 22%; }
+.pv-table td:nth-child(3) { width: 22%; }
+.pv-table td:last-child { padding-right: 0; }
+.pv-table strong { display: block; color: var(--text); font-weight: 600; }
+.pv-host { display: block; margin-top: 2px; font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+.pv-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 10px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--tone);
+  box-shadow: 0 0 10px var(--tone);
+}
+
+/* ---------- never ---------- */
+.pv-list { display: grid; gap: 12px; }
+.pv-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #DCD7F5;
+}
+.pv-list svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  padding: 4px;
+  border-radius: 50%;
+  color: var(--mint);
+  background: rgba(158, 240, 196, .1);
+  border: 1px solid rgba(158, 240, 196, .22);
+}
+
+/* ---------- keys ---------- */
+.pv-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pv-keys.glass::before {
+  background: radial-gradient(70% 100% at 20% 0%, rgba(255, 199, 114, .12), transparent 70%);
+}
+.pv-keys p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.pv-lock {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  color: var(--amber);
+  background: radial-gradient(circle at 50% 30%, rgba(255, 199, 114, .22), rgba(255, 199, 114, .05));
+  border: 1px solid rgba(255, 199, 114, .3);
+  box-shadow: 0 0 36px -10px rgba(255, 199, 114, .6);
+}
+
+.pv-foot {
+  max-width: 70ch;
+  margin-top: clamp(24px, 3.5vw, 36px);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--dim);
+}
+.pv-foot a { color: var(--lavender); font-weight: 600; white-space: nowrap; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .pv-side { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .pv-table thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .pv-table,
+  .pv-table tbody,
+  .pv-table tr,
+  .pv-table th,
+  .pv-table td { display: block; width: auto !important; }
+  .pv-table tbody tr {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .pv-table tbody tr:first-child { padding-top: 0; }
+  .pv-table tbody tr:last-child { border-bottom: 0; padding-bottom: 0; }
+  .pv-table tbody th,
+  .pv-table tbody td {
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+  .pv-table tbody th { margin-bottom: 10px; font-size: 16px; }
+  .pv-table tbody td {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .pv-table tbody td::before {
+    content: attr(data-label);
+    padding-top: 3px;
+    font: 500 10px/1.5 var(--f-mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+}
+@media (max-width: 380px) {
+  .pv-table tbody td { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
