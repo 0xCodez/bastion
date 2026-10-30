@@ -28,6 +28,9 @@
   z-index: 1;
   opacity: 0;
   transition: opacity 1.6s var(--ease-out);
+  /* feather the top edge so the 3D scene melts into the starry sky (no visible seam) */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, .55) 18%, #000 38%);
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, .55) 18%, #000 38%);
 }
 .sec--hero.is-3d .hero__stage { opacity: 1; }
 .sec--hero.is-flat .hero__stage { display: none; }
@@ -308,7 +311,7 @@
 /* ---------- intro: one orchestrated entrance, never from invisible ---------- */
 @media (prefers-reduced-motion: no-preference) {
   .sec--hero.is-intro .hero__rise {
-    animation: hero-rise 1.1s var(--ease-out) both;
+    animation: hero-rise .8s var(--ease-out) both;
   }
   .sec--hero.is-intro .hero__eyebrow { animation-delay: .05s; }
   .sec--hero.is-intro .hero__line:first-child { animation-delay: .14s; }
@@ -323,8 +326,8 @@
   }
 }
 @keyframes hero-rise {
-  from { opacity: .3; transform: translate3d(0, 26px, 0); filter: blur(10px); }
-  to { opacity: 1; transform: none; filter: none; }
+  from { opacity: .35; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes hero-horizon {
   from { transform: translate3d(0, 120px, 0); opacity: .5; }
