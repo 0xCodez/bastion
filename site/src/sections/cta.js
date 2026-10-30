@@ -124,8 +124,8 @@ export function mount(el) {
       <h2 class="display-xl ct-title" id="cta-title">${words}</h2>
       <p class="lead ct-lead">Download Bastion, run one scan, and see what your router has been doing. No account, no subscription, nothing changed without you.</p>
       <div class="ct-actions">
-        <a class="btn btn--primary btn--lg" data-os="win" href="${RELEASES}" rel="noopener">${ICON.down}Download for Windows</a>
-        <a class="btn btn--primary btn--lg" data-os="mac" href="${RELEASES}" rel="noopener">${ICON.down}Download for macOS</a>
+        <a class="btn btn--primary btn--lg" data-os="win" href="https://github.com/0xCodez/bastion/releases/latest/download/Bastion-setup-x64.exe" rel="noopener">${ICON.down}Download for Windows</a>
+        <a class="btn btn--primary btn--lg" data-os="mac" href="https://github.com/0xCodez/bastion/releases/latest/download/Bastion-mac-arm64.dmg" rel="noopener">${ICON.down}Download for macOS</a>
         <a class="btn btn--ghost btn--lg ct-gh" href="${REPO}" rel="noopener">${ICON.code}View source on GitHub</a>
       </div>
       <p class="ct-meta mono">Windows 10 and 11 · macOS 13 and later · MIT licence</p>

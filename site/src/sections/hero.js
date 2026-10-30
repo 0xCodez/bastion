@@ -87,8 +87,8 @@ export function mount(el) {
 
         <div class="hero__actions hero__rise">
           <div class="hero__ctas">
-            <a class="btn btn--lg hero__dl" data-os="win" href="${RELEASES}" rel="noopener">${ICON_DL}<span>Download for Windows</span></a>
-            <a class="btn btn--lg hero__dl" data-os="mac" href="${RELEASES}" rel="noopener">${ICON_DL}<span>Download for macOS</span></a>
+            <a class="btn btn--lg hero__dl" data-os="win" href="https://github.com/0xCodez/bastion/releases/latest/download/Bastion-setup-x64.exe" rel="noopener">${ICON_DL}<span>Download for Windows</span></a>
+            <a class="btn btn--lg hero__dl" data-os="mac" href="https://github.com/0xCodez/bastion/releases/latest/download/Bastion-mac-arm64.dmg" rel="noopener">${ICON_DL}<span>Download for macOS</span></a>
           </div>
           <a class="hero__gh" href="${REPO}" rel="noopener">${ICON_GH}<span>View on GitHub</span>${ICON_ARROW}</a>
         </div>

@@ -10,10 +10,11 @@ import { initNav } from './chrome.js';
 import { sectionJs } from './section-modules.js';
 import { initBackdrop } from './fx/backdrop.js';
 import { initTransitions, initPointerLight, initNavMorph } from './fx/transitions.js';
+import './track.js';
 
 // Section order on the page. Each id has a <section id="<id>"> in index.html, a module
 // src/sections/<id>.js exporting mount(el), and a stylesheet src/sections/<id>.css.
-export const SECTIONS = ['hero', 'problem', 'features', 'demo', 'agents', 'steps', 'privacy', 'faq', 'cta'];
+export const SECTIONS = ['hero', 'features', 'demo', 'agents', 'steps', 'privacy', 'faq', 'support', 'cta'];
 
 // Section modules and CSS come from ./section-modules.js (imported after base styles above).
 

@@ -1,0 +1,327 @@
+/* Support section: tip card + feedback form. Builds on base.css tokens (.glass, .btn, .pill, type).
+   Everything is visible without JS motion; reveal.js only arms what starts below the fold. */
+
+.sec.sec--support {
+  isolation: isolate;
+}
+
+/* ---------- sky: a soft violet bloom and one anamorphic streak across the section top ---------- */
+.sp-sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.sp-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(42% 46% at 50% 34%, rgba(124, 108, 255, .16), transparent 72%),
+    radial-gradient(28% 30% at 22% 62%, rgba(255, 95, 210, .07), transparent 70%),
+    radial-gradient(30% 32% at 80% 66%, rgba(63, 227, 201, .06), transparent 70%);
+}
+.sp-flare {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--sec-pad) * .55);
+  height: 60px;
+  margin-top: -30px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 4%, #000 36%, #000 64%, transparent 96%);
+  mask-image: linear-gradient(90deg, transparent 4%, #000 36%, #000 64%, transparent 96%);
+}
+.sp-flare__core {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1.5px;
+  margin-top: -.75px;
+  background: linear-gradient(90deg, transparent, var(--lavender) 30%, #fff 48%, #fff 52%, var(--sky) 70%, transparent);
+  box-shadow:
+    0 -6px 0 -.4px rgba(110, 160, 255, .2),
+    0 7px 0 -.5px rgba(150, 120, 255, .14),
+    0 0 12px rgba(183, 169, 255, .6);
+  opacity: .8;
+}
+.sp-flare__haze {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 169, 255, .35), transparent);
+  filter: blur(10px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sp-flare__core, .sp-flare__haze { animation: sp-breathe 7s ease-in-out infinite; }
+}
+@keyframes sp-breathe {
+  50% { opacity: .45; transform: scaleX(.86); }
+}
+
+/* ---------- layout ---------- */
+.sp-head .sp-title { max-width: 16ch; }
+.sp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+  gap: clamp(18px, 2.4vw, 28px);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .sp-grid { grid-template-columns: minmax(0, 1fr); max-width: 620px; margin-inline: auto; }
+}
+
+.sp-card {
+  display: grid;
+  gap: 20px;
+  padding: clamp(22px, 3vw, 34px);
+}
+.sp-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.sp-card__head .body-s { margin-top: 4px; }
+
+.sp-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 26px -10px var(--badge-glow, rgba(124, 108, 255, .9));
+}
+.sp-badge--tips { --badge-glow: rgba(255, 95, 210, .85); background: linear-gradient(150deg, #FF8FDF, #B04BFF 60%, #6A4CFF); }
+.sp-badge--fb { --badge-glow: rgba(143, 211, 255, .8); background: linear-gradient(150deg, #A6E4FF, #7C6CFF 70%); }
+.sp-badge--ok { --badge-glow: rgba(158, 240, 196, .8); background: linear-gradient(150deg, #C6FFE0, #3FC98F); color: #082A1B; }
+
+.sp-thanks { justify-self: start; }
+
+/* ---------- tip card frame ---------- */
+.sp-tipframe {
+  position: relative;
+  min-height: 420px;
+  border-radius: var(--radius-m);
+  background: rgba(8, 6, 20, .38);
+  box-shadow: inset 0 0 0 1px rgba(183, 169, 255, .06), inset 0 20px 40px -30px rgba(0, 0, 0, .8);
+  overflow: hidden;
+  display: grid;
+  transition: background .5s var(--ease), box-shadow .5s var(--ease);
+}
+/* once the card is in, the frame steps back so the card floats on the glass (no box in a box) */
+.sp-tipframe[data-state='ready'] { background: transparent; box-shadow: none; }
+.sp-tipframe iframe {
+  grid-area: 1 / 1;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: var(--radius-m);
+  opacity: 0;
+  transition: opacity .5s var(--ease), height .25s ease;
+}
+.sp-tipframe[data-state='ready'] iframe { opacity: 1; }
+/* base.css turns pointer events off for every iframe while Lenis smooth-scrolls; the tip card must stay usable */
+.lenis.lenis-smooth .sp-tipframe iframe { pointer-events: auto; }
+
+.sp-tipframe__skel {
+  grid-area: 1 / 1;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 26px;
+  transition: opacity .4s var(--ease);
+}
+.sp-tipframe__skel i {
+  display: block;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(183, 169, 255, .06), rgba(183, 169, 255, .13), rgba(183, 169, 255, .06)) 0 0 / 200% 100%;
+}
+.sp-tipframe__skel i:first-child { height: 64px; width: 60%; }
+.sp-tipframe__skel i:last-child { height: 54px; border-radius: 999px; margin-top: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .sp-tipframe__skel i { animation: sp-shimmer 1.6s linear infinite; }
+}
+@keyframes sp-shimmer { to { background-position: -200% 0; } }
+.sp-tipframe[data-state='ready'] .sp-tipframe__skel,
+.sp-tipframe[data-state='failed'] .sp-tipframe__skel { opacity: 0; pointer-events: none; }
+
+.sp-tipframe__fallback {
+  grid-area: 1 / 1;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 28px;
+  text-align: center;
+}
+.sp-tipframe[data-state='failed'] { min-height: 220px; }
+.sp-tipframe[data-state='failed'] iframe { display: none; }
+
+.sp-note a { color: var(--lavender); }
+
+/* ---------- feedback form ---------- */
+.sp-form { display: grid; gap: 18px; }
+
+.sp-seg {
+  display: inline-flex;
+  justify-self: start;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(8, 6, 20, .42);
+  box-shadow: inset 0 0 0 1px rgba(183, 169, 255, .08);
+}
+.sp-seg__opt { position: relative; }
+.sp-seg__opt input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.sp-seg__opt span {
+  display: block;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font: 650 14px/1 var(--f-ui);
+  color: var(--muted);
+  transition: background .25s var(--ease), color .2s, box-shadow .25s;
+}
+.sp-seg__opt:hover span { color: var(--text); }
+.sp-seg__opt input:checked + span {
+  color: var(--ink);
+  background: linear-gradient(135deg, #D6CEFF, #9C8EFF);
+  box-shadow: 0 8px 20px -10px rgba(124, 108, 255, .9), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.sp-seg__opt input:focus-visible + span { outline: 2px solid var(--sky); outline-offset: 2px; }
+
+.sp-field { display: grid; gap: 8px; }
+.sp-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  font: 650 13px/1.3 var(--f-ui);
+  color: var(--text);
+}
+.sp-field__label .dim { font-weight: 500; }
+.sp-count { font-size: 11.5px; font-weight: 500; color: var(--dim); }
+.sp-count.is-over { color: var(--coral); }
+
+.sp-field textarea,
+.sp-field input {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-s);
+  padding: 13px 15px;
+  background: rgba(8, 6, 20, .5);
+  box-shadow: inset 0 0 0 1px rgba(183, 169, 255, .1), inset 0 8px 18px -14px rgba(0, 0, 0, .9);
+  color: var(--text);
+  font: 400 15px/1.55 var(--f-ui);
+  transition: box-shadow .2s var(--ease), background .2s;
+}
+.sp-field textarea { resize: vertical; min-height: 128px; max-height: 360px; }
+.sp-field textarea::placeholder,
+.sp-field input::placeholder { color: var(--dim); }
+.sp-field textarea:hover,
+.sp-field input:hover { box-shadow: inset 0 0 0 1px rgba(183, 169, 255, .2), inset 0 8px 18px -14px rgba(0, 0, 0, .9); }
+.sp-field textarea:focus-visible,
+.sp-field input:focus-visible {
+  outline: none;
+  background: rgba(12, 10, 28, .66);
+  box-shadow: inset 0 0 0 1.5px rgba(143, 211, 255, .6), 0 0 0 4px rgba(143, 211, 255, .1);
+}
+
+.sp-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: end;
+}
+@media (max-width: 560px) {
+  .sp-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+.sp-rate { margin: 0; padding: 0; border: 0; min-width: 0; }
+.sp-rate legend { margin-bottom: 8px; gap: 12px; }
+.sp-stars { display: flex; gap: 2px; height: 48px; align-items: center; }
+.sp-star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  color: rgba(183, 169, 255, .24);
+  cursor: pointer;
+  transition: color .15s, transform .2s var(--ease);
+}
+.sp-star input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.sp-star:hover { transform: translateY(-1px) scale(1.08); }
+.sp-star.is-on { color: var(--amber); filter: drop-shadow(0 0 8px rgba(255, 199, 114, .45)); }
+.sp-stars.is-preview .sp-star.is-on { color: #FFDDA6; }
+.sp-star:has(input:focus-visible) { outline: 2px solid var(--sky); outline-offset: -2px; border-radius: 10px; }
+
+.sp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.sp-send { min-width: 132px; }
+.sp-send[disabled] { cursor: progress; }
+.sp-status { flex: 1 1 220px; min-height: 1.6em; }
+.sp-status[data-tone='error'] { color: var(--coral); }
+.sp-status[data-tone='ok'] { color: var(--mint); }
+
+.sp-done {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+.sp-done__title:focus-visible { outline: none; }
+
+.sp-mail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding-top: 18px;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--line-2) 20%, var(--line-2) 80%, transparent) 1;
+}
+.sp-addr {
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(183, 169, 255, .08);
+  color: var(--text);
+  font-size: 13px;
+  user-select: all;
+  -webkit-user-select: all;
+  cursor: text;
+}
+.sp-copy {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .05);
+  color: var(--muted);
+  transition: background .2s, color .2s;
+}
+.sp-copy:hover { background: rgba(255, 255, 255, .1); color: var(--text); }
+.sp-copy[data-copied='true'] { color: var(--mint); background: rgba(158, 240, 196, .12); }
+
+@media (max-width: 560px) {
+  .sp-card { gap: 18px; }
+  .sp-tipframe { min-height: 380px; margin-inline: -6px; }
+  .sp-seg { justify-self: stretch; }
+  .sp-seg__opt { flex: 1; }
+  .sp-seg__opt span { text-align: center; padding-inline: 10px; }
+}

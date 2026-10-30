@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+
+const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 
 // The public URL is used for canonical and Open Graph tags, which must be absolute.
 // Order: SITE_URL (set it in Vercel once a domain is attached) -> Vercel's production
@@ -21,8 +24,29 @@ function siteUrlPlugin() {
   };
 }
 
+// `npm run dev` only: serve the Vercel functions in api/ (in-memory storage) so /dashboard works
+// locally. Set DASHBOARD_PASSWORD in the shell first, or open /dashboard?demo for made-up numbers.
+function devApiPlugin() {
+  return {
+    name: 'bastion-dev-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const m = req.url && req.url.match(/^\/api\/(track|dashboard)(?:[?#]|$)/);
+        if (!m) return next();
+        try {
+          const mod = await server.ssrLoadModule(`/api/${m[1]}.js`);
+          await mod.default(req, res);
+        } catch (err) {
+          next(err);
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [siteUrlPlugin()],
+  plugins: [siteUrlPlugin(), devApiPlugin()],
   build: {
     target: 'es2020',
     cssCodeSplit: true,
@@ -30,6 +54,13 @@ export default defineConfig({
     assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/i.test(file) ? false : undefined),
     // three.js is big on its own; the hero loads it lazily, so this warning is expected.
     chunkSizeWarningLimit: 900,
+    // Two pages: the public site and the private analytics dashboard (/dashboard).
+    rollupOptions: {
+      input: {
+        main: here('./index.html'),
+        dashboard: here('./dashboard.html'),
+      },
+    },
   },
   server: { port: 5173 },
   preview: { port: 4173 },

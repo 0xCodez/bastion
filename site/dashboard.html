@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#07060E">
+  <meta name="color-scheme" content="dark">
+  <title>Bastion Analytics</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script type="module" src="/src/dashboard/main.js"></script>
+</head>
+<body class="dash">
+  <div class="dash-sky" aria-hidden="true"></div>
+
+  <!-- Sign in -->
+  <main class="gate" id="gate" hidden>
+    <form class="gate__card glass" id="gateForm" autocomplete="off">
+      <svg class="gate__mark" width="56" height="56" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><defs><linearGradient id="gateGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D4CBFF"/><stop offset="1" stop-color="#7C6CFF"/></linearGradient></defs><path d="M14 2.5l9.5 4v6.8c0 6-4 10.7-9.5 12.7-5.5-2-9.5-6.7-9.5-12.7V6.5z" fill="url(#gateGrad)"/><path d="M9.5 14.5a6.4 6.4 0 0 1 9 0M11.6 17a3.4 3.4 0 0 1 4.8 0" fill="none" stroke="#120C2E" stroke-width="1.9" stroke-linecap="round"/><circle cx="14" cy="19.6" r="1.3" fill="#120C2E"/></svg>
+      <p class="eyebrow">Private</p>
+      <h1 class="gate__title">Bastion Analytics</h1>
+      <p class="muted">Enter the dashboard password. It stays in this tab only.</p>
+      <label class="sr-only" for="gatePassword">Password</label>
+      <input class="field" id="gatePassword" type="password" placeholder="Password" required autocomplete="current-password">
+      <button class="btn btn--primary" type="submit">Open dashboard</button>
+      <p class="gate__error" id="gateError" role="alert"></p>
+    </form>
+  </main>
+
+  <!-- Dashboard -->
+  <div class="app" id="app" hidden>
+    <header class="top glass">
+      <a class="brand" href="/" title="Back to the site">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><defs><linearGradient id="topGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D4CBFF"/><stop offset="1" stop-color="#7C6CFF"/></linearGradient></defs><path d="M14 2.5l9.5 4v6.8c0 6-4 10.7-9.5 12.7-5.5-2-9.5-6.7-9.5-12.7V6.5z" fill="url(#topGrad)"/><path d="M9.5 14.5a6.4 6.4 0 0 1 9 0M11.6 17a3.4 3.4 0 0 1 4.8 0" fill="none" stroke="#120C2E" stroke-width="1.9" stroke-linecap="round"/><circle cx="14" cy="19.6" r="1.3" fill="#120C2E"/></svg>
+        <span>Bastion <b>Analytics</b></span>
+      </a>
+      <div class="top__actions">
+        <div class="seg" id="range" role="radiogroup" aria-label="Date range">
+          <button type="button" role="radio" data-days="7">7 days</button>
+          <button type="button" role="radio" data-days="30">30 days</button>
+          <button type="button" role="radio" data-days="90">90 days</button>
+        </div>
+        <button class="icon-btn" type="button" id="refresh" title="Refresh">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="sr-only">Refresh</span>
+        </button>
+        <button class="btn btn--ghost btn--sm" type="button" id="signOut">Sign out</button>
+      </div>
+    </header>
+
+    <div class="notice glass" id="notice" hidden>
+      <span class="notice__dot" aria-hidden="true"></span>
+      <div>
+        <strong>Nothing is being recorded yet.</strong>
+        Connect Upstash Redis in Vercel (<em>bastion</em> project, Storage) and redeploy. In-memory storage only
+        works with <code>npm run dev</code>.
+      </div>
+    </div>
+
+    <section class="kpis" aria-label="Key numbers">
+      <article class="kpi glass kpi--hero">
+        <h2>Visitors</h2>
+        <p class="kpi__value" id="kVisitors">–</p>
+        <p class="kpi__sub" id="kVisitorsSub"></p>
+      </article>
+      <article class="kpi glass">
+        <h2>Page views</h2>
+        <p class="kpi__value" id="kPageviews">–</p>
+        <p class="kpi__sub" id="kPageviewsSub"></p>
+      </article>
+      <article class="kpi glass">
+        <h2>Downloads</h2>
+        <p class="kpi__value" id="kDownloads">–</p>
+        <p class="kpi__sub" id="kDownloadsSub"></p>
+      </article>
+      <article class="kpi glass">
+        <h2>Conversion</h2>
+        <p class="kpi__value" id="kConversion">–</p>
+        <p class="kpi__sub">visitors who clicked a download</p>
+      </article>
+      <article class="kpi glass">
+        <h2>Live now</h2>
+        <p class="kpi__value"><span class="live-dot" aria-hidden="true"></span><span id="kOnline">–</span></p>
+        <p class="kpi__sub">active in the last 5 minutes</p>
+      </article>
+      <article class="kpi glass">
+        <h2>GitHub downloads</h2>
+        <p class="kpi__value" id="kGithub">–</p>
+        <p class="kpi__sub" id="kGithubSub">all releases, all time</p>
+      </article>
+    </section>
+
+    <section class="card glass">
+      <header class="card__head">
+        <div>
+          <h2>Visitors per day</h2>
+          <p class="muted">Unique visitors. Hover a day for page views and downloads.</p>
+        </div>
+      </header>
+      <div class="chart" id="visitorsChart"></div>
+      <details class="table-toggle">
+        <summary>Show as table</summary>
+        <div class="table-wrap"><table id="visitorsTable"></table></div>
+      </details>
+    </section>
+
+    <section class="card glass">
+      <header class="card__head">
+        <div>
+          <h2>Downloads per day</h2>
+          <p class="muted">Clicks on the site's download links, by installer.</p>
+        </div>
+        <ul class="legend" id="downloadsLegend" role="list"></ul>
+      </header>
+      <div class="chart" id="downloadsChart"></div>
+      <details class="table-toggle">
+        <summary>Show as table</summary>
+        <div class="table-wrap"><table id="downloadsTable"></table></div>
+      </details>
+    </section>
+
+    <section class="grid" aria-label="Breakdowns">
+      <article class="card glass"><h2>Downloads by installer</h2><ol class="bars" id="platforms" role="list"></ol></article>
+      <article class="card glass"><h2>Download placement</h2><ol class="bars" id="places" role="list"></ol></article>
+      <article class="card glass"><h2>Top sources</h2><ol class="bars" id="sources" role="list"></ol></article>
+      <article class="card glass"><h2>Countries</h2><ol class="bars" id="countries" role="list"></ol></article>
+      <article class="card glass"><h2>Visitors' systems</h2><ol class="bars" id="systems" role="list"></ol></article>
+      <article class="card glass"><h2>Devices</h2><ol class="bars" id="devices" role="list"></ol></article>
+      <article class="card glass"><h2>Outbound and actions</h2><ol class="bars" id="clicks" role="list"></ol></article>
+      <article class="card glass"><h2>Pages</h2><ol class="bars" id="pages" role="list"></ol></article>
+    </section>
+
+    <section class="card glass">
+      <header class="card__head">
+        <div>
+          <h2>GitHub release downloads</h2>
+          <p class="muted">Counted by GitHub per installer, including people who never visited the site. Cached for 10 minutes.</p>
+        </div>
+      </header>
+      <div class="table-wrap"><table id="releasesTable"></table></div>
+    </section>
+
+    <footer class="foot dim" id="footer"></footer>
+  </div>
+
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+</body>
+</html>
